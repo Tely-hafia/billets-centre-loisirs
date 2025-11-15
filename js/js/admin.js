@@ -1,4 +1,17 @@
 // --- Clés de stockage local ---
+const ADMIN_PASSWORD = "admin123"; // change ce mot de passe
+
+// protection très simple
+document.addEventListener("DOMContentLoaded", () => {
+  const ok = window.prompt("Mot de passe administrateur :");
+  if (ok !== ADMIN_PASSWORD) {
+    alert("Accès refusé");
+    // on ne montre pas le contenu admin
+    document.body.innerHTML = "<p style='padding:1rem;font-family:sans-serif;'>Accès refusé.</p>";
+    throw new Error("Accès admin refusé");
+  }
+});
+
 const STORAGE_KEY = "billets_centre_loisirs";    // billets importés
 const VALIDATION_KEY = "billets_validations";    // journal des validations
 
