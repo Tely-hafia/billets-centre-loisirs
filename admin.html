@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Contrôle des billets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Administration - Billets centre de loisirs</h1>
+    <p>Import des billets (CSV), gestion et export des validations.</p>
+  </header>
+
+  <main id="adminContent" style="display:none;">
+    <!-- 1. Importer les billets -->
+    <section class="card">
+      <h2>1. Importer les billets de la semaine</h2>
+      <p>Exportez votre fichier Excel en CSV puis importez-le ici.</p>
+      <input type="file" id="csvFileInput" accept=".csv" />
+      <button id="btnImport">Importer</button>
+      <p id="importStatus" class="status"></p>
+    </section>
+
+    <!-- 2. Billets chargés -->
+    <section class="card">
+      <h2>Billets chargés</h2>
+      <p>Nombre de billets en mémoire : <span id="ticketCount">0</span></p>
+      <button id="btnClear">Effacer les billets stockés (et validations)</button>
+    </section>
+
+    <!-- 3. Vérifier / valider un billet (test admin) -->
+    <section class="card">
+      <h2>2. Vérifier un billet (test)</h2>
+      <label for="ticketNumberInput">Numéro de billet :</label>
+      <input type="text" id="ticketNumberInput" placeholder="Ex : 26-0001" />
+      <button id="btnCheck">Vérifier</button>
+      <div id="checkResult" class="result"></div>
+    </section>
+
+    <!-- 4. Exporter les validations -->
+    <section class="card">
+      <h2>3. Exporter les validations</h2>
+      <button id="btnExport">Exporter en CSV</button>
+      <p>
+        Le fichier CSV contiendra tous les billets validés sur ce navigateur
+        (utile pour le contrôle du soir).
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <small>Zone administration - accès réservé.</small>
+  </footer>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
