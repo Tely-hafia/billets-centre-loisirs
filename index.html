@@ -2,17 +2,17 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Contrôle des billets - Centre de loisirs</title>
+  <title>Admin - Contrôle des billets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <header>
-    <h1>Contrôle des billets - Centre de loisirs</h1>
-    <p>Import des billets depuis Excel (CSV) + vérification + validations.</p>
+    <h1>Administration - Billets centre de loisirs</h1>
+    <p>Import des billets (CSV), gestion et export des validations.</p>
   </header>
 
-  <main>
+  <main id="adminContent" style="display:none;">
     <!-- 1. Importer les billets -->
     <section class="card">
       <h2>1. Importer les billets de la semaine</h2>
@@ -26,12 +26,12 @@
     <section class="card">
       <h2>Billets chargés</h2>
       <p>Nombre de billets en mémoire : <span id="ticketCount">0</span></p>
-      <button id="btnClear">Effacer les billets stockés</button>
+      <button id="btnClear">Effacer les billets stockés (et validations)</button>
     </section>
 
-    <!-- 3. Vérifier / valider un billet -->
+    <!-- 3. Vérifier / valider un billet (test admin) -->
     <section class="card">
-      <h2>2. Vérifier un billet</h2>
+      <h2>2. Vérifier un billet (test)</h2>
       <label for="ticketNumberInput">Numéro de billet :</label>
       <input type="text" id="ticketNumberInput" placeholder="Ex : 26-0001" />
       <button id="btnCheck">Vérifier</button>
@@ -50,9 +50,9 @@
   </main>
 
   <footer>
-    <small>Données stockées localement dans le navigateur.</small>
+    <small>Zone administration - accès réservé.</small>
   </footer>
 
-  <script src="js/app.js"></script>
+  <script src="js/admin.js"></script>
 </body>
 </html>
