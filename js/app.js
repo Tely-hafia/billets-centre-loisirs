@@ -185,8 +185,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const statut = (ticket.statut || "").toLowerCase();
 
+    // --- Cas déjà validé ---
     if (statut === "validé" || statut === "valide") {
-      // Déjà validé
       checkResult.innerHTML = `
         Billet <strong>${ticket.numero_billet}</strong> trouvé.<br />
         <strong>ATTENTION :</strong> ce billet est déjà validé.<br />
@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // --- Validation du billet ---
+    // --- Validation du billet (première fois) ---
     ticket.statut = "Validé";
 
     // Mise à jour du tableau principal
