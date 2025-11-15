@@ -2,57 +2,39 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin - Contrôle des billets</title>
+  <title>Contrôle des billets - Agent</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <header>
-    <h1>Administration - Billets centre de loisirs</h1>
-    <p>Import des billets (CSV), gestion et export des validations.</p>
+    <h1>Contrôle des billets - Poste agent</h1>
+    <p>Cette page permet uniquement de vérifier les billets.</p>
   </header>
 
-  <main id="adminContent" style="display:none;">
-    <!-- 1. Importer les billets -->
-    <section class="card">
-      <h2>1. Importer les billets de la semaine</h2>
-      <p>Exportez votre fichier Excel en CSV puis importez-le ici.</p>
-      <input type="file" id="csvFileInput" accept=".csv" />
-      <button id="btnImport">Importer</button>
-      <p id="importStatus" class="status"></p>
-    </section>
-
-    <!-- 2. Billets chargés -->
+  <main>
     <section class="card">
       <h2>Billets chargés</h2>
-      <p>Nombre de billets en mémoire : <span id="ticketCount">0</span></p>
-      <button id="btnClear">Effacer les billets stockés (et validations)</button>
+      <p>Nombre de billets disponibles dans ce navigateur : <span id="ticketCount">0</span></p>
+      <p style="font-size:0.9rem;">
+        Si le nombre est 0, demander à l'administrateur d'importer les billets
+        depuis la page <strong>admin</strong> sur cet appareil.
+      </p>
     </section>
 
-    <!-- 3. Vérifier / valider un billet (test admin) -->
     <section class="card">
-      <h2>2. Vérifier un billet (test)</h2>
+      <h2>Vérifier un billet</h2>
       <label for="ticketNumberInput">Numéro de billet :</label>
       <input type="text" id="ticketNumberInput" placeholder="Ex : 26-0001" />
       <button id="btnCheck">Vérifier</button>
       <div id="checkResult" class="result"></div>
     </section>
-
-    <!-- 4. Exporter les validations -->
-    <section class="card">
-      <h2>3. Exporter les validations</h2>
-      <button id="btnExport">Exporter en CSV</button>
-      <p>
-        Le fichier CSV contiendra tous les billets validés sur ce navigateur
-        (utile pour le contrôle du soir).
-      </p>
-    </section>
   </main>
 
   <footer>
-    <small>Zone administration - accès réservé.</small>
+    <small>Données stockées localement dans le navigateur.</small>
   </footer>
 
-  <script src="js/admin.js"></script>
+  <script src="js/agent.js"></script>
 </body>
 </html>
