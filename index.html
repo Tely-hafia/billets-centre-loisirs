@@ -9,33 +9,48 @@
 <body>
   <header>
     <h1>Contrôle des billets - Centre de loisirs</h1>
-    <p>Import des billets depuis Excel (CSV) + vérification.</p>
+    <p>Import des billets depuis Excel (CSV) + vérification + validations.</p>
   </header>
 
   <main>
+    <!-- 1. Importer les billets -->
     <section class="card">
       <h2>1. Importer les billets de la semaine</h2>
+      <p>Exportez votre fichier Excel en CSV puis importez-le ici.</p>
       <input type="file" id="csvFileInput" accept=".csv" />
       <button id="btnImport">Importer</button>
       <p id="importStatus" class="status"></p>
     </section>
 
+    <!-- 2. Billets chargés -->
     <section class="card">
       <h2>Billets chargés</h2>
-      <p>Nombre de billets : <span id="ticketCount">0</span></p>
+      <p>Nombre de billets en mémoire : <span id="ticketCount">0</span></p>
       <button id="btnClear">Effacer les billets stockés</button>
     </section>
 
+    <!-- 3. Vérifier / valider un billet -->
     <section class="card">
       <h2>2. Vérifier un billet</h2>
+      <label for="ticketNumberInput">Numéro de billet :</label>
       <input type="text" id="ticketNumberInput" placeholder="Ex : 25-00001" />
       <button id="btnCheck">Vérifier</button>
       <div id="checkResult" class="result"></div>
     </section>
+
+    <!-- 4. Exporter les validations -->
+    <section class="card">
+      <h2>3. Exporter les validations</h2>
+      <button id="btnExport">Exporter en CSV</button>
+      <p>
+        Le fichier CSV contiendra tous les billets validés sur ce navigateur
+        (utile pour le contrôle du soir).
+      </p>
+    </section>
   </main>
 
   <footer>
-    <small>Données stockées localement dans le navigateur.</small>
+    <small>Données stockées localement dans le navigateur (pas de serveur pour l’instant).</small>
   </footer>
 
   <script src="js/app.js"></script>
