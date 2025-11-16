@@ -5,11 +5,12 @@
 // ⚠️ REMPLACE les 5 constantes ci-dessous par tes valeurs Appwrite ⚠️
 // Tu les trouves dans la console Appwrite (Overview + Databases + Tables).
 
-const APPWRITE_ENDPOINT = 'https://<REGION>.cloud.appwrite.io/v1'; // ex : https://eu-west-1.cloud.appwrite.io/v1
-const APPWRITE_PROJECT_ID = '<PROJECT_ID>';           // ex : 6719c9xxxxxxxxxxxx
-const APPWRITE_DATABASE_ID = '<DATABASE_ID>';         // ex : 6919ca2000xxxxxxx
-const APPWRITE_BILLETS_TABLE_ID = '<BILLETS_TABLE_ID>';
-const APPWRITE_VALIDATIONS_TABLE_ID = '<VALIDATIONS_TABLE_ID>';
+const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
+const APPWRITE_PROJECT_ID = '6919c99200348d6d8afe';
+const APPWRITE_DATABASE_ID = 'ID_DE_TA_BASE';
+const APPWRITE_BILLETS_TABLE_ID = 'ID_DE_LA_TABLE_BILLETS';
+const APPWRITE_VALIDATIONS_TABLE_ID = 'ID_DE_LA_TABLE_VALIDATIONS';
+
 
 // Identifiants simples pour la phase test
 const AGENT_ID = 'AGENT_TEST';
