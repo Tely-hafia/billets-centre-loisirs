@@ -7,9 +7,9 @@
 
 const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
 const APPWRITE_PROJECT_ID = '6919c99200348d6d8afe';
-const APPWRITE_DATABASE_ID = 'ID_DE_TA_BASE';
-const APPWRITE_BILLETS_TABLE_ID = 'ID_DE_LA_TABLE_BILLETS';
-const APPWRITE_VALIDATIONS_TABLE_ID = 'ID_DE_LA_TABLE_VALIDATIONS';
+const APPWRITE_DATABASE_ID = '6919ca20001ab6e76866';
+const APPWRITE_BILLETS_TABLE_ID = 'billets';
+const APPWRITE_VALIDATIONS_TABLE_ID = 'validations';
 
 
 // Identifiants simples pour la phase test
