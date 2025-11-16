@@ -1,7 +1,10 @@
-// ======================
-// CONFIG APPWRITE
-// ======================
+// =====================================
+//  ADMIN + APPWRITE
+//  - Import CSV -> Appwrite (table billets)
+//  - Affichage des billets depuis Appwrite
+// =====================================
 
+// Config Appwrite (les mêmes partout)
 const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
 const APPWRITE_PROJECT_ID = '6919c99200348d6d8afe';
 const APPWRITE_DATABASE_ID = '6919ca20001ab6e76866';
@@ -9,99 +12,164 @@ const APPWRITE_BILLETS_TABLE_ID = 'billets';
 
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
+const databases = new Appwrite.Databases(client);
 
-const tablesDB = new Appwrite.TablesDB(client);
+function $(id) {
+  return document.getElementById(id);
+}
 
-// ======================
-// IMPORT CSV
-// ======================
+function parseCsvLine(line, separator = ',') {
+  return line.split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
+}
 
-document.getElementById('btnImportCsv').addEventListener('click', async () => {
+// --------------------------
+// IMPORT CSV -> APPWRITE
+// --------------------------
+async function importerCsv() {
+  const fileInput = $('csvFile');
+  const status = $('importStatus');
 
-  const fileInput = document.getElementById('csvFile');
-  const status = document.getElementById('importStatus');
-
-  if (!fileInput.files.length) {
-    status.textContent = "❌ Aucun fichier sélectionné.";
+  if (!fileInput || !fileInput.files.length) {
+    if (status) status.textContent = '❌ Aucun fichier sélectionné.';
     return;
   }
 
   const file = fileInput.files[0];
-
-  status.textContent = "⏳ Lecture du CSV...";
-
   const text = await file.text();
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
 
-  // Suppose que ton CSV a : numero_billet,date_acces,prix,tarif_universite,statut,semaine_code,type_acces
-  const headers = lines[0].split(',');
+  const firstLine = text.split('\n')[0];
+  const sep = firstLine.includes(';') ? ';' : ',';
 
-  status.textContent = "⏳ Import en cours...";
+  const lines = text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+
+  if (lines.length < 2) {
+    if (status) status.textContent = '❌ Fichier CSV vide ou incorrect.';
+    return;
+  }
+
+  const headers = parseCsvLine(lines[0], sep);
+
+  function getValue(cols, name) {
+    const idx = headers.indexOf(name);
+    if (idx === -1) return '';
+    return cols[idx] ?? '';
+  }
 
   let imported = 0;
 
+  if (status) status.textContent = '⏳ Import en cours vers Appwrite...';
+
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',');
+    const cols = parseCsvLine(lines[i], sep);
+
+    const numero_billet    = getValue(cols, 'numero_billet');
+    const date_acces       = getValue(cols, 'date_acces');
+    const type_acces       = getValue(cols, 'type_acces');
+    const prix             = parseInt(getValue(cols, 'prix') || '0', 10);
+    const tarif_universite = parseInt(getValue(cols, 'tarif_universite') || '0', 10);
+    const statut           = getValue(cols, 'statut') || 'Non utilisé';
+    const semaine_code     = getValue(cols, 'semaine_code') || '';
+
+    if (!numero_billet) continue; // ligne vide
 
     const billetData = {
-      numero_billet: cols[0],
-      date_acces: cols[1],
-      prix: parseInt(cols[2]),
-      tarif_universite: parseInt(cols[3]),
-      statut: cols[4],
-      semaine_code: cols[5],
-      type_acces: cols[6]
+      numero_billet,
+      date_acces,
+      type_acces,
+      prix,
+      tarif_universite,
+      statut,
+      semaine_code
     };
 
     try {
-      await tablesDB.createRow({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: APPWRITE_BILLETS_TABLE_ID,
-        rowId: Appwrite.ID.unique(),
-        data: billetData
-      });
-
+      await databases.createDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_BILLETS_TABLE_ID,
+        Appwrite.ID.unique(),
+        billetData
+      );
       imported++;
-
     } catch (err) {
-      console.error("Erreur ligne CSV", i, err);
+      console.error('Erreur import billet CSV ligne', i, err);
     }
   }
 
-  status.textContent = `✅ Import terminé : ${imported} billets ajoutés.`;
-});
+  if (status) status.textContent = `✅ Import terminé : ${imported} billets envoyés sur Appwrite.`;
 
-// ======================
-// AFFICHAGE DES BILLETS
-// ======================
+  // Recharge la liste pour vérifier
+  chargerBilletsServeur();
+}
 
-document.getElementById('btnLoadBillets').addEventListener('click', async () => {
+// --------------------------
+// AFFICHAGE BILLETS (depuis Appwrite)
+// --------------------------
+
+async function chargerBilletsServeur() {
   const tbody = document.querySelector('#tableBillets tbody');
-  tbody.innerHTML = "<tr><td colspan='5'>⏳ Chargement...</td></tr>";
+  if (!tbody) return;
+
+  tbody.innerHTML = "<tr><td colspan='5'>⏳ Chargement depuis Appwrite...</td></tr>";
 
   try {
-    const res = await tablesDB.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_BILLETS_TABLE_ID,
-      queries: [Appwrite.Query.limit(10000)]
-    });
+    const res = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [Appwrite.Query.limit(10000)]
+    );
 
-    tbody.innerHTML = "";
+    const billets = res.documents || [];
 
-    for (const row of res.rows) {
+    tbody.innerHTML = '';
+
+    if (!billets.length) {
+      tbody.innerHTML = "<tr><td colspan='5'>Aucun billet trouvé sur le serveur.</td></tr>";
+      return;
+    }
+
+    for (const billet of billets) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${row.numero_billet}</td>
-        <td>${row.date_acces}</td>
-        <td>${row.type_acces}</td>
-        <td>${row.statut}</td>
-        <td>${row.semaine_code}</td>
+        <td>${billet.numero_billet || ''}</td>
+        <td>${billet.date_acces || ''}</td>
+        <td>${billet.type_acces || ''}</td>
+        <td>${billet.statut || ''}</td>
+        <td>${billet.semaine_code || ''}</td>
       `;
       tbody.appendChild(tr);
     }
 
   } catch (err) {
-    console.error(err);
-    tbody.innerHTML = "<tr><td colspan='5'>❌ Erreur chargement billets</td></tr>";
+    console.error('Erreur chargement billets Appwrite :', err);
+    tbody.innerHTML = "<tr><td colspan='5'>❌ Erreur chargement billets.</td></tr>";
   }
+}
+
+// --------------------------
+// INIT EVENTS
+// --------------------------
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btnImport = $('btnImportCsv');
+  const btnLoad = $('btnLoadBillets');
+
+  if (btnImport) {
+    btnImport.addEventListener('click', (e) => {
+      e.preventDefault();
+      importerCsv();
+    });
+  }
+
+  if (btnLoad) {
+    btnLoad.addEventListener('click', (e) => {
+      e.preventDefault();
+      chargerBilletsServeur();
+    });
+  }
+
+  // Charger automatiquement les billets à l'ouverture de la page admin
+  chargerBilletsServeur();
 });
