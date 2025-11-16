@@ -1,41 +1,30 @@
 // =====================================
-//  Configuration Appwrite
+//  CONFIG
 // =====================================
 
-// Même config que tout à l’heure, mais on l’utilise avec Databases
+const LOCAL_STORAGE_KEY = 'billets_centre_loisirs';
+
 const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
 const APPWRITE_PROJECT_ID = '6919c99200348d6d8afe';
 const APPWRITE_DATABASE_ID = '6919ca20001ab6e76866';
-const APPWRITE_BILLETS_TABLE_ID = 'billets';      // ID / slug de la table billets
-const APPWRITE_VALIDATIONS_TABLE_ID = 'validations'; // ID / slug de la table validations
+const APPWRITE_BILLETS_TABLE_ID = 'billets';
+const APPWRITE_VALIDATIONS_TABLE_ID = 'validations';
 
-// Identifiants "logiques" pour la phase de test
 const AGENT_ID = 'AGENT_TEST';
 const POSTE_ID = 'POSTE_PRINCIPAL';
 
-// =====================================
-//  Initialisation du client Appwrite
-// =====================================
-
 const client = new Appwrite.Client();
-
-client
-  .setEndpoint(APPWRITE_ENDPOINT)
-  .setProject(APPWRITE_PROJECT_ID);
-
+client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 const databases = new Appwrite.Databases(client);
 
-// =====================================
-//  Helpers DOM
-// =====================================
+let billetsMap = new Map();
+
+// --------------------------
+// Helpers
+// --------------------------
 
 function $(id) {
   return document.getElementById(id);
-}
-
-function setTicketCount(n) {
-  const el = $('ticketCount');
-  if (el) el.textContent = n.toString();
 }
 
 function showMessage(text, type = 'info') {
@@ -44,17 +33,47 @@ function showMessage(text, type = 'info') {
     alert(text);
     return;
   }
-
   zone.textContent = text;
   zone.className = 'message';
-  zone.classList.add(`message-${type}`); // à styliser dans ton CSS
+  zone.classList.add(`message-${type}`);
 }
 
-// =====================================
-//  Chargement du nombre de billets
-// =====================================
+function setTicketCount(n) {
+  const el = $('ticketCount');
+  if (el) el.textContent = n.toString();
+}
 
-async function chargerNombreBillets() {
+function chargerBilletsDepuisLocal() {
+  const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error('Erreur parse billets localStorage', e);
+    return [];
+  }
+}
+
+function sauvegarderBilletsLocaux(billets) {
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(billets));
+}
+
+// --------------------------
+// Initialisation des billets
+// --------------------------
+
+function initialiserBilletsDepuisLocal() {
+  const billets = chargerBilletsDepuisLocal();
+  billetsMap = new Map();
+  for (const b of billets) {
+    billetsMap.set(b.numero_billet, b);
+  }
+  setTicketCount(billetsMap.size);
+}
+
+// Tente de synchroniser les billets depuis Appwrite
+async function synchroniserBilletsDepuisServeur() {
   try {
     const res = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
@@ -62,69 +81,75 @@ async function chargerNombreBillets() {
       [Appwrite.Query.limit(10000)]
     );
 
-    const nb = res.total ?? (res.documents ? res.documents.length : 0);
-    setTicketCount(nb);
+    const billets = (res.documents || []).map(doc => ({
+      numero_billet: doc.numero_billet,
+      date_acces: doc.date_acces,
+      type_acces: doc.type_acces,
+      prix: doc.prix,
+      tarif_universite: doc.tarif_universite,
+      statut: doc.statut,
+      semaine_code: doc.semaine_code
+    }));
+
+    sauvegarderBilletsLocaux(billets);
+
+    billetsMap = new Map();
+    for (const b of billets) {
+      billetsMap.set(b.numero_billet, b);
+    }
+
+    setTicketCount(billetsMap.size);
+    console.log('Billets synchronisés depuis Appwrite :', billetsMap.size);
+
   } catch (err) {
-    console.error('Erreur chargement billets :', err);
-    // On ne bloque pas l’appli pour ça
+    console.warn('Impossible de synchroniser les billets depuis Appwrite, on reste en local :', err);
   }
 }
 
-// =====================================
-//  Vérification d'un billet
-// =====================================
+// --------------------------
+// Vérification d'un billet
+// --------------------------
 
 async function verifierBillet() {
   const input = $('ticketNumber');
   if (!input) {
-    alert("Champ ticketNumber introuvable dans la page.");
+    alert("Champ ticketNumber introuvable.");
     return;
   }
 
   const numero = input.value.trim();
-
   if (!numero) {
     showMessage("Veuillez saisir un numéro de billet.", 'error');
     return;
   }
 
-  showMessage("Vérification en cours...", 'info');
+  const billet = billetsMap.get(numero);
 
+  if (!billet) {
+    showMessage(`Billet ${numero} introuvable dans les billets chargés.`, 'error');
+    return;
+  }
+
+  if (billet.statut === 'Validé') {
+    showMessage(`Billet ${numero} déjà VALIDÉ ❌`, 'error');
+    return;
+  }
+
+  // Met à jour le billet localement
+  billet.statut = 'Validé';
+  billetsMap.set(numero, billet);
+  sauvegarderBilletsLocaux(Array.from(billetsMap.values()));
+
+  showMessage(
+    `Billet ${numero} VALIDÉ ✅ (${billet.type_acces || ''} – ${billet.date_acces || ''})`,
+    'success'
+  );
+
+  input.value = '';
+
+  // Envoie la validation vers Appwrite (si réseau OK)
   try {
-    // 1. Recherche du billet par numero_billet
-    const res = await databases.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_TABLE_ID,
-      [
-        Appwrite.Query.equal('numero_billet', numero),
-        Appwrite.Query.limit(1)
-      ]
-    );
-
-    if (!res.documents || res.documents.length === 0) {
-      showMessage(`Billet ${numero} introuvable.`, 'error');
-      return;
-    }
-
-    const billet = res.documents[0];
-
-    // 2. Si déjà validé
-    if (billet.statut === 'Validé') {
-      showMessage(`Billet ${numero} déjà VALIDÉ ❌`, 'error');
-      return;
-    }
-
-    // 3. Mettre à jour le billet -> statut = Validé
-    await databases.updateDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_TABLE_ID,
-      billet.$id,
-      { statut: 'Validé' }
-    );
-
-    // 4. Enregistrer la validation dans la table "validations"
     const nowIso = new Date().toISOString();
-
     await databases.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
@@ -139,30 +164,22 @@ async function verifierBillet() {
         source: 'agent-web'
       }
     );
-
-    // 5. Afficher le succès
-    const typeAcces = billet.type_acces || '';
-    const dateAcces = billet.date_acces || '';
-
-    showMessage(
-      `Billet ${numero} VALIDÉ ✅ (${typeAcces} – ${dateAcces})`,
-      'success'
-    );
-
-    input.value = '';
-    chargerNombreBillets(); // mettre à jour le compteur
-
   } catch (err) {
-    console.error('Erreur lors de la vérification :', err);
-    showMessage("Erreur lors de la vérification (voir console).", 'error');
+    console.error('Erreur envoi validation Appwrite :', err);
   }
 }
 
-// =====================================
-//  Initialisation des événements
-// =====================================
+// --------------------------
+// INIT
+// --------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 1) charger immédiatement ce qu'on a en cache local
+  initialiserBilletsDepuisLocal();
+
+  // 2) tenter de se synchroniser avec Appwrite (si internet)
+  synchroniserBilletsDepuisServeur();
+
   const btn = $('validateBtn');
   if (btn) {
     btn.addEventListener('click', (e) => {
@@ -179,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+});
 
   chargerNombreBillets();
 });
