@@ -1,76 +1,54 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Contrôle des billets - Poste agent</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Gestion des billets</title>
+  <link rel="stylesheet" href="css/styles.css" />
 
-    <!-- Feuille de style -->
-    <link rel="stylesheet" href="css/styles.css?v=3" />
+  <!-- SDK Appwrite -->
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+
+  <style>
+    body { padding: 30px; }
+    h1 { margin-bottom: 20px; }
+    .card { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    input, button { padding: 10px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; }
+    th { background: #f8f8f8; }
+  </style>
 </head>
-
 <body>
-<header>
-    <div class="header-inner">
-        <div class="logo-badge">CL</div>
-        <div>
-            <h1>Contrôle des billets - Poste agent</h1>
-            <p>Centre de loisirs (poste de contrôle)</p>
-        </div>
-    </div>
-</header>
 
-<main>
+<h1>🎛️ Administration – Billets</h1>
 
-    <!-- Carte : info sur les billets -->
-    <section class="card">
-        <h2>🎟️ Billets chargés</h2>
-        <p>
-            Nombre de billets disponibles dans ce navigateur :
-            <strong><span id="ticketCount">0</span></strong>
-        </p>
-        <p style="font-size:0.9rem;">
-            Si le nombre est <strong>0</strong>, demander à l'administrateur
-            d'importer les billets depuis la page <strong>admin</strong> sur cet appareil.
-        </p>
-    </section>
+<div class="card">
+  <h2>📥 Importer des billets (CSV)</h2>
+  <input type="file" id="csvFile" accept=".csv" />
+  <button id="btnImportCsv">Importer</button>
 
-    <!-- Carte : validation d'un billet -->
-    <section class="card">
-        <h2>🎫 Validation d’un billet</h2>
+  <p id="importStatus"></p>
+</div>
 
-        <label for="ticketNumber">Numéro du billet :</label>
-        <div class="input-row">
-            <input
-                id="ticketNumber"
-                type="text"
-                placeholder="Ex : 26-0001"
-                autocomplete="off"
-            />
-            <button id="validateBtn" type="button">
-                Valider ➜
-            </button>
-        </div>
+<div class="card">
+  <h2>📄 Liste des billets</h2>
+  <button id="btnLoadBillets">Charger les billets</button>
+  <table id="tableBillets">
+    <thead>
+      <tr>
+        <th>Numéro</th>
+        <th>Date accès</th>
+        <th>Type accès</th>
+        <th>Statut</th>
+        <th>Semaine</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
-        <p style="font-size:0.9rem;margin-top:0.5rem;">
-            Entrez le numéro exactement comme imprimé sur le billet.
-        </p>
-
-        <!-- Zone pour les messages (succès / erreur) -->
-        <div id="result-message" class="message"></div>
-    </section>
-
-</main>
-
-<footer>
-    <p>© Centre de loisirs - Poste Agent</p>
-</footer>
-
-<!-- SDK Appwrite -->
-<script src="https://cdn.jsdelivr.net/npm/appwrite@21.4.0"></script>
-
-<!-- Script Agent connecté à Appwrite -->
-<script src="js/agent-appwrite.js"></script>
-
+<script src="js/admin-appwrite.js"></script>
 </body>
 </html>
+
