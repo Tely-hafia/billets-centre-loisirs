@@ -27,10 +27,8 @@ function $(id) {
 
 function showMessage(text, type = 'info') {
   const zone = $('result-message');
-  if (!zone) {
-    alert(text);
-    return;
-  }
+  if (!zone) return alert(text);
+
   zone.textContent = text;
   zone.className = 'message';
   zone.classList.add(`message-${type}`);
@@ -43,9 +41,9 @@ function setTicketCount(n) {
 
 // --- Cache local ---
 function chargerBilletsDepuisLocal() {
-  const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (!raw) return [];
   try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) return [];
     const data = JSON.parse(raw);
     return Array.isArray(data) ? data : [];
   } catch (e) {
@@ -58,18 +56,18 @@ function sauvegarderBilletsLocaux(billets) {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(billets));
 }
 
-// --- Initialisation billets à partir du cache ---
+// --- Initialisation billets depuis cache local ---
 function initialiserBilletsDepuisLocal() {
   const billets = chargerBilletsDepuisLocal();
-  billetsMap = new Map();
-  for (const b of billets) {
-    billetsMap.set(b.numero_billet, b);
-  }
+  billetsMap.clear();
+
+  billets.forEach(b => billetsMap.set(b.numero_billet, b));
+
   console.log('[AGENT] Billets en cache local :', billetsMap.size);
   setTicketCount(billetsMap.size);
 }
 
-// --- Synchro depuis Appwrite ---
+// --- Synchro Appwrite ---
 async function synchroniserBilletsDepuisServeur() {
   console.log('[AGENT] Synchronisation depuis Appwrite…');
 
@@ -95,27 +93,23 @@ async function synchroniserBilletsDepuisServeur() {
 
     sauvegarderBilletsLocaux(billets);
 
-    billetsMap = new Map();
-    for (const b of billets) {
-      billetsMap.set(b.numero_billet, b);
-    }
+    billetsMap.clear();
+    billets.forEach(b => billetsMap.set(b.numero_billet, b));
 
     setTicketCount(billetsMap.size);
+
     console.log('[AGENT] Billets disponibles après synchro :', billetsMap.size);
 
   } catch (err) {
-    console.error('[AGENT] ERREUR synchro billets depuis Appwrite :', err);
-    showMessage("Impossible de synchroniser les billets depuis le serveur (mode cache).", 'error');
+    console.error('[AGENT] ERREUR synchro billets Appwrite :', err);
+    showMessage("Impossible de synchroniser les billets (mode hors-ligne).", 'error');
   }
 }
 
-// --- Vérification d'un billet ---
+// --- Vérification billet ---
 async function verifierBillet() {
   const input = $('ticketNumber');
-  if (!input) {
-    alert("Champ ticketNumber introuvable.");
-    return;
-  }
+  if (!input) return alert('Champ ticketNumber introuvable.');
 
   const numero = input.value.trim();
   if (!numero) {
@@ -126,7 +120,7 @@ async function verifierBillet() {
   const billet = billetsMap.get(numero);
 
   if (!billet) {
-    showMessage(`Billet ${numero} introuvable dans les billets chargés.`, 'error');
+    showMessage(`Billet ${numero} introuvable.`, 'error');
     return;
   }
 
@@ -135,7 +129,7 @@ async function verifierBillet() {
     return;
   }
 
-  // MAJ locale
+  // Validation locale
   billet.statut = 'Validé';
   billetsMap.set(numero, billet);
   sauvegarderBilletsLocaux(Array.from(billetsMap.values()));
@@ -147,16 +141,15 @@ async function verifierBillet() {
 
   input.value = '';
 
-  // Envoi de la validation à Appwrite (si réseau OK)
+  // Envoi à Appwrite
   try {
-    const nowIso = new Date().toISOString();
     await databases.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
       Appwrite.ID.unique(),
       {
         numero_billet: numero,
-        date_validation: nowIso,
+        date_validation: new Date().toISOString(),
         agent_id: AGENT_ID,
         poste_id: POSTE_ID,
         appareil_id: 'WEB',
@@ -164,36 +157,25 @@ async function verifierBillet() {
         source: 'agent-web'
       }
     );
-    console.log('[AGENT] Validation envoyée à Appwrite pour', numero);
+    console.log('[AGENT] Validation envoyée à Appwrite.');
   } catch (err) {
-    console.error('[AGENT] ERREUR envoi validation Appwrite :', err);
+    console.error('[AGENT] ERREUR validation Appwrite :', err);
   }
 }
 
 // --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[AGENT] Script agent-appwrite chargé, DOM prêt.');
+  console.log('[AGENT] Script agent-appwrite chargé.');
 
-  // 1) lire le cache local
   initialiserBilletsDepuisLocal();
-
-  // 2) tenter la synchro Appwrite
   synchroniserBilletsDepuisServeur();
 
-  const btn = $('validateBtn');
-  if (btn) {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      verifierBillet();
-    });
-  }
+  $('validateBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    verifierBillet();
+  });
 
-  const input = $('ticketNumber');
-  if (input) {
-    input.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
-        verifierBillet();
-      }
-    });
-  }
+  $('ticketNumber')?.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') verifierBillet();
+  });
 });
