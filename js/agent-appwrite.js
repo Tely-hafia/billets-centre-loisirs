@@ -175,7 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
     verifierBillet();
   });
 
-  $('ticketNumber')?.addEventListener('keyup', (e) => {
+   $('ticketNumber')?.addEventListener('keyup', (e) => {
     if (e.key === 'Enter') verifierBillet();
   });
 });
+
