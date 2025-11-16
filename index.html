@@ -1,49 +1,59 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Contrôle des billets - Agent</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="stylesheet" href="css/styles.css?v=2" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contrôle des billets - Agent</title>
 
+    <link rel="stylesheet" href="css/styles.css?v=2" />
 </head>
+
 <body>
- <header>
-  <div class="header-inner">
-    <div class="logo-badge">
-      CL
+<header>
+    <div class="header-inner">
+        <div class="logo-badge">CL</div>
+        <div>
+            <h1>Contrôle des billets - Poste agent</h1>
+            <p>Centre de loisirs (poste de contrôle)</p>
+        </div>
     </div>
-    <div>
-      <h1>Contrôle des billets - Poste agent</h1>
-      <p>Centre de loisirs (poste de contrôle)</p>
-    </div>
-  </div>
 </header>
 
+<main>
 
-  <main>
     <section class="card">
-      <h2>Billets chargés</h2>
-      <p>Nombre de billets disponibles dans ce navigateur : <span id="ticketCount">0</span></p>
-      <p style="font-size:0.9rem;">
-        Si le nombre est 0, demander à l'administrateur d'importer les billets
-        depuis la page <strong>admin</strong> sur cet appareil.
-      </p>
+        <h2>Billets chargés</h2>
+        <p>Nombre de billets disponibles dans ce navigateur :
+            <span id="ticketCount">0</span>
+        </p>
+        <p style="font-size:0.9rem;">
+            Si le nombre est 0, demander à l'administrateur d'importer les billets
+            depuis la page <strong>admin</strong> sur cet appareil.
+        </p>
     </section>
 
     <section class="card">
-      <h2>Vérifier un billet</h2>
-      <label for="ticketNumberInput">Numéro de billet :</label>
-      <input type="text" id="ticketNumberInput" placeholder="Ex : 26-0001" />
-      <button id="btnCheck">Vérifier</button>
-      <div id="checkResult" class="result"></div>
+        <h2>Validation d’un billet</h2>
+
+        <label for="ticketNumber">Numéro du billet :</label>
+        <input id="ticketNumber" type="text" placeholder="ex : 26-0015" />
+
+        <button id="validateBtn">Valider ➜</button>
+
+        <div id="result-message" class="message"></div>
     </section>
-  </main>
 
-  <footer>
-    <small>Données stockées localement dans le navigateur.</small>
-  </footer>
+</main>
 
-  <script src="js/agent.js"></script>
+<footer>
+    <p>© Centre de loisirs - Poste Agent</p>
+</footer>
+
+<!-- SDK Appwrite -->
+<script src="https://cdn.jsdelivr.net/npm/appwrite@21.4.0"></script>
+
+<!-- Script de connexion Appwrite + validation -->
+<script src="js/agent-appwrite.js"></script>
+
 </body>
 </html>
