@@ -3,39 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin – Gestion des billets</title>
+  <title>Administration – Billets</title>
   <link rel="stylesheet" href="css/styles.css" />
-
-  <!-- SDK Appwrite -->
-  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-
-  <style>
-    body { padding: 30px; }
-    h1 { margin-bottom: 20px; }
-    .card { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    input, button { padding: 10px; font-size: 16px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 10px; border-bottom: 1px solid #ddd; }
-    th { background: #f8f8f8; }
-  </style>
 </head>
 <body>
 
-<h1>🎛️ Administration – Billets</h1>
+<header>
+  <div class="header-inner">
+    <div class="logo-badge">CL</div>
+    <div>
+      <h1>Administration – Billets</h1>
+      <p>Gestion des billets depuis Appwrite</p>
+    </div>
+  </div>
+</header>
 
-<div class="card">
-  <h2>📥 Importer des billets (CSV)</h2>
-  <input type="file" id="csvFile" accept=".csv" />
-  <button id="btnImportCsv">Importer</button>
+<main>
 
-  <p id="importStatus"></p>
-</div>
+  <!-- IMPORT CSV -->
+  <section class="card">
+    <h2>📥 Importer des billets (CSV)</h2>
 
-<div class="card">
-  <h2>📄 Liste des billets</h2>
-  <button id="btnLoadBillets">Charger les billets</button>
-  <table id="tableBillets">
-    <thead>
+    <input type="file" id="csvFile" accept=".csv" />
+    <button id="btnImportCsv">Importer ▶</button>
+
+    <p id="importStatus" style="margin-top:0.5rem;"></p>
+  </section>
+
+  <!-- LISTE DES BILLETS -->
+  <section class="card">
+    <h2>📄 Liste des billets (depuis Appwrite)</h2>
+
+    <button id="btnLoadBillets">Charger les billets ▶</button>
+
+    <table id="tableBillets" style="width:100%;margin-top:1rem;border-collapse:collapse;">
+      <thead>
       <tr>
         <th>Numéro</th>
         <th>Date accès</th>
@@ -43,13 +45,22 @@
         <th>Statut</th>
         <th>Semaine</th>
       </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
 
+</main>
+
+<footer>
+  <p>© Centre de loisirs – Administration</p>
+</footer>
+
+<!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@21.4.0"></script>
+
+<!-- Script admin -->
 <script src="js/admin-appwrite.js"></script>
+
 </body>
 </html>
-
