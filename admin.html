@@ -1,75 +1,76 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Administration - Billets centre de loisirs</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="css/styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contrôle des billets - Poste agent</title>
+
+    <!-- Feuille de style -->
+    <link rel="stylesheet" href="css/styles.css?v=3" />
 </head>
+
 <body>
-  <header>
-    <h1>Administration - Billets centre de loisirs</h1>
-    <p>Gestion des billets, import CSV, validations et statistiques.</p>
-  </header>
+<header>
+    <div class="header-inner">
+        <div class="logo-badge">CL</div>
+        <div>
+            <h1>Contrôle des billets - Poste agent</h1>
+            <p>Centre de loisirs (poste de contrôle)</p>
+        </div>
+    </div>
+</header>
 
-  <!-- Login admin -->
-  <div id="adminLogin" class="card" style="max-width:420px;margin:2rem auto;">
-    <h2>Connexion administrateur</h2>
-    <input type="password" id="adminPass" placeholder="Mot de passe" />
-    <button id="btnLogin">Se connecter</button>
-    <p id="loginMsg" class="status"></p>
-  </div>
+<main>
 
-  <!-- Contenu admin (caché tant que non connecté) -->
-  <main id="adminContent" style="display:none;">
-    <!-- 1. Import -->
+    <!-- Carte : info sur les billets -->
     <section class="card">
-      <h2>1. Importer les billets de la semaine</h2>
-      <p>Exportez votre fichier Excel en CSV puis importez-le ici.</p>
-      <input type="file" id="csvFileInput" accept=".csv" />
-      <button id="btnImport">Importer</button>
-      <p id="importStatus" class="status"></p>
+        <h2>🎟️ Billets chargés</h2>
+        <p>
+            Nombre de billets disponibles dans ce navigateur :
+            <strong><span id="ticketCount">0</span></strong>
+        </p>
+        <p style="font-size:0.9rem;">
+            Si le nombre est <strong>0</strong>, demander à l'administrateur
+            d'importer les billets depuis la page <strong>admin</strong> sur cet appareil.
+        </p>
     </section>
 
-    <!-- 2. Billets chargés -->
+    <!-- Carte : validation d'un billet -->
     <section class="card">
-      <h2>Billets chargés</h2>
-      <p>Nombre de billets en mémoire : <span id="ticketCount">0</span></p>
-      <button id="btnClear">Effacer les billets stockés (et validations)</button>
+        <h2>🎫 Validation d’un billet</h2>
+
+        <label for="ticketNumber">Numéro du billet :</label>
+        <div class="input-row">
+            <input
+                id="ticketNumber"
+                type="text"
+                placeholder="Ex : 26-0001"
+                autocomplete="off"
+            />
+            <button id="validateBtn" type="button">
+                Valider ➜
+            </button>
+        </div>
+
+        <p style="font-size:0.9rem;margin-top:0.5rem;">
+            Entrez le numéro exactement comme imprimé sur le billet.
+        </p>
+
+        <!-- Zone pour les messages (succès / erreur) -->
+        <div id="result-message" class="message"></div>
     </section>
 
-    <!-- 3. Vérifier un billet (test admin) -->
-    <section class="card">
-      <h2>2. Vérifier un billet (test)</h2>
-      <label for="ticketNumberInput">Numéro de billet :</label>
-      <input type="text" id="ticketNumberInput" placeholder="Ex : 26-0001" />
-      <button id="btnCheck">Vérifier</button>
-      <div id="checkResult" class="result"></div>
-    </section>
+</main>
 
-    <!-- 4. Export validations -->
-    <section class="card">
-      <h2>3. Exporter les validations</h2>
-      <button id="btnExport">Exporter en CSV</button>
-      <p>Le fichier CSV contiendra tous les billets validés sur ce navigateur.</p>
-    </section>
+<footer>
+    <p>© Centre de loisirs - Poste Agent</p>
+</footer>
 
-    <!-- 5. Statistiques par jour -->
-    <section class="card">
-      <h2>4. Statistiques par jour</h2>
-      <label for="dateFilter">Choisir une date d'accès :</label>
-      <select id="dateFilter"></select>
-      <button id="btnRefreshStats">Afficher</button>
+<!-- SDK Appwrite -->
+<script src="https://cdn.jsdelivr.net/npm/appwrite@21.4.0"></script>
 
-      <div id="statsBox" style="margin-top:0.75rem;"></div>
-      <div id="validatedList" style="margin-top:0.75rem; max-height:260px; overflow:auto;"></div>
-    </section>
-  </main>
+<!-- Script Agent connecté à Appwrite -->
+<script src="js/agent-appwrite.js"></script>
 
-  <footer>
-    <small>Zone administration - accès réservé.</small>
-  </footer>
-
-  <script src="js/admin.js"></script>
 </body>
 </html>
