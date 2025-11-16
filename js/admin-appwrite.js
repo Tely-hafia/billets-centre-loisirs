@@ -1,77 +1,119 @@
-// =====================================
-//  AGENT – Appwrite + cache local
+/// =====================================
+//  ADMIN + APPWRITE
+//  - Import CSV -> Appwrite (table billets)
+//  - Affichage des billets depuis Appwrite
 // =====================================
 
-const LOCAL_STORAGE_KEY = 'billets_centre_loisirs';
-
+// Config Appwrite
 const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
 const APPWRITE_PROJECT_ID = '6919c99200348d6d8afe';
 const APPWRITE_DATABASE_ID = '6919ca20001ab6e76866';
 const APPWRITE_BILLETS_TABLE_ID = 'billets';
-const APPWRITE_VALIDATIONS_TABLE_ID = 'validations';
 
-const AGENT_ID = 'AGENT_TEST';
-const POSTE_ID = 'POSTE_PRINCIPAL';
-
-// --- Appwrite client ---
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 const databases = new Appwrite.Databases(client);
 
-let billetsMap = new Map();
-
-// --- Helpers DOM ---
 function $(id) {
   return document.getElementById(id);
 }
 
-function showMessage(text, type = 'info') {
-  const zone = $('result-message');
-  if (!zone) {
-    alert(text);
+function parseCsvLine(line, separator = ',') {
+  return line.split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
+}
+
+// --------------------------
+// IMPORT CSV -> APPWRITE
+// --------------------------
+async function importerCsv() {
+  const fileInput = $('csvFile');
+  const status = $('importStatus');
+
+  if (!fileInput || !fileInput.files.length) {
+    if (status) status.textContent = '❌ Aucun fichier sélectionné.';
     return;
   }
-  zone.textContent = text;
-  zone.className = 'message';
-  zone.classList.add(`message-${type}`);
-}
 
-function setTicketCount(n) {
-  const el = $('ticketCount');
-  if (el) el.textContent = n.toString();
-}
+  const file = fileInput.files[0];
+  const text = await file.text();
 
-// --- Cache local ---
-function chargerBilletsDepuisLocal() {
-  const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
-  } catch (e) {
-    console.error('Erreur parse billets localStorage', e);
-    return [];
+  // Détection ; ou ,
+  const firstLine = text.split('\n')[0];
+  const sep = firstLine.includes(';') ? ';' : ',';
+
+  const lines = text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+
+  if (lines.length < 2) {
+    if (status) status.textContent = '❌ Fichier CSV vide ou incorrect.';
+    return;
   }
-}
 
-function sauvegarderBilletsLocaux(billets) {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(billets));
-}
+  const headers = parseCsvLine(lines[0], sep);
 
-// --- Initialisation billets à partir du cache ---
-function initialiserBilletsDepuisLocal() {
-  const billets = chargerBilletsDepuisLocal();
-  billetsMap = new Map();
-  for (const b of billets) {
-    billetsMap.set(b.numero_billet, b);
+  function getValue(cols, name) {
+    const idx = headers.indexOf(name);
+    if (idx === -1) return '';
+    return cols[idx] ?? '';
   }
-  console.log('[AGENT] Billets en cache local :', billetsMap.size);
-  setTicketCount(billetsMap.size);
+
+  let imported = 0;
+
+  if (status) status.textContent = '⏳ Import en cours vers Appwrite...';
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCsvLine(lines[i], sep);
+
+    const numero_billet    = getValue(cols, 'numero_billet');
+    const date_acces       = getValue(cols, 'date_acces');
+    const type_acces       = getValue(cols, 'type_acces');
+    const prix             = parseInt(getValue(cols, 'prix') || '0', 10);
+    const tarif_universite = parseInt(getValue(cols, 'tarif_universite') || '0', 10);
+    const statut           = getValue(cols, 'statut') || 'Non utilisé';
+    const semaine_code     = getValue(cols, 'semaine_code') || '';
+
+    if (!numero_billet) continue;
+
+    const billetData = {
+      numero_billet,
+      date_acces,
+      type_acces,
+      prix,
+      tarif_universite,
+      statut,
+      semaine_code
+    };
+
+    try {
+      await databases.createDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_BILLETS_TABLE_ID,
+        Appwrite.ID.unique(),
+        billetData
+      );
+      imported++;
+    } catch (err) {
+      console.error('Erreur import billet CSV ligne', i, err);
+    }
+  }
+
+  if (status) status.textContent = `✅ Import terminé : ${imported} billets envoyés sur Appwrite.`;
+
+  // Recharger la liste pour vérifier
+  chargerBilletsServeur();
 }
 
-// --- Synchro depuis Appwrite ---
-async function synchroniserBilletsDepuisServeur() {
-  console.log('[AGENT] Synchronisation depuis Appwrite…');
+// --------------------------
+// AFFICHAGE BILLETS (depuis Appwrite)
+// --------------------------
+
+async function chargerBilletsServeur() {
+  const tbody = document.querySelector('#tableBillets tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = "<tr><td colspan='5'>⏳ Chargement depuis Appwrite...</td></tr>";
 
   try {
     const res = await databases.listDocuments(
@@ -80,120 +122,56 @@ async function synchroniserBilletsDepuisServeur() {
       [Appwrite.Query.limit(10000)]
     );
 
-    const docs = res.documents || [];
-    console.log('[AGENT] Billets reçus depuis Appwrite :', docs.length);
+    const billets = res.documents || [];
 
-    const billets = docs.map(doc => ({
-      numero_billet: doc.numero_billet,
-      date_acces: doc.date_acces,
-      type_acces: doc.type_acces,
-      prix: doc.prix,
-      tarif_universite: doc.tarif_universite,
-      statut: doc.statut,
-      semaine_code: doc.semaine_code
-    }));
+    tbody.innerHTML = '';
 
-    sauvegarderBilletsLocaux(billets);
-
-    billetsMap = new Map();
-    for (const b of billets) {
-      billetsMap.set(b.numero_billet, b);
+    if (!billets.length) {
+      tbody.innerHTML = "<tr><td colspan='5'>Aucun billet trouvé sur le serveur.</td></tr>";
+      return;
     }
 
-    setTicketCount(billetsMap.size);
-    console.log('[AGENT] Billets disponibles après synchro :', billetsMap.size);
+    for (const billet of billets) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${billet.numero_billet || ''}</td>
+        <td>${billet.date_acces || ''}</td>
+        <td>${billet.type_acces || ''}</td>
+        <td>${billet.statut || ''}</td>
+        <td>${billet.semaine_code || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    }
 
   } catch (err) {
-    console.error('[AGENT] ERREUR synchro billets depuis Appwrite :', err);
-    showMessage("Impossible de synchroniser les billets depuis le serveur (mode cache).", 'error');
+    console.error('Erreur chargement billets Appwrite :', err);
+    tbody.innerHTML = "<tr><td colspan='5'>❌ Erreur chargement billets.</td></tr>";
   }
 }
 
-// --- Vérification d'un billet ---
-async function verifierBillet() {
-  const input = $('ticketNumber');
-  if (!input) {
-    alert("Champ ticketNumber introuvable.");
-    return;
-  }
+// --------------------------
+// INIT
+// --------------------------
 
-  const numero = input.value.trim();
-  if (!numero) {
-    showMessage("Veuillez saisir un numéro de billet.", 'error');
-    return;
-  }
-
-  const billet = billetsMap.get(numero);
-
-  if (!billet) {
-    showMessage(`Billet ${numero} introuvable dans les billets chargés.`, 'error');
-    return;
-  }
-
-  if (billet.statut === 'Validé') {
-    showMessage(`Billet ${numero} déjà VALIDÉ ❌`, 'error');
-    return;
-  }
-
-  // MAJ locale
-  billet.statut = 'Validé';
-  billetsMap.set(numero, billet);
-  sauvegarderBilletsLocaux(Array.from(billetsMap.values()));
-
-  showMessage(
-    `Billet ${numero} VALIDÉ ✅ (${billet.type_acces || ''} – ${billet.date_acces || ''})`,
-    'success'
-  );
-
-  input.value = '';
-
-  // Envoi de la validation à Appwrite (si réseau OK)
-  try {
-    const nowIso = new Date().toISOString();
-    await databases.createDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_VALIDATIONS_TABLE_ID,
-      Appwrite.ID.unique(),
-      {
-        numero_billet: numero,
-        date_validation: nowIso,
-        agent_id: AGENT_ID,
-        poste_id: POSTE_ID,
-        appareil_id: 'WEB',
-        mode: 'online',
-        source: 'agent-web'
-      }
-    );
-    console.log('[AGENT] Validation envoyée à Appwrite pour', numero);
-  } catch (err) {
-    console.error('[AGENT] ERREUR envoi validation Appwrite :', err);
-  }
-}
-
-// --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[AGENT] Script agent-appwrite chargé, DOM prêt.');
+  const btnImport = $('btnImportCsv');
+  const btnLoad = $('btnLoadBillets');
 
-  // 1) lire le cache local
-  initialiserBilletsDepuisLocal();
-
-  // 2) tenter la synchro Appwrite
-  synchroniserBilletsDepuisServeur();
-
-  const btn = $('validateBtn');
-  if (btn) {
-    btn.addEventListener('click', (e) => {
+  if (btnImport) {
+    btnImport.addEventListener('click', (e) => {
       e.preventDefault();
-      verifierBillet();
+      importerCsv();
     });
   }
 
-  const input = $('ticketNumber');
-  if (input) {
-    input.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
-        verifierBillet();
-      }
+  if (btnLoad) {
+    btnLoad.addEventListener('click', (e) => {
+      e.preventDefault();
+      chargerBilletsServeur();
     });
   }
+
+  // Charger automatiquement les billets à l'ouverture
+  chargerBilletsServeur();
 });
+
