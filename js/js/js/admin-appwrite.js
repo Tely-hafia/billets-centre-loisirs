@@ -1,10 +1,10 @@
-// =====================================
+//// =====================================
 //  ADMIN + APPWRITE
 //  - Import CSV -> Appwrite (table billets)
 //  - Affichage des billets depuis Appwrite
 // =====================================
 
-// Config Appwrite (les mêmes partout)
+// Config Appwrite
 const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
 const APPWRITE_PROJECT_ID = '6919c99200348d6d8afe';
 const APPWRITE_DATABASE_ID = '6919ca20001ab6e76866';
@@ -37,6 +37,7 @@ async function importerCsv() {
   const file = fileInput.files[0];
   const text = await file.text();
 
+  // Détection ; ou ,
   const firstLine = text.split('\n')[0];
   const sep = firstLine.includes(';') ? ';' : ',';
 
@@ -73,7 +74,7 @@ async function importerCsv() {
     const statut           = getValue(cols, 'statut') || 'Non utilisé';
     const semaine_code     = getValue(cols, 'semaine_code') || '';
 
-    if (!numero_billet) continue; // ligne vide
+    if (!numero_billet) continue;
 
     const billetData = {
       numero_billet,
@@ -100,7 +101,7 @@ async function importerCsv() {
 
   if (status) status.textContent = `✅ Import terminé : ${imported} billets envoyés sur Appwrite.`;
 
-  // Recharge la liste pour vérifier
+  // Recharger la liste pour vérifier
   chargerBilletsServeur();
 }
 
@@ -149,7 +150,7 @@ async function chargerBilletsServeur() {
 }
 
 // --------------------------
-// INIT EVENTS
+// INIT
 // --------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -170,6 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Charger automatiquement les billets à l'ouverture de la page admin
+  // Charger automatiquement les billets à l'ouverture
   chargerBilletsServeur();
 });
