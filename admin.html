@@ -2,26 +2,27 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin - Contrôle des billets</title>
+  <title>Administration - Billets centre de loisirs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="stylesheet" href="css/styles.css?v=2" />
-
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <header>
-  <div class="header-inner">
-    <div class="logo-badge">
-      CL
-    </div>
-    <div>
-      <h1>Administration - Billets centre de loisirs</h1>
-      <p>Gestion des billets, import CSV et validations.</p>
-    </div>
-  </div>
-</header>
+    <h1>Administration - Billets centre de loisirs</h1>
+    <p>Gestion des billets, import CSV, validations et statistiques.</p>
+  </header>
 
+  <!-- Login admin -->
+  <div id="adminLogin" class="card" style="max-width:420px;margin:2rem auto;">
+    <h2>Connexion administrateur</h2>
+    <input type="password" id="adminPass" placeholder="Mot de passe" />
+    <button id="btnLogin">Se connecter</button>
+    <p id="loginMsg" class="status"></p>
+  </div>
+
+  <!-- Contenu admin (caché tant que non connecté) -->
   <main id="adminContent" style="display:none;">
-    <!-- 1. Importer les billets -->
+    <!-- 1. Import -->
     <section class="card">
       <h2>1. Importer les billets de la semaine</h2>
       <p>Exportez votre fichier Excel en CSV puis importez-le ici.</p>
@@ -37,11 +38,31 @@
       <button id="btnClear">Effacer les billets stockés (et validations)</button>
     </section>
 
-    <!-- 3. Exporter les validations -->
+    <!-- 3. Vérifier un billet (test admin) -->
     <section class="card">
-      <h2>2. Exporter les validations</h2>
+      <h2>2. Vérifier un billet (test)</h2>
+      <label for="ticketNumberInput">Numéro de billet :</label>
+      <input type="text" id="ticketNumberInput" placeholder="Ex : 26-0001" />
+      <button id="btnCheck">Vérifier</button>
+      <div id="checkResult" class="result"></div>
+    </section>
+
+    <!-- 4. Export validations -->
+    <section class="card">
+      <h2>3. Exporter les validations</h2>
       <button id="btnExport">Exporter en CSV</button>
-      <p>Les billets validés par les agents apparaîtront ici.</p>
+      <p>Le fichier CSV contiendra tous les billets validés sur ce navigateur.</p>
+    </section>
+
+    <!-- 5. Statistiques par jour -->
+    <section class="card">
+      <h2>4. Statistiques par jour</h2>
+      <label for="dateFilter">Choisir une date d'accès :</label>
+      <select id="dateFilter"></select>
+      <button id="btnRefreshStats">Afficher</button>
+
+      <div id="statsBox" style="margin-top:0.75rem;"></div>
+      <div id="validatedList" style="margin-top:0.75rem; max-height:260px; overflow:auto;"></div>
     </section>
   </main>
 
