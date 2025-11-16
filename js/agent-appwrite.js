@@ -1,5 +1,5 @@
 // =====================================
-//  CONFIG
+//  AGENT – Appwrite + cache local
 // =====================================
 
 const LOCAL_STORAGE_KEY = 'billets_centre_loisirs';
@@ -13,16 +13,14 @@ const APPWRITE_VALIDATIONS_TABLE_ID = 'validations';
 const AGENT_ID = 'AGENT_TEST';
 const POSTE_ID = 'POSTE_PRINCIPAL';
 
+// --- Appwrite client ---
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 const databases = new Appwrite.Databases(client);
 
 let billetsMap = new Map();
 
-// --------------------------
-// Helpers
-// --------------------------
-
+// --- Helpers DOM ---
 function $(id) {
   return document.getElementById(id);
 }
@@ -43,6 +41,7 @@ function setTicketCount(n) {
   if (el) el.textContent = n.toString();
 }
 
+// --- Cache local ---
 function chargerBilletsDepuisLocal() {
   const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (!raw) return [];
@@ -59,21 +58,21 @@ function sauvegarderBilletsLocaux(billets) {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(billets));
 }
 
-// --------------------------
-// Initialisation des billets
-// --------------------------
-
+// --- Initialisation billets à partir du cache ---
 function initialiserBilletsDepuisLocal() {
   const billets = chargerBilletsDepuisLocal();
   billetsMap = new Map();
   for (const b of billets) {
     billetsMap.set(b.numero_billet, b);
   }
+  console.log('[AGENT] Billets en cache local :', billetsMap.size);
   setTicketCount(billetsMap.size);
 }
 
-// Tente de synchroniser les billets depuis Appwrite
+// --- Synchro depuis Appwrite ---
 async function synchroniserBilletsDepuisServeur() {
+  console.log('[AGENT] Synchronisation depuis Appwrite…');
+
   try {
     const res = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
@@ -81,7 +80,10 @@ async function synchroniserBilletsDepuisServeur() {
       [Appwrite.Query.limit(10000)]
     );
 
-    const billets = (res.documents || []).map(doc => ({
+    const docs = res.documents || [];
+    console.log('[AGENT] Billets reçus depuis Appwrite :', docs.length);
+
+    const billets = docs.map(doc => ({
       numero_billet: doc.numero_billet,
       date_acces: doc.date_acces,
       type_acces: doc.type_acces,
@@ -99,17 +101,15 @@ async function synchroniserBilletsDepuisServeur() {
     }
 
     setTicketCount(billetsMap.size);
-    console.log('Billets synchronisés depuis Appwrite :', billetsMap.size);
+    console.log('[AGENT] Billets disponibles après synchro :', billetsMap.size);
 
   } catch (err) {
-    console.warn('Impossible de synchroniser les billets depuis Appwrite, on reste en local :', err);
+    console.error('[AGENT] ERREUR synchro billets depuis Appwrite :', err);
+    showMessage("Impossible de synchroniser les billets depuis le serveur (mode cache).", 'error');
   }
 }
 
-// --------------------------
-// Vérification d'un billet
-// --------------------------
-
+// --- Vérification d'un billet ---
 async function verifierBillet() {
   const input = $('ticketNumber');
   if (!input) {
@@ -135,7 +135,7 @@ async function verifierBillet() {
     return;
   }
 
-  // Met à jour le billet localement
+  // MAJ locale
   billet.statut = 'Validé';
   billetsMap.set(numero, billet);
   sauvegarderBilletsLocaux(Array.from(billetsMap.values()));
@@ -147,7 +147,7 @@ async function verifierBillet() {
 
   input.value = '';
 
-  // Envoie la validation vers Appwrite (si réseau OK)
+  // Envoi de la validation à Appwrite (si réseau OK)
   try {
     const nowIso = new Date().toISOString();
     await databases.createDocument(
@@ -164,20 +164,20 @@ async function verifierBillet() {
         source: 'agent-web'
       }
     );
+    console.log('[AGENT] Validation envoyée à Appwrite pour', numero);
   } catch (err) {
-    console.error('Erreur envoi validation Appwrite :', err);
+    console.error('[AGENT] ERREUR envoi validation Appwrite :', err);
   }
 }
 
-// --------------------------
-// INIT
-// --------------------------
-
+// --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
-  // 1) charger immédiatement ce qu'on a en cache local
+  console.log('[AGENT] Script agent-appwrite chargé, DOM prêt.');
+
+  // 1) lire le cache local
   initialiserBilletsDepuisLocal();
 
-  // 2) tenter de se synchroniser avec Appwrite (si internet)
+  // 2) tenter la synchro Appwrite
   synchroniserBilletsDepuisServeur();
 
   const btn = $('validateBtn');
@@ -196,7 +196,4 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-});
-
-  chargerNombreBillets();
 });
