@@ -142,6 +142,22 @@ async function verifierBillet() {
   );
 
   input.value = '';
+// Mise à jour du billet sur Appwrite (statut = Validé)
+try {
+  if (billet.id) {
+    await databases.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      billet.id,
+      { statut: 'Validé' }
+    );
+    console.log('[AGENT] Billet mis à jour dans Appwrite :', numero);
+  } else {
+    console.warn('[AGENT] billet.id manquant, impossible de mettre à jour Appwrite pour', numero);
+  }
+} catch (err) {
+  console.error('[AGENT] ERREUR update billet Appwrite :', err);
+}
 
   // Envoi à Appwrite
   try {
