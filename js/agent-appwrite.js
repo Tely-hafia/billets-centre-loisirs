@@ -6,10 +6,11 @@ const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";        // ton ID projet
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";       // ta base "centre_loisirs"
 
-const APPWRITE_BILLETS_TABLE_ID = "billets";
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
-const APPWRITE_AGENTS_TABLE_ID = "agents";
-const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
+// Dans l'interface Appwrite, ce sont les IDs des collections
+const APPWRITE_BILLETS_COLLECTION_ID = "billets";
+const APPWRITE_VALIDATIONS_COLLECTION_ID = "validations";
+const APPWRITE_AGENTS_COLLECTION_ID = "agents";
+const APPWRITE_ETUDIANTS_COLLECTION_ID = "etudiants";
 
 const AGENT_LOCALSTORAGE_KEY = "centre_loisirs_agent";
 
@@ -23,13 +24,14 @@ client
   .setEndpoint(APPWRITE_ENDPOINT)
   .setProject(APPWRITE_PROJECT_ID);
 
-const tablesDB = new Appwrite.TablesDB(client);
+// Ici on utilise Databases (collections/documents)
+const databases = new Appwrite.Databases(client);
 
 // ======================================================
 //  État local
 // ======================================================
 
-let billetsMap = {};        // numero_billet -> billet
+let billetsMap = {};        // numero_billet -> billet (document)
 let currentAgent = null;    // agent connecté { id, login, nom, role }
 
 // ======================================================
@@ -77,24 +79,22 @@ async function chargerBilletsDepuisAppwrite() {
   try {
     console.log("[AGENT] Chargement billets depuis Appwrite…");
 
-    const res = await tablesDB.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_BILLETS_TABLE_ID,
-      queries: [
-        Appwrite.Query.limit(10000) // large mais raisonnable pour ta volumétrie
-      ]
-    });
+    const res = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_COLLECTION_ID,
+      [Appwrite.Query.limit(10000)]
+    );
 
     billetsMap = {};
-    const rows = res.rows || [];
-    rows.forEach((row) => {
-      if (row.numero_billet) {
-        billetsMap[row.numero_billet] = row;
+    const docs = res.documents || [];
+    docs.forEach((doc) => {
+      if (doc.numero_billet) {
+        billetsMap[doc.numero_billet] = doc;
       }
     });
 
-    console.log("[AGENT] Billets chargés :", rows.length);
-    setTicketCount(rows.length);
+    console.log("[AGENT] Billets chargés :", docs.length);
+    setTicketCount(docs.length);
   } catch (err) {
     console.error("[AGENT] Erreur chargement billets :", err);
     showMessage(
@@ -164,18 +164,20 @@ async function loginAgent() {
   showLoginMessage("Connexion en cours…", "info");
 
   try {
-    const res = await tablesDB.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_AGENTS_TABLE_ID,
-      queries: [
+    const res = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_AGENTS_COLLECTION_ID,
+      [
         Appwrite.Query.equal("login", [login]),
         Appwrite.Query.equal("mot_de_passe", [password]),
         Appwrite.Query.equal("actif", [true]),
         Appwrite.Query.limit(1)
       ]
-    });
+    );
 
-    if (!res.rows || res.rows.length === 0) {
+    const docs = res.documents || [];
+
+    if (docs.length === 0) {
       showLoginMessage(
         "Identifiants incorrects ou agent inactif.",
         "error"
@@ -185,7 +187,7 @@ async function loginAgent() {
       return;
     }
 
-    const ag = res.rows[0];
+    const ag = docs[0];
     currentAgent = {
       id: ag.$id,
       login: ag.login,
@@ -243,20 +245,19 @@ function updateUIForAgent() {
 
 async function verifierEtudiant(numeroEtudiant) {
   try {
-    const res = await tablesDB.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_ETUDIANTS_TABLE_ID,
-      queries: [
+    const res = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_ETUDIANTS_COLLECTION_ID,
+      [
         Appwrite.Query.equal("numero_etudiant", [numeroEtudiant]),
         Appwrite.Query.equal("actif", [true]),
         Appwrite.Query.limit(1)
       ]
-    });
+    );
 
-    if (!res.rows || res.rows.length === 0) {
-      return null;
-    }
-    return res.rows[0];
+    const docs = res.documents || [];
+    if (docs.length === 0) return null;
+    return docs[0];
   } catch (err) {
     console.error("[AGENT] Erreur vérification étudiant :", err);
     return null;
@@ -289,34 +290,36 @@ async function verifierBillet() {
   showMessage("Vérification en cours…", "info");
 
   try {
-    // 1. On récupère le billet (depuis le cache, sinon depuis Appwrite)
+    // 1. On récupère le billet (cache ou Appwrite)
     let billet = findBillet(numero);
 
     if (!billet) {
-      const res = await tablesDB.listRows({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: APPWRITE_BILLETS_TABLE_ID,
-        queries: [
+      const res = await databases.listDocuments(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_BILLETS_COLLECTION_ID,
+        [
           Appwrite.Query.equal("numero_billet", [numero]),
           Appwrite.Query.limit(1)
         ]
-      });
+      );
 
-      if (!res.rows || res.rows.length === 0) {
+      const docs = res.documents || [];
+      if (docs.length === 0) {
         showMessage(`Billet ${numero} introuvable.`, "error");
         return;
       }
-      billet = res.rows[0];
+
+      billet = docs[0];
       billetsMap[numero] = billet;
     }
 
-    // 2. Vérifier s'il est déjà validé
+    // 2. Déjà validé ?
     if (billet.statut === "Validé") {
       showMessage(`Billet ${numero} déjà VALIDÉ ❌`, "error");
       return;
     }
 
-    // 3. Déterminer le tarif choisi
+    // 3. Tarif choisi
     const normalRadio = document.querySelector(
       "input[name='tarifType'][value='normal']"
     );
@@ -338,13 +341,11 @@ async function verifierBillet() {
     let montantPaye = tarifNormal;
     let numeroEtudiant = "";
 
-    // 4. Si tarif étudiant, on vérifie le numéro étudiant
+    // 4. Si tarif étudiant -> vérif etudiant
     if (tarifChoisi === "etudiant") {
       let numEtu = "";
       const etuInput = $("studentNumber");
-      if (etuInput) {
-        numEtu = etuInput.value.trim();
-      }
+      if (etuInput) numEtu = etuInput.value.trim();
 
       if (!numEtu) {
         numEtu = window.prompt("Numéro étudiant :");
@@ -372,15 +373,15 @@ async function verifierBillet() {
       montantPaye = tarifEtudiant;
     }
 
-    // 5. Mettre à jour le billet -> statut = Validé
-    await tablesDB.updateRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_BILLETS_TABLE_ID,
-      rowId: billet.$id,
-      data: {
+    // 5. Mettre à jour le billet (statut)
+    await databases.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_COLLECTION_ID,
+      billet.$id,
+      {
         statut: "Validé"
       }
-    });
+    );
 
     billet.statut = "Validé";
     billetsMap[numero] = billet;
@@ -404,12 +405,12 @@ async function verifierBillet() {
 
     console.log("[AGENT] Création validation :", validationData);
 
-    await tablesDB.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_VALIDATIONS_TABLE_ID,
-      rowId: Appwrite.ID.unique(),
-      data: validationData
-    });
+    await databases.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_COLLECTION_ID,
+      Appwrite.ID.unique(),
+      validationData
+    );
 
     // 7. Succès
     const typeAcces = billet.type_acces || "";
@@ -443,7 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadAgentFromStorage();
   updateUIForAgent();
 
-  // Événements
+  // Événements connexion / déconnexion
   const btnLogin = $("btnLogin");
   if (btnLogin) {
     btnLogin.addEventListener("click", (e) => {
@@ -460,6 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Validation billet
   const btnValidate = $("validateBtn");
   if (btnValidate) {
     btnValidate.addEventListener("click", (e) => {
@@ -480,3 +482,4 @@ document.addEventListener("DOMContentLoaded", () => {
   // Charger les billets depuis Appwrite
   chargerBilletsDepuisAppwrite();
 });
+
