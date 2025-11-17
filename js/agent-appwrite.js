@@ -73,11 +73,13 @@ function showLoginMessage(text, type = "info") {
 function updateUIForAgent() {
   const loginSection = $("loginSection");
   const validationSection = $("validationSection");
+  const billetsSection = $("billetsSection");
   const agentInfo = $("agentInfo");
 
   if (currentAgent) {
     if (loginSection) loginSection.style.display = "none";
     if (validationSection) validationSection.style.display = "block";
+    if (billetsSection) billetsSection.style.display = "block";
 
     if (agentInfo) {
       agentInfo.style.display = "block";
@@ -92,12 +94,15 @@ function updateUIForAgent() {
   } else {
     if (loginSection) loginSection.style.display = "block";
     if (validationSection) validationSection.style.display = "none";
+    if (billetsSection) billetsSection.style.display = "none";
+
     if (agentInfo) {
       agentInfo.style.display = "none";
       agentInfo.textContent = "";
     }
   }
 }
+
 
 // =====================================
 //  Chargement du nombre de billets
