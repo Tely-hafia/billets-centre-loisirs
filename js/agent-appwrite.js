@@ -1,9 +1,8 @@
+console.log("[AGENT] agent-appwrite.js chargé");
+
 // =====================================
 //  Configuration Appwrite
 // =====================================
-
-// ⚠️ Laisse ces valeurs si elles sont déjà correctes.
-// Sinon adapte avec tes vrais IDs de projet / base / tables.
 
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
@@ -13,13 +12,18 @@ const APPWRITE_BILLETS_TABLE_ID = "billets";
 const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
 const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
 
-// Identifiants simples pour la phase test
 const AGENT_ID = "AGENT_TEST";
 const POSTE_ID = "POSTE_PRINCIPAL";
 
 // =====================================
 //  Initialisation du client Appwrite
 // =====================================
+
+if (typeof Appwrite === "undefined") {
+  console.error(
+    "[AGENT] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@21.4.0\"></script>"
+  );
+}
 
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
@@ -30,7 +34,7 @@ const databases = new Appwrite.Databases(client);
 //  Cache local des billets
 // =====================================
 
-let billetsMap = new Map(); // clé = numero_billet, valeur = billet
+let billetsMap = new Map(); // clé = numero_billet
 
 function $(id) {
   return document.getElementById(id);
@@ -49,11 +53,10 @@ function showMessage(text, type = "info") {
   }
 
   zone.textContent = text;
-  zone.className = "message"; // reset
-  zone.classList.add(`message-${type}`); // message-info / -success / -error (à styliser)
+  zone.className = "message";
+  zone.classList.add(`message-${type}`);
 }
 
-// Sauvegarde locale (optionnel, pour un peu d'offline)
 function sauvegarderBilletsLocaux(billets) {
   try {
     localStorage.setItem("billets_cache", JSON.stringify(billets));
@@ -74,10 +77,11 @@ function chargerBilletsLocaux() {
 }
 
 // =====================================
-//  Chargement des billets depuis Appwrite
+//  Chargement des billets
 // =====================================
 
 async function chargerBilletsDepuisAppwrite() {
+  console.log("[AGENT] Chargement billets depuis Appwrite…");
   try {
     const res = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
@@ -106,16 +110,16 @@ async function chargerBilletsDepuisAppwrite() {
     sauvegarderBilletsLocaux(billets);
     setTicketCount(billets.length);
 
-    console.log("[AGENT] Billets chargés depuis Appwrite :", billets.length);
+    console.log("[AGENT] Billets chargés :", billets.length);
   } catch (err) {
     console.error("[AGENT] Erreur chargement billets Appwrite :", err);
-    // On retombe sur le cache local
     const billets = chargerBilletsLocaux();
     billetsMap = new Map();
     billets.forEach((b) => {
       if (b.numero_billet) billetsMap.set(b.numero_billet, b);
     });
     setTicketCount(billets.length);
+    console.log("[AGENT] Billets chargés depuis le cache :", billets.length);
   }
 }
 
@@ -124,6 +128,7 @@ async function chargerBilletsDepuisAppwrite() {
 // =====================================
 
 async function verifierEtudiant(numeroEtudiant) {
+  console.log("[AGENT] Vérification étudiant :", numeroEtudiant);
   try {
     const res = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
@@ -135,9 +140,11 @@ async function verifierEtudiant(numeroEtudiant) {
     );
 
     if (!res.documents || res.documents.length === 0) {
+      console.log("[AGENT] Étudiant introuvable :", numeroEtudiant);
       return null;
     }
 
+    console.log("[AGENT] Étudiant trouvé :", res.documents[0]);
     return res.documents[0];
   } catch (err) {
     console.error("[AGENT] Erreur recherche étudiant :", err);
@@ -150,13 +157,13 @@ async function verifierEtudiant(numeroEtudiant) {
 // =====================================
 
 async function verifierBillet() {
-  const inputBillet = $("ticketNumber");
-  if (!inputBillet) {
-    alert("Champ ticketNumber introuvable dans la page.");
-    return;
-  }
+  console.log("[AGENT] Vérification billet…");
 
-  const numero = inputBillet.value.trim();
+  const inputBillet = $("ticketNumber");
+  const inputEtudiant = $("studentNumber");
+
+  const numero = inputBillet ? inputBillet.value.trim() : "";
+  const numeroEtudiant = inputEtudiant ? inputEtudiant.value.trim() : "";
 
   // Tarif sélectionné
   const radiosTarif = document.querySelectorAll('input[name="tarif"]');
@@ -165,8 +172,7 @@ async function verifierBillet() {
     if (r.checked) tarifApplique = r.value;
   });
 
-  const inputEtudiant = $("studentNumber");
-  const numeroEtudiant = inputEtudiant ? inputEtudiant.value.trim() : "";
+  console.log("[AGENT] Tarif choisi :", tarifApplique);
 
   if (!numero) {
     showMessage("Veuillez saisir un numéro de billet.", "error");
@@ -184,7 +190,6 @@ async function verifierBillet() {
   showMessage("Vérification en cours...", "info");
 
   try {
-    // 1. Rechercher le billet dans le cache (alimenté par Appwrite)
     const billet = billetsMap.get(numero);
     if (!billet) {
       showMessage(`Billet ${numero} introuvable.`, "error");
@@ -196,7 +201,6 @@ async function verifierBillet() {
       return;
     }
 
-    // 2. Si tarif étudiant, vérifier l'étudiant dans Appwrite
     let etuDoc = null;
     if (tarifApplique === "etudiant") {
       etuDoc = await verifierEtudiant(numeroEtudiant);
@@ -209,7 +213,6 @@ async function verifierBillet() {
       }
     }
 
-    // 3. Déterminer les montants
     const tarifNormal = parseInt(billet.prix || 0, 10) || 0;
     const tarifEtudiant = parseInt(billet.tarif_universite || 0, 10) || 0;
 
@@ -218,7 +221,6 @@ async function verifierBillet() {
       montantPaye = tarifEtudiant;
     }
 
-    // 4. Mettre à jour localement le billet
     billet.statut = "Validé";
     billetsMap.set(numero, billet);
     sauvegarderBilletsLocaux(Array.from(billetsMap.values()));
@@ -231,29 +233,25 @@ async function verifierBillet() {
       "success"
     );
 
-    inputBillet.value = "";
+    if (inputBillet) inputBillet.value = "";
     if (inputEtudiant) inputEtudiant.value = "";
 
-    // 5. Mettre à jour le billet dans Appwrite (statut = Validé)
+    // Update billet
     try {
       if (billet.id) {
         await databases.updateDocument(
           APPWRITE_DATABASE_ID,
           APPWRITE_BILLETS_TABLE_ID,
           billet.id,
-          {
-            statut: "Validé"
-          }
+          { statut: "Validé" }
         );
         console.log("[AGENT] Billet mis à jour dans Appwrite :", numero);
-      } else {
-        console.warn("[AGENT] billet.id manquant pour", numero);
       }
     } catch (err) {
       console.error("[AGENT] ERREUR update billet Appwrite :", err);
     }
 
-    // 6. Enregistrer la validation dans la table "validations"
+    // Enregistrer la validation
     try {
       const nowIso = new Date().toISOString();
 
@@ -269,8 +267,10 @@ async function verifierBillet() {
         agent_id: AGENT_ID,
         poste_id: POSTE_ID,
         numero_etudiant:
-          tarifApplique === "etudiant" ? numeroEtudiant : "" // obligatoire côté logique, pas côté schéma
+          tarifApplique === "etudiant" ? numeroEtudiant : ""
       };
+
+      console.log("[AGENT] Création validation :", dataValidation);
 
       await databases.createDocument(
         APPWRITE_DATABASE_ID,
@@ -279,10 +279,9 @@ async function verifierBillet() {
         dataValidation
       );
 
-      console.log("[AGENT] Validation enregistrée dans Appwrite :", dataValidation);
+      console.log("[AGENT] Validation enregistrée dans Appwrite");
     } catch (err) {
       console.error("[AGENT] ERREUR validation Appwrite :", err);
-      // On n'empêche pas l'entrée (le billet est déjà valide), mais on logue l'erreur
     }
   } catch (err) {
     console.error("[AGENT] Erreur lors de la vérification :", err);
@@ -291,27 +290,27 @@ async function verifierBillet() {
 }
 
 // =====================================
-//  Initialisation des événements
+//  Initialisation
 // =====================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Afficher / cacher le champ "numéro étudiant" selon le tarif
+  console.log("[AGENT] DOMContentLoaded");
+
   const radiosTarif = document.querySelectorAll('input[name="tarif"]');
   const studentRow = $("studentRow");
 
   radiosTarif.forEach((r) => {
     r.addEventListener("change", () => {
-      if (studentRow) {
-        if (r.value === "etudiant" && r.checked) {
-          studentRow.style.display = "flex";
-        } else if (r.value === "normal" && r.checked) {
-          studentRow.style.display = "none";
-        }
+      if (!studentRow) return;
+
+      if (r.value === "etudiant" && r.checked) {
+        studentRow.style.display = "flex";
+      } else if (r.value === "normal" && r.checked) {
+        studentRow.style.display = "none";
       }
     });
   });
 
-  // Bouton "Valider"
   const btn = $("validateBtn");
   if (btn) {
     btn.addEventListener("click", (e) => {
@@ -320,7 +319,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Validation avec Entrée dans le champ billet
   const input = $("ticketNumber");
   if (input) {
     input.addEventListener("keyup", (e) => {
@@ -330,6 +328,5 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Charger les billets au démarrage
   chargerBilletsDepuisAppwrite();
 });
