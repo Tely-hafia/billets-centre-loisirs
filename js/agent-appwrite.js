@@ -1,43 +1,40 @@
-console.log("[AGENT] agent-appwrite.js chargé");
-
-// =====================================
-//  Configuration Appwrite
-// =====================================
+// ======================================================
+//  Configuration Appwrite  (à adapter avec tes valeurs)
+// ======================================================
 
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
-const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
+const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";        // ton ID projet
+const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";       // ta base "centre_loisirs"
 
 const APPWRITE_BILLETS_TABLE_ID = "billets";
 const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
-const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
 const APPWRITE_AGENTS_TABLE_ID = "agents";
+const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
 
-// =====================================
+const AGENT_LOCALSTORAGE_KEY = "centre_loisirs_agent";
+
+// ======================================================
 //  Initialisation Appwrite
-// =====================================
-
-if (typeof Appwrite === "undefined") {
-  console.error(
-    "[AGENT] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@21.4.0\"></script>"
-  );
-}
+// ======================================================
 
 const client = new Appwrite.Client();
-client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 
-// Tables (relational DB)
+client
+  .setEndpoint(APPWRITE_ENDPOINT)
+  .setProject(APPWRITE_PROJECT_ID);
+
 const tablesDB = new Appwrite.TablesDB(client);
 
-// =====================================
-//  État courant
-// =====================================
+// ======================================================
+//  État local
+// ======================================================
 
-let currentAgent = null; // {id, code, nom, poste}
+let billetsMap = {};        // numero_billet -> billet
+let currentAgent = null;    // agent connecté { id, login, nom, role }
 
-// =====================================
+// ======================================================
 //  Helpers DOM
-// =====================================
+// ======================================================
 
 function $(id) {
   return document.getElementById(id);
@@ -61,105 +58,128 @@ function showMessage(text, type = "info") {
 }
 
 function showLoginMessage(text, type = "info") {
-  const zone = $("login-message");
-  if (!zone) return;
+  const zone = $("loginMessage");
+  if (!zone) {
+    alert(text);
+    return;
+  }
 
   zone.textContent = text;
   zone.className = "message";
   zone.classList.add(`message-${type}`);
 }
 
-// Affichage login / validation selon connexion
-function updateUIForAgent() {
-  const loginSection = $("loginSection");
-  const validationSection = $("validationSection");
-  const billetsSection = $("billetsSection");
-  const agentInfo = $("agentInfo");
+// ======================================================
+//  Chargement des billets (depuis Appwrite)
+// ======================================================
 
-  if (currentAgent) {
-    if (loginSection) loginSection.style.display = "none";
-    if (validationSection) validationSection.style.display = "block";
-    if (billetsSection) billetsSection.style.display = "block";
-
-    if (agentInfo) {
-      agentInfo.style.display = "block";
-      const posteLabel =
-        currentAgent.poste === "entree"
-          ? "Poste entrée"
-          : currentAgent.poste === "interne"
-          ? "Poste interne"
-          : currentAgent.poste;
-      agentInfo.textContent = `Connecté : ${currentAgent.code} (${posteLabel})`;
-    }
-  } else {
-    if (loginSection) loginSection.style.display = "block";
-    if (validationSection) validationSection.style.display = "none";
-    if (billetsSection) billetsSection.style.display = "none";
-
-    if (agentInfo) {
-      agentInfo.style.display = "none";
-      agentInfo.textContent = "";
-    }
-  }
-}
-
-
-// =====================================
-//  Chargement du nombre de billets
-// =====================================
-
-async function chargerNombreBillets() {
+async function chargerBilletsDepuisAppwrite() {
   try {
+    console.log("[AGENT] Chargement billets depuis Appwrite…");
+
     const res = await tablesDB.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_BILLETS_TABLE_ID,
-      queries: [Appwrite.Query.limit(10000)]
+      queries: [
+        Appwrite.Query.limit(10000) // large mais raisonnable pour ta volumétrie
+      ]
     });
 
-    const nb = res.rows ? res.rows.length : 0;
-    setTicketCount(nb);
-    console.log("[AGENT] Billets chargés :", nb);
+    billetsMap = {};
+    const rows = res.rows || [];
+    rows.forEach((row) => {
+      if (row.numero_billet) {
+        billetsMap[row.numero_billet] = row;
+      }
+    });
+
+    console.log("[AGENT] Billets chargés :", rows.length);
+    setTicketCount(rows.length);
   } catch (err) {
     console.error("[AGENT] Erreur chargement billets :", err);
+    showMessage(
+      "Impossible de charger les billets depuis le serveur (voir console).",
+      "error"
+    );
   }
 }
 
-// =====================================
-//  Connexion agent
-// =====================================
+function findBillet(numero) {
+  return billetsMap[numero] || null;
+}
+
+// ======================================================
+//  Gestion Agent : login / logout / UI
+// ======================================================
+
+function loadAgentFromStorage() {
+  try {
+    const raw = localStorage.getItem(AGENT_LOCALSTORAGE_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    if (obj && obj.login) {
+      currentAgent = obj;
+      console.log("[AGENT] Agent restauré depuis localStorage :", currentAgent);
+    }
+  } catch (e) {
+    console.warn("[AGENT] Impossible de restaurer l'agent depuis localStorage.");
+  }
+}
+
+function saveAgentToStorage() {
+  if (!currentAgent) {
+    localStorage.removeItem(AGENT_LOCALSTORAGE_KEY);
+    return;
+  }
+  localStorage.setItem(AGENT_LOCALSTORAGE_KEY, JSON.stringify(currentAgent));
+}
+
+function logoutAgent() {
+  currentAgent = null;
+  saveAgentToStorage();
+  updateUIForAgent();
+  showLoginMessage("Vous êtes déconnecté.", "info");
+}
 
 async function loginAgent() {
   const codeInput = $("agentCode");
   const passInput = $("agentPassword");
 
   if (!codeInput || !passInput) {
-    alert("Problème HTML : champs login introuvables.");
+    alert("Problème HTML : champs de connexion introuvables.");
     return;
   }
 
-  const code = codeInput.value.trim();
+  const login = codeInput.value.trim();
   const password = passInput.value.trim();
 
-  if (!code || !password) {
-    showLoginMessage("Veuillez saisir le code agent et le mot de passe.", "error");
+  if (!login || !password) {
+    showLoginMessage(
+      "Veuillez saisir le code agent et le mot de passe.",
+      "error"
+    );
     return;
   }
 
-  showLoginMessage("Connexion en cours...", "info");
+  showLoginMessage("Connexion en cours…", "info");
 
   try {
     const res = await tablesDB.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_AGENTS_TABLE_ID,
       queries: [
-        Appwrite.Query.equal("code", [code]),
-        Appwrite.Query.equal("password", [password]),
+        Appwrite.Query.equal("login", [login]),
+        Appwrite.Query.equal("mot_de_passe", [password]),
+        Appwrite.Query.equal("actif", [true]),
         Appwrite.Query.limit(1)
       ]
     });
 
     if (!res.rows || res.rows.length === 0) {
-      showLoginMessage("Code ou mot de passe incorrect.", "error");
+      showLoginMessage(
+        "Identifiants incorrects ou agent inactif.",
+        "error"
+      );
       currentAgent = null;
       updateUIForAgent();
       return;
@@ -168,13 +188,12 @@ async function loginAgent() {
     const ag = res.rows[0];
     currentAgent = {
       id: ag.$id,
-      code: ag.code,
+      login: ag.login,
       nom: ag.nom,
-      poste: ag.poste
+      role: ag.role
     };
 
-    // Mémoriser dans localStorage
-    localStorage.setItem("centre_loisirs_agent", JSON.stringify(currentAgent));
+    saveAgentToStorage();
 
     showLoginMessage("Connexion réussie.", "success");
     console.log("[AGENT] Connecté :", currentAgent);
@@ -186,124 +205,174 @@ async function loginAgent() {
   }
 }
 
-function loadAgentFromStorage() {
-  try {
-    const raw = localStorage.getItem("centre_loisirs_agent");
-    if (!raw) return;
-    const ag = JSON.parse(raw);
-    if (ag && ag.code && ag.poste) {
-      currentAgent = ag;
-      console.log("[AGENT] Agent restauré depuis localStorage :", currentAgent);
+function updateUIForAgent() {
+  const loginSection = $("loginSection");
+  const validationSection = $("validationSection");
+  const billetsSection = $("billetsSection");
+  const agentInfo = $("agentInfo");
+  const logoutBtn = $("btnLogout");
+
+  if (currentAgent) {
+    if (loginSection) loginSection.style.display = "none";
+    if (validationSection) validationSection.style.display = "block";
+    if (billetsSection) billetsSection.style.display = "block";
+
+    if (agentInfo) {
+      agentInfo.style.display = "block";
+      agentInfo.textContent = `Connecté : ${currentAgent.login} (${currentAgent.role})`;
     }
-  } catch (err) {
-    console.warn("[AGENT] Impossible de restaurer l'agent depuis localStorage :", err);
+
+    if (logoutBtn) logoutBtn.style.display = "inline-block";
+  } else {
+    if (loginSection) loginSection.style.display = "block";
+    if (validationSection) validationSection.style.display = "none";
+    if (billetsSection) billetsSection.style.display = "none";
+
+    if (agentInfo) {
+      agentInfo.style.display = "none";
+      agentInfo.textContent = "";
+    }
+
+    if (logoutBtn) logoutBtn.style.display = "none";
   }
 }
 
-// =====================================
-//  Vérification / validation d'un billet
-// =====================================
+// ======================================================
+//  Vérification Étudiant
+// ======================================================
 
-async function verifierBillet() {
-  if (!currentAgent) {
-    showMessage("Veuillez vous connecter en tant qu'agent.", "error");
-    return;
-  }
-
-  const input = $("ticketNumber");
-  if (!input) {
-    alert("Champ ticketNumber introuvable dans la page.");
-    return;
-  }
-
-  const numero = input.value.trim();
-
-  if (!numero) {
-    showMessage("Veuillez saisir un numéro de billet.", "error");
-    return;
-  }
-
-  // Tarif choisi
-  const tarifRadios = document.querySelectorAll('input[name="tarif"]');
-  let tarifChoisi = "normal";
-  tarifRadios.forEach((r) => {
-    if (r.checked) tarifChoisi = r.value;
-  });
-
-  console.log("[AGENT] Vérification billet...", numero);
-  console.log("[AGENT] Tarif choisi :", tarifChoisi);
-
-  showMessage("Vérification en cours...", "info");
-
+async function verifierEtudiant(numeroEtudiant) {
   try {
-    // 1. Recherche du billet
     const res = await tablesDB.listRows({
       databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_BILLETS_TABLE_ID,
+      tableId: APPWRITE_ETUDIANTS_TABLE_ID,
       queries: [
-        Appwrite.Query.equal("numero_billet", [numero]),
+        Appwrite.Query.equal("numero_etudiant", [numeroEtudiant]),
+        Appwrite.Query.equal("actif", [true]),
         Appwrite.Query.limit(1)
       ]
     });
 
     if (!res.rows || res.rows.length === 0) {
-      showMessage(`Billet ${numero} introuvable.`, "error");
-      return;
+      return null;
+    }
+    return res.rows[0];
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification étudiant :", err);
+    return null;
+  }
+}
+
+// ======================================================
+//  Vérification & validation d'un billet
+// ======================================================
+
+async function verifierBillet() {
+  const input = $("ticketNumber");
+
+  if (!currentAgent) {
+    showMessage("Veuillez d'abord vous connecter.", "error");
+    return;
+  }
+
+  if (!input) {
+    alert("Champ ticketNumber introuvable.");
+    return;
+  }
+
+  const numero = input.value.trim();
+  if (!numero) {
+    showMessage("Veuillez saisir un numéro de billet.", "error");
+    return;
+  }
+
+  showMessage("Vérification en cours…", "info");
+
+  try {
+    // 1. On récupère le billet (depuis le cache, sinon depuis Appwrite)
+    let billet = findBillet(numero);
+
+    if (!billet) {
+      const res = await tablesDB.listRows({
+        databaseId: APPWRITE_DATABASE_ID,
+        tableId: APPWRITE_BILLETS_TABLE_ID,
+        queries: [
+          Appwrite.Query.equal("numero_billet", [numero]),
+          Appwrite.Query.limit(1)
+        ]
+      });
+
+      if (!res.rows || res.rows.length === 0) {
+        showMessage(`Billet ${numero} introuvable.`, "error");
+        return;
+      }
+      billet = res.rows[0];
+      billetsMap[numero] = billet;
     }
 
-    const billet = res.rows[0];
-
+    // 2. Vérifier s'il est déjà validé
     if (billet.statut === "Validé") {
       showMessage(`Billet ${numero} déjà VALIDÉ ❌`, "error");
       return;
     }
 
-    // Déterminer les tarifs
+    // 3. Déterminer le tarif choisi
+    const normalRadio = document.querySelector(
+      "input[name='tarifType'][value='normal']"
+    );
+    const etuRadio = document.querySelector(
+      "input[name='tarifType'][value='etudiant']"
+    );
+
+    let tarifChoisi = "normal";
+    if (etuRadio && etuRadio.checked) {
+      tarifChoisi = "etudiant";
+    } else if (normalRadio && normalRadio.checked) {
+      tarifChoisi = "normal";
+    }
+
     const tarifNormal = billet.prix || 0;
-    const tarifEtudiant = billet.tarif_universite || 0;
+    const tarifEtudiant = billet.tarif_universite || tarifNormal;
 
-    let tarifApplique = "normal";
+    let tarifApplique = tarifNormal;
     let montantPaye = tarifNormal;
-    let numeroEtudiant = null;
+    let numeroEtudiant = "";
 
+    // 4. Si tarif étudiant, on vérifie le numéro étudiant
     if (tarifChoisi === "etudiant") {
-      // Numéro étudiant obligatoire
-      const studentInput = $("studentNumber");
-      const numEtu = studentInput ? studentInput.value.trim() : "";
+      let numEtu = "";
+      const etuInput = $("studentNumber");
+      if (etuInput) {
+        numEtu = etuInput.value.trim();
+      }
+
+      if (!numEtu) {
+        numEtu = window.prompt("Numéro étudiant :");
+      }
 
       if (!numEtu) {
         showMessage(
-          "Impossible d'appliquer un tarif étudiant sans numéro étudiant.",
+          "Numéro étudiant obligatoire pour appliquer le tarif étudiant.",
           "error"
         );
         return;
       }
 
-      // Vérification de l'étudiant dans la table "etudiants"
-      const etuRes = await tablesDB.listRows({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: APPWRITE_ETUDIANTS_TABLE_ID,
-        queries: [
-          Appwrite.Query.equal("numero_etudiant", [numEtu]),
-          Appwrite.Query.limit(1)
-        ]
-      });
-
-      if (!etuRes.rows || etuRes.rows.length === 0) {
+      const etu = await verifierEtudiant(numEtu);
+      if (!etu) {
         showMessage(
-          `Numéro étudiant ${numEtu} introuvable dans la liste des étudiants.`,
+          "Étudiant introuvable ou inactif. Tarif étudiant refusé.",
           "error"
         );
         return;
       }
 
-      // OK, on applique le tarif étudiant
-      tarifApplique = "etudiant";
-      montantPaye = tarifEtudiant || tarifNormal;
       numeroEtudiant = numEtu;
+      tarifApplique = tarifEtudiant;
+      montantPaye = tarifEtudiant;
     }
 
-    // 2. Mettre à jour le billet -> statut = Validé
+    // 5. Mettre à jour le billet -> statut = Validé
     await tablesDB.updateRow({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_BILLETS_TABLE_ID,
@@ -313,16 +382,14 @@ async function verifierBillet() {
       }
     });
 
-    console.log(
-      "[AGENT] Billet mis à jour dans Appwrite :",
-      billet.numero_billet
-    );
+    billet.statut = "Validé";
+    billetsMap[numero] = billet;
 
-    // 3. Enregistrer la validation
+    // 6. Enregistrer la validation
     const nowIso = new Date().toISOString();
 
     const validationData = {
-      numero_billet: billet.numero_billet,
+      numero_billet: numero,
       billet_id: billet.$id,
       date_validation: nowIso,
       type_acces: billet.type_acces || "",
@@ -330,8 +397,8 @@ async function verifierBillet() {
       tarif_etudiant: tarifEtudiant,
       tarif_applique: tarifApplique,
       montant_paye: montantPaye,
-      agent_id: currentAgent.code,
-      poste_id: currentAgent.poste,
+      agent_id: currentAgent.login,
+      poste_id: currentAgent.role,
       numero_etudiant: numeroEtudiant
     };
 
@@ -344,84 +411,72 @@ async function verifierBillet() {
       data: validationData
     });
 
-    // 4. Message succès
+    // 7. Succès
     const typeAcces = billet.type_acces || "";
-    const dateAcces = billet.date_acces || "";
+    const msgDetail =
+      tarifChoisi === "etudiant"
+        ? `Tarif étudiant appliqué (${montantPaye} GNF).`
+        : `Tarif normal appliqué (${montantPaye} GNF).`;
 
     showMessage(
-      `Billet ${numero} VALIDÉ ✅ (${typeAcces} – ${dateAcces})\nTarif : ${
-        tarifApplique === "etudiant" ? "Étudiant" : "Normal"
-      } – Montant payé : ${montantPaye} GNF`,
+      `Billet ${numero} VALIDÉ ✅ (${typeAcces})  -  ${msgDetail}`,
       "success"
     );
 
-    // On vide le champ billet (et étudiant)
     input.value = "";
     const studentInput = $("studentNumber");
     if (studentInput) studentInput.value = "";
-
-    // On met à jour le compteur
-    chargerNombreBillets();
   } catch (err) {
     console.error("[AGENT] Erreur lors de la vérification :", err);
     showMessage("Erreur lors de la vérification (voir console).", "error");
   }
 }
 
-// =====================================
-//  Initialisation des événements
-// =====================================
+// ======================================================
+//  Initialisation
+// ======================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[AGENT] DOMContentLoaded");
+  console.log("[AGENT] agent-appwrite.js chargé");
 
-  // Restaurer l'agent depuis localStorage (si déjà connecté)
+  // Restaurer l'agent si déjà connecté
   loadAgentFromStorage();
   updateUIForAgent();
 
-  // Login bouton
-  const loginBtn = $("loginBtn");
-  if (loginBtn) {
-    loginBtn.addEventListener("click", (e) => {
+  // Événements
+  const btnLogin = $("btnLogin");
+  if (btnLogin) {
+    btnLogin.addEventListener("click", (e) => {
       e.preventDefault();
       loginAgent();
     });
   }
 
-  // Validation bouton
-  const btn = $("validateBtn");
-  if (btn) {
-    btn.addEventListener("click", (e) => {
+  const btnLogout = $("btnLogout");
+  if (btnLogout) {
+    btnLogout.addEventListener("click", (e) => {
+      e.preventDefault();
+      logoutAgent();
+    });
+  }
+
+  const btnValidate = $("validateBtn");
+  if (btnValidate) {
+    btnValidate.addEventListener("click", (e) => {
       e.preventDefault();
       verifierBillet();
     });
   }
 
-  // Validation avec Entrée dans le champ billet
-  const input = $("ticketNumber");
-  if (input) {
-    input.addEventListener("keyup", (e) => {
+  const ticketInput = $("ticketNumber");
+  if (ticketInput) {
+    ticketInput.addEventListener("keyup", (e) => {
       if (e.key === "Enter") {
         verifierBillet();
       }
     });
   }
 
-  // Affichage champ étudiant selon radio bouton
-  const tarifRadios = document.querySelectorAll('input[name="tarif"]');
-  const studentRow = $("studentRow");
-  tarifRadios.forEach((r) => {
-    r.addEventListener("change", () => {
-      if (!studentRow) return;
-      if (r.value === "etudiant" && r.checked) {
-        studentRow.style.display = "flex";
-      } else if (r.value === "normal" && r.checked) {
-        studentRow.style.display = "none";
-      }
-    });
-  });
-
-  // Charger le nombre de billets au démarrage
-  chargerNombreBillets();
+  // Charger les billets depuis Appwrite
+  chargerBilletsDepuisAppwrite();
 });
-
