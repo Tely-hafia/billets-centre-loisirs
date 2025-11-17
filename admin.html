@@ -13,41 +13,76 @@
     <div class="logo-badge">CL</div>
     <div>
       <h1>Administration – Billets</h1>
-      <p>Gestion des billets depuis Appwrite</p>
+      <p>Import CSV, statistiques et gestion des données Appwrite.</p>
     </div>
   </div>
 </header>
 
 <main>
 
-  <!-- IMPORT CSV -->
+  <!-- 1. IMPORT CSV -->
   <section class="card">
     <h2>📥 Importer des billets (CSV)</h2>
 
-    <input type="file" id="csvFile" accept=".csv" />
-    <button id="btnImportCsv">Importer ▶</button>
+    <p>Choisissez un fichier CSV exporté depuis Excel (colonnes : numero_billet, date_acces, type_acces, prix, tarif_universite, statut, semaine_code).</p>
 
-    <p id="importStatus" style="margin-top:0.5rem;"></p>
+    <input type="file" id="csvFile" accept=".csv" />
+    <button id="btnImportCsv">Importer ▶▶</button>
+
+    <p id="importStatus" class="note" style="margin-top:0.5rem;"></p>
   </section>
 
-  <!-- LISTE DES BILLETS -->
+  <!-- 2. STATISTIQUES -->
   <section class="card">
-    <h2>📄 Liste des billets (depuis Appwrite)</h2>
+    <h2>📊 Statistiques des billets (depuis Appwrite)</h2>
 
-    <button id="btnLoadBillets">Charger les billets ▶</button>
+    <button id="btnRefreshStats">Recharger les stats ▶▶</button>
+    <p id="statsStatus" class="note" style="margin-top:0.5rem;"></p>
 
-    <table id="tableBillets" style="width:100%;margin-top:1rem;border-collapse:collapse;">
+    <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1rem;">
+      <div class="stat-card">
+        <h3>Total billets</h3>
+        <p><strong id="statTotalBillets">0</strong></p>
+      </div>
+      <div class="stat-card">
+        <h3>Billets validés</h3>
+        <p><strong id="statBilletsValides">0</strong></p>
+      </div>
+      <div class="stat-card">
+        <h3>Billets non utilisés</h3>
+        <p><strong id="statBilletsNonUtilises">0</strong></p>
+      </div>
+      <div class="stat-card">
+        <h3>Recette totale (plein tarif)</h3>
+        <p><strong id="statRecetteTotale">0</strong> GNF</p>
+      </div>
+      <div class="stat-card">
+        <h3>Recette totale (tarif université)</h3>
+        <p><strong id="statRecetteUniversite">0</strong> GNF</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2rem;">📅 Recette par jour</h3>
+    <table id="tableStatsJours" style="width:100%;margin-top:0.5rem;border-collapse:collapse;">
       <thead>
       <tr>
-        <th>Numéro</th>
         <th>Date accès</th>
-        <th>Type accès</th>
-        <th>Statut</th>
-        <th>Semaine</th>
+        <th>Nombre de billets</th>
+        <th>Recette (plein tarif)</th>
+        <th>Recette (tarif université)</th>
       </tr>
       </thead>
       <tbody></tbody>
     </table>
+  </section>
+
+  <!-- 3. MAINTENANCE -->
+  <section class="card">
+    <h2>🧹 Maintenance des données</h2>
+    <p>Utilisez ce bouton pour effacer tous les billets de la base Appwrite, par exemple avant d'importer une nouvelle semaine.</p>
+    <button id="btnDeleteBillets" style="background:#e53935;color:white;padding:0.6rem 1.2rem;border-radius:999px;border:none;cursor:pointer;">
+      Effacer tous les billets ❌
+    </button>
   </section>
 
 </main>
@@ -57,8 +92,9 @@
 </footer>
 
 <!-- SDK Appwrite -->
-<script src="https://cdn.jsdelivr.net/npm/appwrite@21.4.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+<!-- Script admin Appwrite -->
 <script src="js/admin-appwrite.js"></script>
+
 </body>
 </html>
-
