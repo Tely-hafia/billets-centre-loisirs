@@ -1,7 +1,8 @@
-/// =====================================
+// =====================================
 //  ADMIN + APPWRITE
 //  - Import CSV -> Appwrite (table billets)
-//  - Affichage des billets depuis Appwrite
+//  - Statistiques des billets
+//  - Effacer tous les billets
 // =====================================
 
 // Config Appwrite
@@ -65,7 +66,6 @@ async function importerCsv() {
 
   for (let i = 1; i < lines.length; i++) {
     const cols = parseCsvLine(lines[i], sep);
-
     const numero_billet    = getValue(cols, 'numero_billet');
     const date_acces       = getValue(cols, 'date_acces');
     const type_acces       = getValue(cols, 'type_acces');
@@ -76,22 +76,20 @@ async function importerCsv() {
 
     if (!numero_billet) continue;
 
-    const billetData = {
-      numero_billet,
-      date_acces,
-      type_acces,
-      prix,
-      tarif_universite,
-      statut,
-      semaine_code
-    };
-
     try {
       await databases.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_TABLE_ID,
         Appwrite.ID.unique(),
-        billetData
+        {
+          numero_billet,
+          date_acces,
+          type_acces,
+          prix,
+          tarif_universite,
+          statut,
+          semaine_code
+        }
       );
       imported++;
     } catch (err) {
@@ -101,19 +99,20 @@ async function importerCsv() {
 
   if (status) status.textContent = `✅ Import terminé : ${imported} billets envoyés sur Appwrite.`;
 
-  // Recharger la liste pour vérifier
-  chargerBilletsServeur();
+  // Mettre à jour les stats après import
+  chargerStatsBillets();
 }
 
 // --------------------------
-// AFFICHAGE BILLETS (depuis Appwrite)
+// CHARGER LES STATS
 // --------------------------
+async function chargerStatsBillets() {
+  const status = $('statsStatus');
+  const tbodyJours = document.querySelector('#tableStatsJours tbody');
+  if (!tbodyJours) return;
 
-async function chargerBilletsServeur() {
-  const tbody = document.querySelector('#tableBillets tbody');
-  if (!tbody) return;
-
-  tbody.innerHTML = "<tr><td colspan='5'>⏳ Chargement depuis Appwrite...</td></tr>";
+  if (status) status.textContent = '⏳ Chargement des stats depuis Appwrite...';
+  tbodyJours.innerHTML = '';
 
   try {
     const res = await databases.listDocuments(
@@ -122,40 +121,122 @@ async function chargerBilletsServeur() {
       [Appwrite.Query.limit(10000)]
     );
 
-    const billets = res.documents || [];
+    const docs = res.documents || [];
 
-    tbody.innerHTML = '';
+    // Stats globales
+    let total = docs.length;
+    let nbValides = 0;
+    let nbNonUtilises = 0;
+    let totalPrix = 0;
+    let totalUniv = 0;
 
-    if (!billets.length) {
-      tbody.innerHTML = "<tr><td colspan='5'>Aucun billet trouvé sur le serveur.</td></tr>";
-      return;
+    // Stats par jour
+    const parJour = {}; // {date: {nb, prix, univ}}
+
+    for (const d of docs) {
+      const statut = d.statut || 'Non utilisé';
+      const prix = Number(d.prix || 0);
+      const univ = Number(d.tarif_universite || 0);
+      const date = d.date_acces || 'Inconnue';
+
+      if (statut === 'Validé') nbValides++;
+      else nbNonUtilises++;
+
+      totalPrix += prix;
+      totalUniv += univ;
+
+      if (!parJour[date]) {
+        parJour[date] = { nb: 0, prix: 0, univ: 0 };
+      }
+      parJour[date].nb += 1;
+      parJour[date].prix += prix;
+      parJour[date].univ += univ;
     }
 
-    for (const billet of billets) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${billet.numero_billet || ''}</td>
-        <td>${billet.date_acces || ''}</td>
-        <td>${billet.type_acces || ''}</td>
-        <td>${billet.statut || ''}</td>
-        <td>${billet.semaine_code || ''}</td>
-      `;
-      tbody.appendChild(tr);
+    // Injecter dans le DOM
+    $('statTotalBillets').textContent = total.toString();
+    $('statBilletsValides').textContent = nbValides.toString();
+    $('statBilletsNonUtilises').textContent = nbNonUtilises.toString();
+    $('statRecetteTotale').textContent = totalPrix.toLocaleString('fr-FR');
+    $('statRecetteUniversite').textContent = totalUniv.toLocaleString('fr-FR');
+
+    const dates = Object.keys(parJour).sort();
+    if (!dates.length) {
+      tbodyJours.innerHTML = "<tr><td colspan='4'>Aucun billet trouvé.</td></tr>";
+    } else {
+      for (const date of dates) {
+        const info = parJour[date];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${date}</td>
+          <td>${info.nb}</td>
+          <td>${info.prix.toLocaleString('fr-FR')} GNF</td>
+          <td>${info.univ.toLocaleString('fr-FR')} GNF</td>
+        `;
+        tbodyJours.appendChild(tr);
+      }
     }
+
+    if (status) status.textContent = `✅ Stats mises à jour (${total} billets).`;
 
   } catch (err) {
-    console.error('Erreur chargement billets Appwrite :', err);
-    tbody.innerHTML = "<tr><td colspan='5'>❌ Erreur chargement billets.</td></tr>";
+    console.error('Erreur chargement stats Appwrite :', err);
+    if (status) status.textContent = '❌ Erreur lors du chargement des stats.';
+  }
+}
+
+// --------------------------
+// EFFACER TOUS LES BILLETS
+// --------------------------
+async function effacerTousLesBillets() {
+  const status = $('statsStatus');
+
+  const ok = confirm(
+    "⚠️ ATTENTION : ceci va supprimer TOUS les billets de la base Appwrite.\n\n" +
+    "Utilisez cela uniquement avant d'importer une nouvelle semaine.\n\n" +
+    "Confirmer la suppression ?"
+  );
+  if (!ok) return;
+
+  if (status) status.textContent = '⏳ Suppression de tous les billets...';
+
+  try {
+    const res = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [Appwrite.Query.limit(10000)]
+    );
+
+    const docs = res.documents || [];
+    let deleted = 0;
+
+    for (const d of docs) {
+      try {
+        await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_BILLETS_TABLE_ID, d.$id);
+        deleted++;
+      } catch (err) {
+        console.error('Erreur suppression billet', d.$id, err);
+      }
+    }
+
+    if (status) status.textContent = `✅ Suppression terminée : ${deleted} billets effacés.`;
+
+    // Mettre à jour les stats après suppression
+    chargerStatsBillets();
+
+  } catch (err) {
+    console.error('Erreur lors de la suppression globale :', err);
+    if (status) status.textContent = '❌ Erreur lors de la suppression des billets.';
   }
 }
 
 // --------------------------
 // INIT
 // --------------------------
-
 document.addEventListener('DOMContentLoaded', () => {
   const btnImport = $('btnImportCsv');
-  const btnLoad = $('btnLoadBillets');
+  const btnStats = $('btnRefreshStats');
+  const btnDelete = $('btnDeleteBillets');
 
   if (btnImport) {
     btnImport.addEventListener('click', (e) => {
@@ -164,14 +245,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (btnLoad) {
-    btnLoad.addEventListener('click', (e) => {
+  if (btnStats) {
+    btnStats.addEventListener('click', (e) => {
       e.preventDefault();
-      chargerBilletsServeur();
+      chargerStatsBillets();
     });
   }
 
-  // Charger automatiquement les billets à l'ouverture
-  chargerBilletsServeur();
+  if (btnDelete) {
+    btnDelete.addEventListener('click', (e) => {
+      e.preventDefault();
+      effacerTousLesBillets();
+    });
+  }
+
+  // Charger les stats au démarrage
+  chargerStatsBillets();
 });
 
