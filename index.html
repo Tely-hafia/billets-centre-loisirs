@@ -20,6 +20,37 @@
 </header>
 
 <main>
+
+<section class="card" id="loginSection">
+  <h2>Connexion agent</h2>
+
+  <div class="form-row">
+    <label for="agentCode">Code agent :</label>
+    <input
+      type="text"
+      id="agentCode"
+      placeholder="Ex : ENTREE1"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="form-row">
+    <label for="agentPassword">Mot de passe :</label>
+    <input
+      type="password"
+      id="agentPassword"
+      placeholder="Mot de passe"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="form-row">
+    <button id="loginBtn">Se connecter</button>
+  </div>
+
+  <p id="login-message" class="message"></p>
+</section>
+
     <section class="card">
         <h2>🎟️ Billets chargés</h2>
         <p>
@@ -32,8 +63,12 @@
         </p>
     </section>
 
-    <section class="card">
+   <section class="card" id="validationSection">
   <h2>Validation d’un billet</h2>
+
+  <p id="agentInfo" class="message message-info" style="display:none;">
+    <!-- rempli par JS : ex. "Connecté : ENTREE1 (Poste entrée)" -->
+  </p>
 
   <!-- Choix du tarif -->
   <div class="form-row">
