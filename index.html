@@ -35,21 +35,44 @@
     <section class="card">
         <h2>🎫 Validation d’un billet</h2>
 
-        <label for="ticketNumber">Numéro du billet :</label>
-        <div class="input-row">
-            <input
-                id="ticketNumber"
-                type="text"
-                placeholder="Ex : 26-0001"
-                autocomplete="off"
-            />
-            <button id="validateBtn" type="button">
-                Valider ➜
-            </button>
-        </div>
+        <section class="card">
+  <h2>Validation d’un billet</h2>
 
-        <div id="result-message" class="message"></div>
-    </section>
+  <!-- Choix du tarif -->
+  <div class="form-row">
+    <label>Tarif appliqué :</label>
+    <div class="radio-group">
+      <label>
+        <input type="radio" name="tarif" value="normal" checked />
+        Normal
+      </label>
+      <label>
+        <input type="radio" name="tarif" value="etudiant" />
+        Étudiant
+      </label>
+    </div>
+  </div>
+
+  <!-- Numéro étudiant (visible seulement si tarif étudiant) -->
+  <div class="form-row" id="studentRow" style="display:none;">
+    <label for="studentNumber">Numéro étudiant :</label>
+    <input
+      type="text"
+      id="studentNumber"
+      placeholder="Numéro étudiant"
+    />
+  </div>
+
+  <!-- Numéro de billet -->
+  <div class="form-row">
+    <label for="ticketNumber">Numéro du billet :</label>
+    <input type="text" id="ticketNumber" placeholder="Ex : 26-0001" />
+    <button id="validateBtn">Valider ➤</button>
+  </div>
+
+  <p id="result-message" class="message"></p>
+</section>
+
 </main>
 
 <footer>
