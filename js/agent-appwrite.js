@@ -82,14 +82,16 @@ async function synchroniserBilletsDepuisServeur() {
     console.log('[AGENT] Billets reçus depuis Appwrite :', docs.length);
 
     const billets = docs.map(doc => ({
-      numero_billet: doc.numero_billet,
-      date_acces: doc.date_acces,
-      type_acces: doc.type_acces,
-      prix: doc.prix,
-      tarif_universite: doc.tarif_universite,
-      statut: doc.statut,
-      semaine_code: doc.semaine_code
-    }));
+  id: doc.$id,                       // <-- on garde l'ID du document Appwrite
+  numero_billet: doc.numero_billet,
+  date_acces: doc.date_acces,
+  type_acces: doc.type_acces,
+  prix: doc.prix,
+  tarif_universite: doc.tarif_universite,
+  statut: doc.statut,
+  semaine_code: doc.semaine_code
+}));
+
 
     sauvegarderBilletsLocaux(billets);
 
