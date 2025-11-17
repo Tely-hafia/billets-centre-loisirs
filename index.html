@@ -22,15 +22,15 @@
 <main>
 
 <section class="card" id="loginSection">
-  <h2>Connexion agent</h2>
+  <h2>🔐 Connexion agent</h2>
 
   <div class="form-row">
     <label for="agentCode">Code agent :</label>
     <input
       type="text"
       id="agentCode"
-      placeholder="Ex : ENTREE1"
-      autocomplete="off"
+      placeholder="agent"
+      autocomplete="username"
     />
   </div>
 
@@ -39,17 +39,23 @@
     <input
       type="password"
       id="agentPassword"
-      placeholder="Mot de passe"
-      autocomplete="off"
+      placeholder="••••"
+      autocomplete="current-password"
     />
   </div>
 
-  <div class="form-row">
-    <button id="loginBtn">Se connecter</button>
-  </div>
+  <button id="btnLogin" class="btn-primary">
+    Se connecter ▸
+  </button>
 
-  <p id="login-message" class="message"></p>
+  <button id="btnLogout" class="btn-secondary" style="display:none;">
+    Se déconnecter
+  </button>
+
+  <p id="loginMessage" class="message"></p>
+  <p id="agentInfo" class="agent-info" style="display:none;"></p>
 </section>
+
 
     <section class="card" id="billetsSection" style="display:none;">
   <h2>Billets chargés</h2>
