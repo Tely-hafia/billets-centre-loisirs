@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contrôle des billets - Poste agent</title>
-  <link rel="stylesheet" href="css/styles.css?v=7" />
+  <title>Centre de loisirs – Poste agent</title>
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
@@ -12,20 +12,20 @@
   <div class="header-inner">
     <div class="logo-badge">CL</div>
     <div>
-      <h1>Contrôle des billets - Poste agent</h1>
-      <p>Centre de loisirs (poste de contrôle)</p>
+      <h1>Centre de loisirs – Poste agent</h1>
+      <p>Connexion, contrôle des billets et ventes restauration/chicha.</p>
     </div>
   </div>
 </header>
 
 <main>
 
-  <!-- 1. CONNEXION AGENT (PAGE 1) -->
+  <!-- 1. Connexion agent -->
   <section id="card-login" class="card">
     <h2>Connexion agent</h2>
 
     <p style="margin-bottom:0.6rem;">
-      Saisissez votre code agent et votre mot de passe pour accéder à la validation des billets.
+      Saisissez votre code agent et votre mot de passe pour accéder au poste.
     </p>
 
     <div style="margin-bottom:0.5rem;">
@@ -43,131 +43,126 @@
     <p id="login-message" class="status"></p>
   </section>
 
-  <!-- 2. ZONE APRES CONNEXION (PAGE 2) -->
-  <div id="agent-zone" style="display:none;">
+  <!-- 2. Zone après connexion -->
+  <div id="app-zone" style="display:none;">
 
-    <!-- Navigation entre les postes -->
-    <section class="card" id="navigation-card">
-      <h2>Sélection du poste</h2>
-      <div class="mode-navigation">
-        <button id="btn-mode-entree" class="mode-btn active" data-mode="entree">
-          🎫 Entrée
-        </button>
-        <button id="btn-mode-interne" class="mode-btn" data-mode="interne">
-          🎮 Interne
-        </button>
-        <button id="btn-mode-restaurant" class="mode-btn" data-mode="restaurant">
-          🍔 Restaurant
-        </button>
-      </div>
-      
-      <!-- Infos agent connecté -->
-      <p id="agent-connected-info" class="status" style="margin-top:1rem;">
+    <!-- Bandeau agent + choix du mode -->
+    <section class="card">
+      <h2>Poste agent</h2>
+
+      <p id="agent-connected-info" class="status" style="margin-bottom:0.8rem;">
         Connecté : <strong id="agent-connected-name"></strong>
-        <button id="btnLogout" type="button" style="margin-left:0.75rem;">
+        (<span id="agent-connected-role"></span>)
+      </p>
+
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+        <button id="btnModeBillets" type="button">
+          Contrôle billets
+        </button>
+        <button id="btnModeResto" type="button" style="background:#f97316;">
+          Restauration / Chicha
+        </button>
+        <button id="btnLogout" type="button" style="margin-left:auto; background:#ef4444;">
           Se déconnecter
         </button>
+      </div>
+
+      <p class="status" style="margin-top:0.3rem;">
+        Mode actif : <strong id="mode-label">Contrôle billets</strong>
       </p>
     </section>
 
-    <!-- MODE ENTRÉE -->
-    <div id="mode-entree" class="mode-content">
-      <!-- Billets disponibles -->
-      <section class="card">
-        <h2>Billets disponibles</h2>
-        <p style="font-size:1.15rem;font-weight:600;">
-          <span id="ticketCount">0</span> billets disponibles
-        </p>
-      </section>
+    <!-- MODE 1 : Contrôle billets (entrée + jeux internes) -->
+    <section class="card" id="mode-billets">
+      <h2>Contrôle des billets</h2>
 
-      <!-- Validation d'un billet -->
-      <section class="card">
-        <h2>Validation d'un billet (Entrée)</h2>
+      <p style="font-size:1rem; font-weight:600;">
+        Billets non utilisés : <span id="ticketCount">0</span>
+      </p>
 
-        <!-- Choix du tarif -->
-        <div style="margin-bottom:0.6rem;">
-          <label>Tarif appliqué :</label><br />
-          <label style="margin-right:1rem;">
-            <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
-            Normal
-          </label>
-          <label>
-            <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
-            Étudiant
-          </label>
-        </div>
+      <!-- Choix du tarif -->
+      <div style="margin-bottom:0.6rem; margin-top:0.8rem;">
+        <label>Tarif appliqué :</label><br />
+        <label style="margin-right:1rem;">
+          <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
+          Normal
+        </label>
+        <label>
+          <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
+          Étudiant
+        </label>
+      </div>
 
-        <!-- Numéro étudiant -->
-        <div style="margin-bottom:0.6rem;">
-          <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
-          <input type="text" id="etuNumber" placeholder="Ex : USTG-12345" />
-        </div>
+      <!-- Numéro étudiant -->
+      <div style="margin-bottom:0.6rem;">
+        <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
+        <input
+          type="text"
+          id="etuNumber"
+          placeholder="Ex : USTG-12345"
+        />
+      </div>
 
-        <!-- Numéro de billet -->
-        <div style="margin-bottom:0.8rem;">
-          <label for="ticketNumber">Numéro du billet :</label><br />
-          <input type="text" id="ticketNumber" placeholder="Ex : 26-0001" />
-        </div>
+      <!-- Numéro de billet -->
+      <div style="margin-bottom:0.8rem;">
+        <label for="ticketNumber">Numéro du billet :</label><br />
+        <input
+          type="text"
+          id="ticketNumber"
+          placeholder="Ex : 26-0001"
+        />
+      </div>
 
-        <button id="validateBtn" type="button">Valider ▶▶</button>
-        <div id="result-message" class="result" style="display:none;"></div>
-      </section>
-    </div>
+      <button id="validateBtn" type="button">
+        Valider le billet ▶▶
+      </button>
 
-    <!-- MODE INTERNE -->
-    <div id="mode-interne" class="mode-content" style="display:none;">
-      <section class="card">
-        <h2>Validation interne (Jeux)</h2>
-        
-        <div style="margin-bottom:0.8rem;">
-          <label for="ticketNumberInterne">Numéro du billet :</label><br />
-          <input type="text" id="ticketNumberInterne" placeholder="Ex : 26-0001" />
-        </div>
+      <div id="result-message" class="result" style="display:none;"></div>
+    </section>
 
-        <button id="validateBtnInterne" type="button">Valider le billet ▶▶</button>
-        <div id="result-message-interne" class="result" style="display:none;"></div>
-      </section>
-    </div>
+    <!-- MODE 2 : Restauration / Chicha -->
+    <section class="card" id="mode-resto" style="display:none;">
+      <h2>Restauration / Chicha</h2>
 
-    <!-- MODE RESTAURANT -->
-    <div id="mode-restaurant" class="mode-content" style="display:none;">
-      <section class="card">
-        <h2>Vente Restaurant / Bar</h2>
-        
-        <div style="margin-bottom:0.6rem;">
-          <label for="produitSelect">Produit :</label><br />
-          <select id="produitSelect" style="width:100%;padding:0.5rem;">
-            <option value="">Choisir un produit...</option>
-          </select>
-        </div>
+      <p style="margin-bottom:0.6rem;">
+        Enregistre ici les ventes du bar, restaurant ou chicha.
+      </p>
 
-        <div style="margin-bottom:0.6rem;">
-          <label for="quantite">Quantité :</label><br />
-          <input type="number" id="quantite" value="1" min="1" style="width:100px;" />
-        </div>
+      <div style="margin-bottom:0.6rem;">
+        <label for="restoProduit">Produit :</label><br>
+        <select id="restoProduit" style="min-width:260px; padding:0.45rem 0.6rem; border-radius:999px; border:1px solid var(--border-soft);">
+          <option value="">Chargement du menu...</option>
+        </select>
+      </div>
 
-        <div style="margin-bottom:0.8rem;padding:0.5rem;background:var(--accent-soft);border-radius:8px;">
-          <strong>Total : </strong>
-          <span id="montantTotal" style="font-size:1.2rem;font-weight:bold;color:var(--accent);">0 GNF</span>
-        </div>
+      <div style="margin-bottom:0.6rem;">
+        <label for="restoQuantite">Quantité :</label><br>
+        <input type="number" id="restoQuantite" min="1" value="1" style="max-width:120px;">
+      </div>
 
-        <button id="btnVenteRestaurant" type="button">Enregistrer la vente ▶▶</button>
-        <div id="result-message-restaurant" class="result" style="display:none;"></div>
-      </section>
-    </div>
+      <p id="restoMontant" style="font-weight:600; margin-top:0.4rem;">
+        Montant : 0 GNF
+      </p>
+
+      <button id="btnRestoVente" type="button" style="margin-top:0.6rem;">
+        Enregistrer la vente
+      </button>
+
+      <div id="restoResult" class="result" style="margin-top:0.8rem; display:none;"></div>
+    </section>
 
   </div>
 
 </main>
 
 <footer>
-  <p>© Centre de loisirs - Poste Agent</p>
+  <p>© Centre de loisirs – Poste agent</p>
 </footer>
 
-<!-- SDK Appwrite v13 -->
+<!-- SDK Appwrite (v13 comme côté admin) -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=3"></script>
+<script src="js/agent-appwrite.js"></script>
 
 </body>
 </html>
