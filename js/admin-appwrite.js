@@ -1,15 +1,16 @@
 console.log("[ADMIN] admin-appwrite.js chargé");
 
 // =====================================
-//  Configuration Appwrite (mêmes valeurs que côté agent)
+//  Configuration Appwrite
 // =====================================
 
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
-const APPWRITE_BILLETS_TABLE_ID = "billets";
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
+const APPWRITE_BILLETS_TABLE_ID = "billets";          // billets d'entrée
+const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux internes
+const APPWRITE_VALIDATIONS_TABLE_ID = "validations";  // historique validations
 
 // =====================================
 //  Initialisation du client Appwrite
@@ -17,7 +18,7 @@ const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
 
 if (typeof Appwrite === "undefined") {
   console.error(
-    "[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@21.4.0\"></script>"
+    "[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@13.0.0\"></script>"
   );
 }
 
@@ -26,20 +27,32 @@ adminClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 
 const adminDB = new Appwrite.Databases(adminClient);
 
-// Helper DOM
+// Helpers DOM
 function $(id) {
   return document.getElementById(id);
 }
 
-// Petit helper format
+// Format monnaie
 function formatGNF(n) {
   const v = Number(n) || 0;
   return v.toLocaleString("fr-FR") + " GNF";
 }
 
 // =====================================
-//  1. IMPORT CSV -> billets (version simple)
+//  1. IMPORT CSV -> billets (ENTRÉE)
 // =====================================
+/*
+  Structure attendue du CSV (séparateur ; ) :
+
+  numero_billet   (obligatoire)
+  type_acces      (obligatoire)
+  prix            (optionnel -> 0 si vide)
+  tarif_universite (optionnel -> 0 si vide)
+  statut          (optionnel -> "Non utilisé" si vide)
+
+  Exemple d’entête :
+  numero_billet;type_acces;prix;tarif_universite;statut
+*/
 
 async function importerCSVDansBillets(file) {
   if (!file) {
@@ -58,22 +71,18 @@ async function importerCSVDansBillets(file) {
       return;
     }
 
-    // On suppose que la première ligne est l'en-tête
     const header = lignes[0].split(";").map((h) => h.trim());
     console.log("[ADMIN] En-têtes CSV :", header);
 
-    // On cherche les colonnes attendues
     const idxNumero = header.indexOf("numero_billet");
-    const idxDate = header.indexOf("date_acces");
     const idxType = header.indexOf("type_acces");
     const idxPrix = header.indexOf("prix");
     const idxTarifUni = header.indexOf("tarif_universite");
     const idxStatut = header.indexOf("statut");
-    const idxSemaine = header.indexOf("semaine_code");
 
-    if (idxNumero === -1 || idxDate === -1 || idxType === -1) {
+    if (idxNumero === -1 || idxType === -1) {
       alert(
-        "Le CSV doit contenir au minimum les colonnes : numero_billet, date_acces, type_acces."
+        "Le CSV doit contenir au minimum les colonnes : numero_billet, type_acces."
       );
       return;
     }
@@ -82,20 +91,29 @@ async function importerCSVDansBillets(file) {
 
     for (let i = 1; i < lignes.length; i++) {
       const cols = lignes[i].split(";");
-
       if (!cols[idxNumero]) continue; // ligne vide
 
+      const numero = cols[idxNumero].trim();
+      const typeAcces = cols[idxType] ? cols[idxType].trim() : "";
+
+      if (!numero || !typeAcces) continue;
+
+      const prix = idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
+      const tarifUni =
+        idxTarifUni !== -1
+          ? parseInt(cols[idxTarifUni].trim() || "0", 10) || 0
+          : 0;
+      const statut =
+        idxStatut !== -1 && cols[idxStatut]
+          ? cols[idxStatut].trim()
+          : "Non utilisé";
+
       const doc = {
-        numero_billet: cols[idxNumero].trim(),
-        date_acces: cols[idxDate] ? cols[idxDate].trim() : "",
-        type_acces: cols[idxType] ? cols[idxType].trim() : "",
-        prix: idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0,
-        tarif_universite:
-          idxTarifUni !== -1
-            ? parseInt(cols[idxTarifUni].trim() || "0", 10) || 0
-            : 0,
-        statut: idxStatut !== -1 ? cols[idxStatut].trim() : "Non utilisé",
-        semaine_code: idxSemaine !== -1 ? cols[idxSemaine].trim() : ""
+        numero_billet: numero,
+        type_acces: typeAcces,
+        prix: prix,
+        tarif_universite: tarifUni,
+        statut: statut
       };
 
       try {
@@ -119,7 +137,7 @@ async function importerCSVDansBillets(file) {
 }
 
 // =====================================
-//  2. STATS à partir de la collection "validations"
+//  2. STATS à partir de "validations"
 // =====================================
 
 async function chargerStatsValidations() {
@@ -139,7 +157,6 @@ async function chargerStatsValidations() {
     const docs = res.documents || [];
     console.log("[ADMIN] Validations récupérées :", docs.length);
 
-    // Totaux simples
     const totalValidations = docs.length;
 
     let recetteTotale = 0;
@@ -166,7 +183,6 @@ async function chargerStatsValidations() {
       parType[type].montant += montant;
     });
 
-    // Mise à jour DOM
     const elCount = $("stat-validations-count");
     const elTotal = $("stat-revenue-total");
     const elNormal = $("stat-revenue-normal");
@@ -177,37 +193,37 @@ async function chargerStatsValidations() {
     if (elNormal) elNormal.textContent = formatGNF(recetteNormal);
     if (elEtu) elEtu.textContent = formatGNF(recetteEtudiant);
 
-    // Tableau par type d'accès
     const tbody = $("stats-type-body");
     if (tbody) {
       tbody.innerHTML = "";
 
-      Object.keys(parType).forEach((type) => {
-        const row = document.createElement("tr");
-
-        const tdType = document.createElement("td");
-        tdType.textContent = type;
-
-        const tdCount = document.createElement("td");
-        tdCount.textContent = parType[type].count.toString();
-
-        const tdMontant = document.createElement("td");
-        tdMontant.textContent = formatGNF(parType[type].montant);
-
-        row.appendChild(tdType);
-        row.appendChild(tdCount);
-        row.appendChild(tdMontant);
-
-        tbody.appendChild(row);
-      });
-
-      if (Object.keys(parType).length === 0) {
+      const types = Object.keys(parType);
+      if (types.length === 0) {
         const row = document.createElement("tr");
         const td = document.createElement("td");
         td.colSpan = 3;
         td.textContent = "Aucune validation pour le moment.";
         row.appendChild(td);
         tbody.appendChild(row);
+      } else {
+        types.forEach((type) => {
+          const row = document.createElement("tr");
+
+          const tdType = document.createElement("td");
+          tdType.textContent = type;
+
+          const tdCount = document.createElement("td");
+          tdCount.textContent = parType[type].count.toString();
+
+          const tdMontant = document.createElement("td");
+          tdMontant.textContent = formatGNF(parType[type].montant);
+
+          row.appendChild(tdType);
+          row.appendChild(tdCount);
+          row.appendChild(tdMontant);
+
+          tbody.appendChild(row);
+        });
       }
     }
 
@@ -226,17 +242,17 @@ async function chargerStatsValidations() {
 }
 
 // =====================================
-//  3. Nettoyage des données
+//  3. Nettoyage des BILLETS (pas validations)
 // =====================================
 
-async function effacerToutesLesDonnees() {
+async function effacerTousLesBillets() {
   const ok = confirm(
-    "CONFIRMATION : effacer TOUS les billets et validations ?"
+    "CONFIRMATION : effacer TOUS les billets d'entrée ET les billets internes ?\n(Les validations NE seront PAS effacées.)"
   );
   if (!ok) return;
 
   try {
-    // 1. Supprimer tous les billets
+    // billets (entrée)
     const billetsRes = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_TABLE_ID,
@@ -256,38 +272,37 @@ async function effacerToutesLesDonnees() {
       }
     }
 
-    // 2. Supprimer toutes les validations
-    const valRes = await adminDB.listDocuments(
+    // billets internes (jeux)
+    const biRes = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
-      APPWRITE_VALIDATIONS_TABLE_ID,
+      APPWRITE_BILLETS_INTERNE_TABLE_ID,
       [Appwrite.Query.limit(10000)]
     );
-    const validations = valRes.documents || [];
+    const billetsInt = biRes.documents || [];
 
-    for (const v of validations) {
+    for (const bi of billetsInt) {
       try {
         await adminDB.deleteDocument(
           APPWRITE_DATABASE_ID,
-          APPWRITE_VALIDATIONS_TABLE_ID,
-          v.$id
+          APPWRITE_BILLETS_INTERNE_TABLE_ID,
+          bi.$id
         );
       } catch (err) {
-        console.error("[ADMIN] Erreur suppression validation", v.$id, err);
+        console.error("[ADMIN] Erreur suppression billet interne", bi.$id, err);
       }
     }
 
-    alert("Toutes les données billets + validations ont été supprimées.");
-    console.log(
-      "[ADMIN] Nettoyage terminé. Billets supprimés :",
-      billets.length,
-      "Validations supprimées :",
-      validations.length
+    alert(
+      "Tous les billets (entrée + internes) ont été supprimés.\nLes validations sont conservées."
     );
-
-    // On rafraîchit les stats (qui devraient être à zéro)
-    chargerStatsValidations();
+    console.log(
+      "[ADMIN] Nettoyage billets terminé. Entrée:",
+      billets.length,
+      "Internes:",
+      billetsInt.length
+    );
   } catch (err) {
-    console.error("[ADMIN] Erreur lors du nettoyage des données :", err);
+    console.error("[ADMIN] Erreur lors du nettoyage des billets :", err);
     alert("Erreur lors du nettoyage (voir console).");
   }
 }
@@ -300,8 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("[ADMIN] DOMContentLoaded");
 
   // Import CSV
-  const csvInput = $("csvFile");        // <-- même ID que dans le HTML
-  const importBtn = $("btnImportCsv");  // <-- même ID que dans le HTML
+  const csvInput = $("csvFile");
+  const importBtn = $("btnImportCsv");
 
   if (importBtn && csvInput) {
     importBtn.addEventListener("click", (e) => {
@@ -319,15 +334,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Nettoyage (bouton rouge qui supprime billets + validations)
+  // Nettoyage billets
   const clearDataBtn = $("clearDataBtn");
   if (clearDataBtn) {
     clearDataBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      effacerToutesLesDonnees();
+      effacerTousLesBillets();
     });
   }
 
-  // Charger les stats automatiquement au démarrage
+  // Charger les stats automatiquement
   chargerStatsValidations();
 });
