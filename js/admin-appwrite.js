@@ -8,9 +8,9 @@ const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
-const APPWRITE_BILLETS_TABLE_ID = "billets";          // billets d'entrée
+const APPWRITE_BILLETS_TABLE_ID = "billets";                // billets d'entrée
 const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux internes
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";  // historique validations
+const APPWRITE_VALIDATIONS_TABLE_ID = "validations";        // historique validations
 
 // =====================================
 //  Initialisation du client Appwrite
@@ -32,6 +32,11 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function getImportType() {
+  const r = document.querySelector('input[name="importType"]:checked');
+  return r ? r.value : "entree";
+}
+
 // Format monnaie
 function formatGNF(n) {
   const v = Number(n) || 0;
@@ -39,26 +44,17 @@ function formatGNF(n) {
 }
 
 // =====================================
-//  1. IMPORT CSV -> billets (ENTRÉE)
+//  1. IMPORT CSV
 // =====================================
-/*
-  Structure attendue du CSV (séparateur ; ) :
-
-  numero_billet   (obligatoire)
-  type_acces      (obligatoire)
-  prix            (optionnel -> 0 si vide)
-  tarif_universite (optionnel -> 0 si vide)
-  statut          (optionnel -> "Non utilisé" si vide)
-
-  Exemple d’entête :
-  numero_billet;type_acces;prix;tarif_universite;statut
-*/
 
 async function importerCSVDansBillets(file) {
   if (!file) {
     alert("Veuillez choisir un fichier CSV.");
     return;
   }
+
+  const typeImport = getImportType(); // "entree" ou "interne"
+  console.log("[ADMIN] Import type =", typeImport);
 
   const reader = new FileReader();
 
@@ -74,62 +70,113 @@ async function importerCSVDansBillets(file) {
     const header = lignes[0].split(";").map((h) => h.trim());
     console.log("[ADMIN] En-têtes CSV :", header);
 
-    const idxNumero = header.indexOf("numero_billet");
-    const idxType = header.indexOf("type_acces");
-    const idxPrix = header.indexOf("prix");
-    const idxTarifUni = header.indexOf("tarif_universite");
-    const idxStatut = header.indexOf("statut");
-
-    if (idxNumero === -1 || idxType === -1) {
-      alert(
-        "Le CSV doit contenir au minimum les colonnes : numero_billet, type_acces."
-      );
-      return;
-    }
-
     let count = 0;
 
-    for (let i = 1; i < lignes.length; i++) {
-      const cols = lignes[i].split(";");
-      if (!cols[idxNumero]) continue; // ligne vide
+    if (typeImport === "entree") {
+      // ======== BILLETS D'ENTRÉE ========
+      const idxNumero = header.indexOf("numero_billet");
+      const idxType = header.indexOf("type_acces");
+      const idxPrix = header.indexOf("prix");
+      const idxTarifUni = header.indexOf("tarif_universite");
+      const idxStatut = header.indexOf("statut");
 
-      const numero = cols[idxNumero].trim();
-      const typeAcces = cols[idxType] ? cols[idxType].trim() : "";
-
-      if (!numero || !typeAcces) continue;
-
-      const prix = idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
-      const tarifUni =
-        idxTarifUni !== -1
-          ? parseInt(cols[idxTarifUni].trim() || "0", 10) || 0
-          : 0;
-      const statut =
-        idxStatut !== -1 && cols[idxStatut]
-          ? cols[idxStatut].trim()
-          : "Non utilisé";
-
-      const doc = {
-        numero_billet: numero,
-        type_acces: typeAcces,
-        prix: prix,
-        tarif_universite: tarifUni,
-        statut: statut
-      };
-
-      try {
-        await adminDB.createDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_BILLETS_TABLE_ID,
-          Appwrite.ID.unique(),
-          doc
+      if (idxNumero === -1 || idxType === -1) {
+        alert(
+          "Pour les billets d'entrée, le CSV doit contenir au minimum : numero_billet;type_acces"
         );
-        count++;
-      } catch (err) {
-        console.error("[ADMIN] Erreur création billet pour la ligne", i, err);
+        return;
       }
+
+      for (let i = 1; i < lignes.length; i++) {
+        const cols = lignes[i].split(";");
+        if (!cols[idxNumero]) continue;
+
+        const numero = cols[idxNumero].trim();
+        const typeAcces = cols[idxType] ? cols[idxType].trim() : "";
+        if (!numero || !typeAcces) continue;
+
+        const prix =
+          idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
+        const tarifUni =
+          idxTarifUni !== -1
+            ? parseInt(cols[idxTarifUni].trim() || "0", 10) || 0
+            : 0;
+        const statut =
+          idxStatut !== -1 && cols[idxStatut]
+            ? cols[idxStatut].trim()
+            : "Non utilisé";
+
+        const doc = {
+          numero_billet: numero,
+          type_acces: typeAcces,
+          prix: prix,
+          tarif_universite: tarifUni,
+          statut: statut
+        };
+
+        try {
+          await adminDB.createDocument(
+            APPWRITE_DATABASE_ID,
+            APPWRITE_BILLETS_TABLE_ID,
+            Appwrite.ID.unique(),
+            doc
+          );
+          count++;
+        } catch (err) {
+          console.error("[ADMIN] Erreur création billet entrée ligne", i, err);
+        }
+      }
+
+      alert(`Import billets d'entrée terminé : ${count} billets créés.`);
+
+    } else {
+      // ======== BILLETS INTERNES (JEUX) ========
+      const idxNumero = header.indexOf("numero_billet");
+      const idxTypeBillet = header.indexOf("type_billet");
+      const idxPrix = header.indexOf("prix");
+
+      if (idxNumero === -1 || idxTypeBillet === -1) {
+        alert(
+          "Pour les billets internes, le CSV doit contenir au minimum : numero_billet;type_billet"
+        );
+        return;
+      }
+
+      for (let i = 1; i < lignes.length; i++) {
+        const cols = lignes[i].split(";");
+        if (!cols[idxNumero]) continue;
+
+        const numero = cols[idxNumero].trim();
+        const typeBillet = cols[idxTypeBillet]
+          ? cols[idxTypeBillet].trim()
+          : "";
+        if (!numero || !typeBillet) continue;
+
+        const prix =
+          idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
+
+        const doc = {
+          numero_billet: numero,
+          type_billet: typeBillet,
+          prix: prix
+        };
+
+        try {
+          await adminDB.createDocument(
+            APPWRITE_DATABASE_ID,
+            APPWRITE_BILLETS_INTERNE_TABLE_ID,
+            Appwrite.ID.unique(),
+            doc
+          );
+          count++;
+        } catch (err) {
+          console.error("[ADMIN] Erreur création billet interne ligne", i, err);
+        }
+      }
+
+      alert(`Import billets internes terminé : ${count} billets créés.`);
     }
 
-    alert(`Import terminé : ${count} billets créés.`);
     console.log("[ADMIN] Import CSV terminé. Billets créés :", count);
   };
 
@@ -234,8 +281,7 @@ async function chargerStatsValidations() {
   } catch (err) {
     console.error("[ADMIN] Erreur chargement stats validations :", err);
     if (msg) {
-      msg.textContent =
-        "Erreur lors du chargement des stats (voir console).";
+      msg.textContent = "Erreur lors du chargement des stats (voir console).";
       msg.className = "message message-error";
     }
   }
@@ -252,7 +298,7 @@ async function effacerTousLesBillets() {
   if (!ok) return;
 
   try {
-    // billets (entrée)
+    // billets d'entrée
     const billetsRes = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_TABLE_ID,
@@ -272,7 +318,7 @@ async function effacerTousLesBillets() {
       }
     }
 
-    // billets internes (jeux)
+    // billets internes
     const biRes = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_INTERNE_TABLE_ID,
@@ -314,7 +360,6 @@ async function effacerTousLesBillets() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[ADMIN] DOMContentLoaded");
 
-  // Import CSV
   const csvInput = $("csvFile");
   const importBtn = $("btnImportCsv");
 
@@ -325,7 +370,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Stats
   const refreshStatsBtn = $("refreshStatsBtn");
   if (refreshStatsBtn) {
     refreshStatsBtn.addEventListener("click", (e) => {
@@ -334,7 +378,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Nettoyage billets
   const clearDataBtn = $("clearDataBtn");
   if (clearDataBtn) {
     clearDataBtn.addEventListener("click", (e) => {
@@ -343,6 +386,5 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Charger les stats automatiquement
   chargerStatsValidations();
 });
