@@ -300,8 +300,8 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("[ADMIN] DOMContentLoaded");
 
   // Import CSV
-  const csvInput = $("csvFileInput");
-  const importBtn = $("importBtn");
+  const csvInput = $("csvFile");        // <-- même ID que dans le HTML
+  const importBtn = $("btnImportCsv");  // <-- même ID que dans le HTML
 
   if (importBtn && csvInput) {
     importBtn.addEventListener("click", (e) => {
@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Nettoyage
+  // Nettoyage (bouton rouge qui supprime billets + validations)
   const clearDataBtn = $("clearDataBtn");
   if (clearDataBtn) {
     clearDataBtn.addEventListener("click", (e) => {
