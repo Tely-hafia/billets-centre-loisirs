@@ -12,6 +12,8 @@ const APPWRITE_BILLETS_TABLE_ID = "billets";
 const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
 const APPWRITE_AGENTS_TABLE_ID = "agents";
 const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
+const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
+const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
 
 // ===============================
 //  CLIENT APPWRITE
@@ -29,6 +31,13 @@ client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 const db = new Appwrite.Databases(client);
 
 // ===============================
+//  VARIABLES GLOBALES
+// ===============================
+
+let currentAgent = null;
+let produitsMenu = [];
+
+// ===============================
 //  HELPERS DOM
 // ===============================
 
@@ -36,8 +45,8 @@ function $(id) {
   return document.getElementById(id);
 }
 
-function showResult(text, type) {
-  const zone = $("result-message");
+function showResult(selector, text, type) {
+  const zone = $(selector);
   if (!zone) return;
 
   zone.style.display = "block";
@@ -48,8 +57,8 @@ function showResult(text, type) {
   else if (type === "warn") zone.classList.add("warn");
 }
 
-function clearResult() {
-  const zone = $("result-message");
+function clearResult(selector) {
+  const zone = $(selector);
   if (!zone) return;
   zone.style.display = "none";
   zone.textContent = "";
@@ -80,10 +89,33 @@ function getTarifChoisi() {
 }
 
 // ===============================
-//  ÉTAT DE CONNEXION
+//  GESTION DE LA NAVIGATION
 // ===============================
 
-let currentAgent = null; // ⚠️ Pas de localStorage → pas de session persistante
+function changerMode(mode) {
+  // Masquer tous les modes
+  document.querySelectorAll('.mode-content').forEach(el => {
+    el.style.display = 'none';
+  });
+  
+  // Désactiver tous les boutons
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Activer le mode sélectionné
+  $(`mode-${mode}`).style.display = 'block';
+  $(`btn-mode-${mode}`).classList.add('active');
+  
+  // Réinitialiser les messages
+  clearResult('result-message');
+  clearResult('result-message-interne');
+  clearResult('result-message-restaurant');
+}
+
+// ===============================
+//  ÉTAT DE CONNEXION
+// ===============================
 
 const cardLogin = $("card-login");
 const agentZone = $("agent-zone");
@@ -94,7 +126,7 @@ function appliquerEtatConnexion(agent) {
   currentAgent = agent;
 
   if (agent) {
-    // On montre la zone billets + validation
+    // On montre la zone agent
     if (cardLogin) cardLogin.style.display = "none";
     if (agentZone) agentZone.style.display = "block";
 
@@ -103,8 +135,12 @@ function appliquerEtatConnexion(agent) {
       agentNameEl.textContent = `${agent.login} (${agent.role || ""})`;
     }
 
-    // Charger les billets disponibles
+    // Charger les données
     chargerNombreBillets();
+    chargerMenuRestaurant();
+    
+    // Mode par défaut
+    changerMode('entree');
   } else {
     // Déconnexion → retour à la page de login
     if (cardLogin) cardLogin.style.display = "block";
@@ -114,11 +150,13 @@ function appliquerEtatConnexion(agent) {
     setTicketCount(0);
   }
 
-  clearResult();
+  clearResult('result-message');
+  clearResult('result-message-interne');
+  clearResult('result-message-restaurant');
 }
 
 // ===============================
-//  CHARGER NOMBRE DE BILLET "DISPONIBLES"
+//  CHARGEMENT DES DONNÉES
 // ===============================
 
 async function chargerNombreBillets() {
@@ -136,8 +174,51 @@ async function chargerNombreBillets() {
     setTicketCount(nb);
   } catch (err) {
     console.error("[AGENT] Erreur chargement billets :", err);
-    // On laisse l'affichage existant, on ne bloque pas l'agent
   }
+}
+
+async function chargerMenuRestaurant() {
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_MENU_RESTO_COLLECTION_ID,
+      [Appwrite.Query.equal("actif", [true])]
+    );
+
+    produitsMenu = res.documents || [];
+    const select = $("#produitSelect");
+    select.innerHTML = '<option value="">Choisir un produit...</option>';
+    
+    produitsMenu.forEach(produit => {
+      const option = document.createElement('option');
+      option.value = produit.code_product;
+      option.textContent = `${produit.libelle} - ${produit.prix_unitaire.toLocaleString()} GNF`;
+      option.dataset.prix = produit.prix_unitaire;
+      select.appendChild(option);
+    });
+
+    // Écouter les changements pour calculer le total
+    select.addEventListener('change', calculerTotal);
+    $("#quantite").addEventListener('input', calculerTotal);
+    
+  } catch (err) {
+    console.error("[AGENT] Erreur chargement menu :", err);
+  }
+}
+
+function calculerTotal() {
+  const select = $("#produitSelect");
+  const quantite = $("#quantite");
+  const totalEl = $("#montantTotal");
+  
+  if (!select || !quantite || !totalEl) return;
+  
+  const produit = select.options[select.selectedIndex];
+  const prix = parseInt(produit.dataset.prix || 0);
+  const qte = parseInt(quantite.value || 1);
+  
+  const total = prix * qte;
+  totalEl.textContent = total.toLocaleString() + " GNF";
 }
 
 // ===============================
@@ -187,14 +268,14 @@ function deconnexionAgent() {
 }
 
 // ===============================
-//  VALIDATION BILLET
+//  VALIDATION BILLET (MODE ENTRÉE)
 // ===============================
 
-async function verifierBillet() {
-  clearResult();
+async function verifierBilletEntree() {
+  clearResult('result-message');
 
   if (!currentAgent) {
-    showResult("Veuillez d'abord vous connecter.", "error");
+    showResult("result-message", "Veuillez d'abord vous connecter.", "error");
     return;
   }
 
@@ -203,11 +284,11 @@ async function verifierBillet() {
   const tarifChoisi = getTarifChoisi();
 
   if (!numeroBillet) {
-    showResult("Veuillez saisir un numéro de billet.", "error");
+    showResult("result-message", "Veuillez saisir un numéro de billet.", "error");
     return;
   }
 
-  // 1) PARTIE CRITIQUE : rechercher + mettre à jour le billet
+  // 1) Rechercher le billet
   let billet;
 
   try {
@@ -221,21 +302,21 @@ async function verifierBillet() {
     );
 
     if (!res.documents || res.documents.length === 0) {
-      showResult(`Billet ${numeroBillet} introuvable.`, "error");
+      showResult("result-message", `Billet ${numeroBillet} introuvable.`, "error");
       return;
     }
 
     billet = res.documents[0];
 
     if (billet.statut === "Validé") {
-      showResult(`Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
+      showResult("result-message", `Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
       return;
     }
 
-    // Si tarif étudiant → vérifier le numéro étudiant dans la collection "etudiants"
+    // Si tarif étudiant → vérifier le numéro étudiant
     if (tarifChoisi === "etudiant") {
       if (!numeroEtu) {
-        showResult("Pour le tarif étudiant, le numéro étudiant est obligatoire.", "error");
+        showResult("result-message", "Pour le tarif étudiant, le numéro étudiant est obligatoire.", "error");
         return;
       }
 
@@ -250,7 +331,7 @@ async function verifierBillet() {
         );
 
         if (!etuRes.documents || etuRes.documents.length === 0) {
-          showResult(
+          showResult("result-message",
             "Numéro étudiant introuvable. L'étudiant doit être enregistré par l'administrateur.",
             "error"
           );
@@ -258,7 +339,7 @@ async function verifierBillet() {
         }
       } catch (errCheck) {
         console.error("[AGENT] Erreur vérification étudiant :", errCheck);
-        showResult(
+        showResult("result-message",
           "Erreur lors de la vérification du numéro étudiant (voir console).",
           "error"
         );
@@ -274,34 +355,31 @@ async function verifierBillet() {
       { statut: "Validé" }
     );
 
-    // Affichage succès immédiat pour l'agent
+    // Affichage succès
     const typeAcces = billet.type_acces || "";
     const dateAcces = billet.date_acces || "";
-    showResult(
+    showResult("result-message",
       `Billet ${numeroBillet} VALIDÉ ✅ (${typeAcces} – ${dateAcces})`,
       "success"
     );
 
-    // On vide le champ numéro de billet
-    const ticketInput = $("ticketNumber");
-    if (ticketInput) ticketInput.value = "";
-
-    // On met à jour le compteur
+    // Vider le champ et mettre à jour le compteur
+    $("ticketNumber").value = "";
     chargerNombreBillets();
+
   } catch (err) {
-    console.error("[AGENT] ERREUR critique validation billet :", err);
-    showResult("Erreur lors de la vérification (voir console).", "error");
+    console.error("[AGENT] ERREUR validation billet :", err);
+    showResult("result-message", "Erreur lors de la vérification (voir console).", "error");
     return;
   }
 
-  // 2) PARTIE NON CRITIQUE : journalisation dans "validations"
+  // 2) Journalisation dans "validations"
   try {
     const nowIso = new Date().toISOString();
 
     const montantNormal = parseInt(billet.prix || 0, 10) || 0;
     const montantEtudiant = parseInt(billet.tarif_universite || 0, 10) || 0;
-    const montantPaye =
-      tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
+    const montantPaye = tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
 
     await db.createDocument(
       APPWRITE_DATABASE_ID,
@@ -322,8 +400,138 @@ async function verifierBillet() {
       }
     );
   } catch (logErr) {
-    // On NE casse PAS l'affichage pour l'agent
-    console.warn("[AGENT] Erreur lors de l'enregistrement de la validation :", logErr);
+    console.warn("[AGENT] Erreur enregistrement validation :", logErr);
+  }
+}
+
+// ===============================
+//  VALIDATION BILLET (MODE INTERNE)
+// ===============================
+
+async function verifierBilletInterne() {
+  clearResult('result-message-interne');
+
+  if (!currentAgent) {
+    showResult("result-message-interne", "Veuillez d'abord vous connecter.", "error");
+    return;
+  }
+
+  const numeroBillet = $("ticketNumberInterne")?.value.trim();
+
+  if (!numeroBillet) {
+    showResult("result-message-interne", "Veuillez saisir un numéro de billet.", "error");
+    return;
+  }
+
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_billet", numeroBillet),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      showResult("result-message-interne", `Billet ${numeroBillet} introuvable.`, "error");
+      return;
+    }
+
+    const billet = res.documents[0];
+
+    if (billet.statut === "Validé") {
+      showResult("result-message-interne", `Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
+      return;
+    }
+
+    // Validation interne (jeux) - pas de changement de statut pour l'instant
+    const typeAcces = billet.type_acces || "";
+    showResult("result-message-interne",
+      `Billet ${numeroBillet} VALIDÉ pour jeux internes ✅ (${typeAcces})`,
+      "success"
+    );
+
+    // Vider le champ
+    $("ticketNumberInterne").value = "";
+
+  } catch (err) {
+    console.error("[AGENT] Erreur validation interne :", err);
+    showResult("result-message-interne", "Erreur lors de la validation (voir console).", "error");
+  }
+}
+
+// ===============================
+//  VENTE RESTAURANT (MODE RESTAURANT)
+// ===============================
+
+async function enregistrerVenteRestaurant() {
+  clearResult('result-message-restaurant');
+
+  if (!currentAgent) {
+    showResult("result-message-restaurant", "Veuillez d'abord vous connecter.", "error");
+    return;
+  }
+
+  const produitSelect = $("#produitSelect");
+  const quantiteInput = $("#quantite");
+  
+  const codeProduit = produitSelect.value;
+  const quantite = parseInt(quantiteInput.value || 1);
+
+  if (!codeProduit) {
+    showResult("result-message-restaurant", "Veuillez sélectionner un produit.", "error");
+    return;
+  }
+
+  if (quantite < 1) {
+    showResult("result-message-restaurant", "La quantité doit être au moins 1.", "error");
+    return;
+  }
+
+  try {
+    // Trouver le produit sélectionné
+    const produit = produitsMenu.find(p => p.code_product === codeProduit);
+    if (!produit) {
+      showResult("result-message-restaurant", "Produit non trouvé.", "error");
+      return;
+    }
+
+    const montantTotal = produit.prix_unitaire * quantite;
+    const nowIso = new Date().toISOString();
+
+    // Générer un numéro de ticket unique
+    const numeroTicket = "R" + Date.now();
+
+    // Enregistrer la vente
+    await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VENTES_RESTO_COLLECTION_ID,
+      Appwrite.ID.unique(),
+      {
+        numero_ticket: numeroTicket,
+        date_vente: nowIso,
+        code_produit: codeProduit,
+        quantite: quantite,
+        montant_total: montantTotal,
+        agent_id: currentAgent.login,
+        poste_id: currentAgent.role
+      }
+    );
+
+    showResult("result-message-restaurant",
+      `Vente enregistrée ✅\nTicket: ${numeroTicket}\n${quantite}x ${produit.libelle}\nTotal: ${montantTotal.toLocaleString()} GNF`,
+      "success"
+    );
+
+    // Réinitialiser le formulaire
+    produitSelect.selectedIndex = 0;
+    quantiteInput.value = 1;
+    $("#montantTotal").textContent = "0 GNF";
+
+  } catch (err) {
+    console.error("[AGENT] Erreur enregistrement vente :", err);
+    showResult("result-message-restaurant", "Erreur lors de l'enregistrement (voir console).", "error");
   }
 }
 
@@ -334,8 +542,17 @@ async function verifierBillet() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[AGENT] DOMContentLoaded");
 
-  // Etat initial : déconnecté
+  // État initial : déconnecté
   appliquerEtatConnexion(null);
+
+  // Navigation entre les modes
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const mode = btn.dataset.mode;
+      changerMode(mode);
+    });
+  });
 
   // Connexion
   const btnLogin = $("btnLogin");
@@ -355,21 +572,48 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Validation
+  // Validation Entrée
   const btnValidate = $("validateBtn");
   if (btnValidate) {
     btnValidate.addEventListener("click", (e) => {
       e.preventDefault();
-      verifierBillet();
+      verifierBilletEntree();
     });
   }
 
-  // Validation par Entrée dans le champ billet
+  // Validation Interne
+  const btnValidateInterne = $("validateBtnInterne");
+  if (btnValidateInterne) {
+    btnValidateInterne.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifierBilletInterne();
+    });
+  }
+
+  // Vente Restaurant
+  const btnVenteRestaurant = $("btnVenteRestaurant");
+  if (btnVenteRestaurant) {
+    btnVenteRestaurant.addEventListener("click", (e) => {
+      e.preventDefault();
+      enregistrerVenteRestaurant();
+    });
+  }
+
+  // Validation par Entrée dans les champs
   const inputTicket = $("ticketNumber");
   if (inputTicket) {
     inputTicket.addEventListener("keyup", (e) => {
       if (e.key === "Enter") {
-        verifierBillet();
+        verifierBilletEntree();
+      }
+    });
+  }
+
+  const inputTicketInterne = $("ticketNumberInterne");
+  if (inputTicketInterne) {
+    inputTicketInterne.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") {
+        verifierBilletInterne();
       }
     });
   }
