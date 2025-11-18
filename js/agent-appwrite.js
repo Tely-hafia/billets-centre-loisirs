@@ -1,18 +1,19 @@
 // ======================================================
-//  Configuration Appwrite  (à adapter avec tes valeurs)
+//  Configuration Appwrite
 // ======================================================
 
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";        // ton ID projet
-const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";       // ta base "centre_loisirs"
+const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
+const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
-// Dans l'interface Appwrite, ce sont les IDs des collections
 const APPWRITE_BILLETS_COLLECTION_ID = "billets";
 const APPWRITE_VALIDATIONS_COLLECTION_ID = "validations";
 const APPWRITE_AGENTS_COLLECTION_ID = "agents";
 const APPWRITE_ETUDIANTS_COLLECTION_ID = "etudiants";
 
-const AGENT_LOCALSTORAGE_KEY = "centre_loisirs_agent";
+// Pas de persistance : tout est en mémoire
+let billetsMap = {};        // numero_billet -> document billet
+let currentAgent = null;    // agent connecté
 
 // ======================================================
 //  Initialisation Appwrite
@@ -24,15 +25,7 @@ client
   .setEndpoint(APPWRITE_ENDPOINT)
   .setProject(APPWRITE_PROJECT_ID);
 
-// Ici on utilise Databases (collections/documents)
 const databases = new Appwrite.Databases(client);
-
-// ======================================================
-//  État local
-// ======================================================
-
-let billetsMap = {};        // numero_billet -> billet (document)
-let currentAgent = null;    // agent connecté { id, login, nom, role }
 
 // ======================================================
 //  Helpers DOM
@@ -71,8 +64,44 @@ function showLoginMessage(text, type = "info") {
   zone.classList.add(`message-${type}`);
 }
 
+// Carte de résumé de validation
+function showValidationDetails(details) {
+  const card = $("validationSummary");
+  if (!card) return;
+
+  card.style.display = "block";
+
+  const set = (id, value) => {
+    const el = $(id);
+    if (el) el.textContent = value;
+  };
+
+  set("valNumBillet", details.numero || "");
+  set("valTypeAcces", details.typeAcces || "");
+  set("valTarifChoisi", details.tarifLabel || "");
+  set(
+    "valTarifNormal",
+    details.tarifNormal != null
+      ? details.tarifNormal.toLocaleString("fr-FR") + " GNF"
+      : "—"
+  );
+  set(
+    "valTarifEtudiant",
+    details.tarifEtudiant != null
+      ? details.tarifEtudiant.toLocaleString("fr-FR") + " GNF"
+      : "—"
+  );
+  set(
+    "valMontantPaye",
+    details.montantPaye != null
+      ? details.montantPaye.toLocaleString("fr-FR") + " GNF"
+      : "—"
+  );
+  set("valNumeroEtudiant", details.numeroEtudiant || "—");
+}
+
 // ======================================================
-//  Chargement des billets (depuis Appwrite)
+//  Chargement des billets
 // ======================================================
 
 async function chargerBilletsDepuisAppwrite() {
@@ -112,31 +141,8 @@ function findBillet(numero) {
 //  Gestion Agent : login / logout / UI
 // ======================================================
 
-function loadAgentFromStorage() {
-  try {
-    const raw = localStorage.getItem(AGENT_LOCALSTORAGE_KEY);
-    if (!raw) return;
-    const obj = JSON.parse(raw);
-    if (obj && obj.login) {
-      currentAgent = obj;
-      console.log("[AGENT] Agent restauré depuis localStorage :", currentAgent);
-    }
-  } catch (e) {
-    console.warn("[AGENT] Impossible de restaurer l'agent depuis localStorage.");
-  }
-}
-
-function saveAgentToStorage() {
-  if (!currentAgent) {
-    localStorage.removeItem(AGENT_LOCALSTORAGE_KEY);
-    return;
-  }
-  localStorage.setItem(AGENT_LOCALSTORAGE_KEY, JSON.stringify(currentAgent));
-}
-
 function logoutAgent() {
   currentAgent = null;
-  saveAgentToStorage();
   updateUIForAgent();
   showLoginMessage("Vous êtes déconnecté.", "info");
 }
@@ -195,8 +201,6 @@ async function loginAgent() {
       role: ag.role
     };
 
-    saveAgentToStorage();
-
     showLoginMessage("Connexion réussie.", "success");
     console.log("[AGENT] Connecté :", currentAgent);
 
@@ -215,7 +219,7 @@ function updateUIForAgent() {
   const logoutBtn = $("btnLogout");
 
   if (currentAgent) {
-    if (loginSection) loginSection.style.display = "none";
+    if (loginSection) loginSection.style.display = "block"; // on garde la carte mais avec info
     if (validationSection) validationSection.style.display = "block";
     if (billetsSection) billetsSection.style.display = "block";
 
@@ -290,7 +294,7 @@ async function verifierBillet() {
   showMessage("Vérification en cours…", "info");
 
   try {
-    // 1. On récupère le billet (cache ou Appwrite)
+    // 1. Récupérer le billet
     let billet = findBillet(numero);
 
     if (!billet) {
@@ -341,7 +345,7 @@ async function verifierBillet() {
     let montantPaye = tarifNormal;
     let numeroEtudiant = "";
 
-    // 4. Si tarif étudiant -> vérif etudiant
+    // 4. Tarif étudiant -> vérif etudiant
     if (tarifChoisi === "etudiant") {
       let numEtu = "";
       const etuInput = $("studentNumber");
@@ -373,14 +377,12 @@ async function verifierBillet() {
       montantPaye = tarifEtudiant;
     }
 
-    // 5. Mettre à jour le billet (statut)
+    // 5. Mettre à jour le billet
     await databases.updateDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_COLLECTION_ID,
       billet.$id,
-      {
-        statut: "Validé"
-      }
+      { statut: "Validé" }
     );
 
     billet.statut = "Validé";
@@ -412,7 +414,7 @@ async function verifierBillet() {
       validationData
     );
 
-    // 7. Succès
+    // 7. Affichage
     const typeAcces = billet.type_acces || "";
     const msgDetail =
       tarifChoisi === "etudiant"
@@ -423,6 +425,16 @@ async function verifierBillet() {
       `Billet ${numero} VALIDÉ ✅ (${typeAcces})  -  ${msgDetail}`,
       "success"
     );
+
+    showValidationDetails({
+      numero,
+      typeAcces,
+      tarifLabel: tarifChoisi === "etudiant" ? "Étudiant" : "Normal",
+      tarifNormal,
+      tarifEtudiant,
+      montantPaye,
+      numeroEtudiant
+    });
 
     input.value = "";
     const studentInput = $("studentNumber");
@@ -440,11 +452,8 @@ async function verifierBillet() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[AGENT] agent-appwrite.js chargé");
 
-  // Restaurer l'agent si déjà connecté
-  loadAgentFromStorage();
   updateUIForAgent();
 
-  // Événements connexion / déconnexion
   const btnLogin = $("btnLogin");
   if (btnLogin) {
     btnLogin.addEventListener("click", (e) => {
@@ -461,7 +470,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Validation billet
   const btnValidate = $("validateBtn");
   if (btnValidate) {
     btnValidate.addEventListener("click", (e) => {
@@ -479,7 +487,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Charger les billets depuis Appwrite
+  // Charger les billets
   chargerBilletsDepuisAppwrite();
 });
-
