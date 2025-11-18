@@ -21,34 +21,30 @@ const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
 
 if (typeof Appwrite === "undefined") {
   console.error(
-    "[AGENT] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@13.0.0\"></script>"
+    "[AGENT] Appwrite SDK non chargé. Vérifie le script CDN."
   );
 }
 
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-
 const db = new Appwrite.Databases(client);
 
 // ===============================
-//  VARIABLES GLOBALES
-// ===============================
-
-let currentAgent = null;
-let produitsMenu = [];
-
-// ===============================
-//  HELPERS DOM
+//  HELPERS DOM & FORMAT
 // ===============================
 
 function $(id) {
   return document.getElementById(id);
 }
 
-function showResult(selector, text, type) {
-  const zone = $(selector);
-  if (!zone) return;
+function formatMontantGNF(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString("fr-FR") + " GNF";
+}
 
+function showResult(text, type) {
+  const zone = $("result-message");
+  if (!zone) return;
   zone.style.display = "block";
   zone.textContent = text;
   zone.className = "result";
@@ -57,8 +53,8 @@ function showResult(selector, text, type) {
   else if (type === "warn") zone.classList.add("warn");
 }
 
-function clearResult(selector) {
-  const zone = $(selector);
+function clearResult() {
+  const zone = $("result-message");
   if (!zone) return;
   zone.style.display = "none";
   zone.textContent = "";
@@ -69,11 +65,10 @@ function showLoginMessage(text, type) {
   const zone = $("login-message");
   if (!zone) return;
   zone.textContent = text || "";
-  zone.className = "status";
-  if (!text) return;
-  if (type === "success") zone.style.color = "#16a34a";
-  else if (type === "error") zone.style.color = "#b91c1c";
-  else zone.style.color = "#6b7280";
+  zone.style.color =
+    type === "success" ? "#16a34a" :
+    type === "error" ? "#b91c1c" :
+    "#6b7280";
 }
 
 function setTicketCount(n) {
@@ -82,147 +77,115 @@ function setTicketCount(n) {
 }
 
 function getTarifChoisi() {
-  const normal = $("tarif-normal");
   const etu = $("tarif-etudiant");
   if (etu && etu.checked) return "etudiant";
   return "normal";
 }
 
 // ===============================
-//  GESTION DE LA NAVIGATION
+//  ETAT GLOBAL
 // ===============================
 
-function changerMode(mode) {
-  // Masquer tous les modes
-  document.querySelectorAll('.mode-content').forEach(el => {
-    el.style.display = 'none';
-  });
-  
-  // Désactiver tous les boutons
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
-  // Activer le mode sélectionné
-  $(`mode-${mode}`).style.display = 'block';
-  $(`btn-mode-${mode}`).classList.add('active');
-  
-  // Réinitialiser les messages
-  clearResult('result-message');
-  clearResult('result-message-interne');
-  clearResult('result-message-restaurant');
-}
+let currentAgent = null;   // Pas de session persistante
+let restoProduitsCache = [];
+let currentMode = "billets";
 
 // ===============================
-//  ÉTAT DE CONNEXION
+//  UI MODES
 // ===============================
-
-const cardLogin = $("card-login");
-const agentZone = $("agent-zone");
-const agentInfoP = $("agent-connected-info");
-const agentNameEl = $("agent-connected-name");
 
 function appliquerEtatConnexion(agent) {
   currentAgent = agent;
 
-  if (agent) {
-    // On montre la zone agent
-    if (cardLogin) cardLogin.style.display = "none";
-    if (agentZone) agentZone.style.display = "block";
+  const loginCard = $("card-login");
+  const appZone = $("app-zone");
 
-    if (agentInfoP && agentNameEl) {
-      agentInfoP.style.display = "block";
-      agentNameEl.textContent = `${agent.login} (${agent.role || ""})`;
+  const nameEl = $("agent-connected-name");
+  const roleEl = $("agent-connected-role");
+  const btnModeBillets = $("btnModeBillets");
+  const btnModeResto = $("btnModeResto");
+
+  if (agent) {
+    // Décodage du rôle pour savoir quels modes on autorise
+    const roleStr = (agent.role || "").toLowerCase();
+
+    let canBillets =
+      roleStr.includes("billet") ||
+      roleStr.includes("entree") ||
+      roleStr.includes("entrée") ||
+      roleStr.includes("gardien") ||
+      roleStr.includes("jeux") ||
+      roleStr.includes("interne");
+
+    let canResto =
+      roleStr.includes("resto") ||
+      roleStr.includes("restaurant") ||
+      roleStr.includes("bar") ||
+      roleStr.includes("chicha");
+
+    // Si rien n'est détecté, on considère l'agent "complet" (accès aux deux)
+    if (!canBillets && !canResto) {
+      canBillets = true;
+      canResto = true;
     }
 
-    // Charger les données
-    chargerNombreBillets();
-    chargerMenuRestaurant();
-    
-    // Mode par défaut
-    changerMode('entree');
+    // Affichage zone app
+    if (loginCard) loginCard.style.display = "none";
+    if (appZone) appZone.style.display = "block";
+
+    if (nameEl) nameEl.textContent = agent.login || "";
+    if (roleEl) roleEl.textContent = agent.role || "";
+
+    // Afficher/masquer les boutons de mode selon les droits
+    if (btnModeBillets) {
+      btnModeBillets.style.display = canBillets ? "inline-flex" : "none";
+    }
+    if (btnModeResto) {
+      btnModeResto.style.display = canResto ? "inline-flex" : "none";
+    }
+
+    // Mode par défaut selon le type d'agent
+    if (canBillets && !canResto) {
+      // Agent billets uniquement
+      switchMode("billets");
+      chargerNombreBillets();
+    } else if (!canBillets && canResto) {
+      // Agent resto uniquement
+      switchMode("resto");
+    } else {
+      // Agent qui peut tout faire → par défaut billets
+      switchMode("billets");
+      chargerNombreBillets();
+    }
   } else {
-    // Déconnexion → retour à la page de login
-    if (cardLogin) cardLogin.style.display = "block";
-    if (agentZone) agentZone.style.display = "none";
+    // Déconnexion → retour à la page login
+    if (loginCard) loginCard.style.display = "block";
+    if (appZone) appZone.style.display = "none";
 
-    if (agentInfoP) agentInfoP.style.display = "none";
+    if (btnModeBillets) btnModeBillets.style.display = "inline-flex";
+    if (btnModeResto) btnModeResto.style.display = "inline-flex";
+
     setTicketCount(0);
-  }
-
-  clearResult('result-message');
-  clearResult('result-message-interne');
-  clearResult('result-message-restaurant');
-}
-
-// ===============================
-//  CHARGEMENT DES DONNÉES
-// ===============================
-
-async function chargerNombreBillets() {
-  try {
-    const res = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_TABLE_ID,
-      [
-        Appwrite.Query.equal("statut", "Non utilisé"),
-        Appwrite.Query.limit(10000)
-      ]
-    );
-
-    const nb = res.documents ? res.documents.length : 0;
-    setTicketCount(nb);
-  } catch (err) {
-    console.error("[AGENT] Erreur chargement billets :", err);
+    clearResult();
   }
 }
 
-async function chargerMenuRestaurant() {
-  try {
-    const res = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_MENU_RESTO_COLLECTION_ID,
-      [Appwrite.Query.equal("actif", [true])]
-    );
 
-    produitsMenu = res.documents || [];
-    const select = $("#produitSelect");
-    select.innerHTML = '<option value="">Choisir un produit...</option>';
-    
-    produitsMenu.forEach(produit => {
-      const option = document.createElement('option');
-      option.value = produit.code_product;
-      option.textContent = `${produit.libelle} - ${produit.prix_unitaire.toLocaleString()} GNF`;
-      option.dataset.prix = produit.prix_unitaire;
-      select.appendChild(option);
-    });
+function switchMode(mode) {
+  currentMode = mode;
 
-    // Écouter les changements pour calculer le total
-    select.addEventListener('change', calculerTotal);
-    $("#quantite").addEventListener('input', calculerTotal);
-    
-  } catch (err) {
-    console.error("[AGENT] Erreur chargement menu :", err);
-  }
-}
+  const modeBillets = $("mode-billets");
+  const modeResto = $("mode-resto");
+  const modeLabel = $("mode-label");
 
-function calculerTotal() {
-  const select = $("#produitSelect");
-  const quantite = $("#quantite");
-  const totalEl = $("#montantTotal");
-  
-  if (!select || !quantite || !totalEl) return;
-  
-  const produit = select.options[select.selectedIndex];
-  const prix = parseInt(produit.dataset.prix || 0);
-  const qte = parseInt(quantite.value || 1);
-  
-  const total = prix * qte;
-  totalEl.textContent = total.toLocaleString() + " GNF";
+  if (modeBillets) modeBillets.style.display = mode === "billets" ? "block" : "none";
+  if (modeResto) modeResto.style.display = mode === "resto" ? "block" : "none";
+  if (modeLabel) modeLabel.textContent =
+    mode === "billets" ? "Contrôle billets" : "Restauration / Chicha";
 }
 
 // ===============================
-//  CONNEXION / DÉCONNEXION AGENT
+//  CONNEXION / DÉCONNEXION
 // ===============================
 
 async function connecterAgent() {
@@ -256,6 +219,7 @@ async function connecterAgent() {
     const agent = res.documents[0];
     showLoginMessage("Connexion réussie.", "success");
     appliquerEtatConnexion(agent);
+
   } catch (err) {
     console.error("[AGENT] Erreur connexion agent :", err);
     showLoginMessage("Erreur lors de la connexion (voir console).", "error");
@@ -268,14 +232,31 @@ function deconnexionAgent() {
 }
 
 // ===============================
-//  VALIDATION BILLET (MODE ENTRÉE)
+//  BILLETS : COMPTE ET VALIDATION
 // ===============================
 
-async function verifierBilletEntree() {
-  clearResult('result-message');
+async function chargerNombreBillets() {
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [
+        Appwrite.Query.equal("statut", "Non utilisé"),
+        Appwrite.Query.limit(10000)
+      ]
+    );
+    const nb = res.documents ? res.documents.length : 0;
+    setTicketCount(nb);
+  } catch (err) {
+    console.error("[AGENT] Erreur chargement billets :", err);
+  }
+}
+
+async function verifierBillet() {
+  clearResult();
 
   if (!currentAgent) {
-    showResult("result-message", "Veuillez d'abord vous connecter.", "error");
+    showResult("Veuillez d'abord vous connecter.", "error");
     return;
   }
 
@@ -284,13 +265,13 @@ async function verifierBilletEntree() {
   const tarifChoisi = getTarifChoisi();
 
   if (!numeroBillet) {
-    showResult("result-message", "Veuillez saisir un numéro de billet.", "error");
+    showResult("Veuillez saisir un numéro de billet.", "error");
     return;
   }
 
-  // 1) Rechercher le billet
   let billet;
 
+  // 1. Partie critique : billet
   try {
     const res = await db.listDocuments(
       APPWRITE_DATABASE_ID,
@@ -302,21 +283,24 @@ async function verifierBilletEntree() {
     );
 
     if (!res.documents || res.documents.length === 0) {
-      showResult("result-message", `Billet ${numeroBillet} introuvable.`, "error");
+      showResult(`Billet ${numeroBillet} introuvable.`, "error");
       return;
     }
 
     billet = res.documents[0];
 
     if (billet.statut === "Validé") {
-      showResult("result-message", `Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
+      showResult(`Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
       return;
     }
 
-    // Si tarif étudiant → vérifier le numéro étudiant
+    // Tarif étudiant → vérifier etudiant
     if (tarifChoisi === "etudiant") {
       if (!numeroEtu) {
-        showResult("result-message", "Pour le tarif étudiant, le numéro étudiant est obligatoire.", "error");
+        showResult(
+          "Pour le tarif étudiant, le numéro étudiant est obligatoire.",
+          "error"
+        );
         return;
       }
 
@@ -331,7 +315,7 @@ async function verifierBilletEntree() {
         );
 
         if (!etuRes.documents || etuRes.documents.length === 0) {
-          showResult("result-message",
+          showResult(
             "Numéro étudiant introuvable. L'étudiant doit être enregistré par l'administrateur.",
             "error"
           );
@@ -339,7 +323,7 @@ async function verifierBilletEntree() {
         }
       } catch (errCheck) {
         console.error("[AGENT] Erreur vérification étudiant :", errCheck);
-        showResult("result-message",
+        showResult(
           "Erreur lors de la vérification du numéro étudiant (voir console).",
           "error"
         );
@@ -355,183 +339,189 @@ async function verifierBilletEntree() {
       { statut: "Validé" }
     );
 
-    // Affichage succès
     const typeAcces = billet.type_acces || "";
     const dateAcces = billet.date_acces || "";
-    showResult("result-message",
+    showResult(
       `Billet ${numeroBillet} VALIDÉ ✅ (${typeAcces} – ${dateAcces})`,
       "success"
     );
 
-    // Vider le champ et mettre à jour le compteur
-    $("ticketNumber").value = "";
-    chargerNombreBillets();
+    const ticketInput = $("ticketNumber");
+    if (ticketInput) ticketInput.value = "";
 
+    chargerNombreBillets();
   } catch (err) {
-    console.error("[AGENT] ERREUR validation billet :", err);
-    showResult("result-message", "Erreur lors de la vérification (voir console).", "error");
+    console.error("[AGENT] ERREUR critique validation billet :", err);
+    showResult("Erreur lors de la vérification (voir console).", "error");
     return;
   }
 
-  // 2) Journalisation dans "validations"
+  // 2. Journalisation dans validations (non bloquant)
   try {
     const nowIso = new Date().toISOString();
 
     const montantNormal = parseInt(billet.prix || 0, 10) || 0;
     const montantEtudiant = parseInt(billet.tarif_universite || 0, 10) || 0;
-    const montantPaye = tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
+    const montantPaye =
+      tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
+
+    const validationDoc = {
+      numero_billet: billet.numero_billet,
+      billet_id: billet.$id,
+      date_validation: nowIso,
+      type_acces: billet.type_acces || "",
+      type_billet: billet.type_billet || "",
+      code_offre: billet.code_offre || "",
+      tarif_normal: montantNormal,
+      tarif_etudiant: montantEtudiant,
+      tarif_applique: tarifChoisi,
+      montant_paye: montantPaye,
+      agent_id: currentAgent.$id || "",
+      poste_id: currentAgent.role || "",
+      numero_etudiant: numeroEtu || ""
+    };
 
     await db.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
       Appwrite.ID.unique(),
-      {
-        numero_billet: billet.numero_billet,
-        billet_id: billet.$id,
-        date_validation: nowIso,
-        type_acces: billet.type_acces || "",
-        tarif_normal: montantNormal,
-        tarif_etudiant: montantEtudiant,
-        tarif_applique: tarifChoisi,
-        montant_paye: montantPaye,
-        agent_id: currentAgent?.$id || "",
-        poste_id: currentAgent?.role || "",
-        numero_etudiant: numeroEtu || ""
-      }
+      validationDoc
     );
   } catch (logErr) {
-    console.warn("[AGENT] Erreur enregistrement validation :", logErr);
+    console.warn(
+      "[AGENT] Erreur lors de l'enregistrement de la validation :",
+      logErr
+    );
   }
 }
 
 // ===============================
-//  VALIDATION BILLET (MODE INTERNE)
+//  RESTO / CHICHA
 // ===============================
 
-async function verifierBilletInterne() {
-  clearResult('result-message-interne');
-
-  if (!currentAgent) {
-    showResult("result-message-interne", "Veuillez d'abord vous connecter.", "error");
-    return;
-  }
-
-  const numeroBillet = $("ticketNumberInterne")?.value.trim();
-
-  if (!numeroBillet) {
-    showResult("result-message-interne", "Veuillez saisir un numéro de billet.", "error");
-    return;
-  }
+async function chargerProduitsResto() {
+  const select = $("restoProduit");
+  if (!select) return;
 
   try {
     const res = await db.listDocuments(
       APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_TABLE_ID,
+      APPWRITE_MENU_RESTO_COLLECTION_ID,
       [
-        Appwrite.Query.equal("numero_billet", numeroBillet),
-        Appwrite.Query.limit(1)
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(100)
       ]
     );
 
-    if (!res.documents || res.documents.length === 0) {
-      showResult("result-message-interne", `Billet ${numeroBillet} introuvable.`, "error");
-      return;
-    }
+    restoProduitsCache = res.documents || [];
 
-    const billet = res.documents[0];
+    select.innerHTML = '<option value="">Choisir un produit...</option>';
 
-    if (billet.statut === "Validé") {
-      showResult("result-message-interne", `Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
-      return;
-    }
-
-    // Validation interne (jeux) - pas de changement de statut pour l'instant
-    const typeAcces = billet.type_acces || "";
-    showResult("result-message-interne",
-      `Billet ${numeroBillet} VALIDÉ pour jeux internes ✅ (${typeAcces})`,
-      "success"
-    );
-
-    // Vider le champ
-    $("ticketNumberInterne").value = "";
-
+    restoProduitsCache.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.code_produit;
+      opt.textContent = `${p.libelle} – ${formatMontantGNF(p.prix_unitaire)}`;
+      select.appendChild(opt);
+    });
   } catch (err) {
-    console.error("[AGENT] Erreur validation interne :", err);
-    showResult("result-message-interne", "Erreur lors de la validation (voir console).", "error");
+    console.error("[AGENT] Erreur chargement menu resto :", err);
+    select.innerHTML =
+      '<option value="">Erreur de chargement du menu</option>';
   }
 }
 
-// ===============================
-//  VENTE RESTAURANT (MODE RESTAURANT)
-// ===============================
+function majAffichageMontantResto() {
+  const select = $("restoProduit");
+  const qteInput = $("restoQuantite");
+  const montantEl = $("restoMontant");
+  if (!select || !qteInput || !montantEl) return;
 
-async function enregistrerVenteRestaurant() {
-  clearResult('result-message-restaurant');
+  const produit = restoProduitsCache.find(
+    (p) => p.code_produit === select.value
+  );
+
+  const qte = parseInt(qteInput.value || "1", 10);
+  if (!produit || !qte || qte <= 0) {
+    montantEl.textContent = "Montant : 0 GNF";
+    return;
+  }
+
+  const total = (Number(produit.prix_unitaire) || 0) * qte;
+  montantEl.textContent = "Montant : " + formatMontantGNF(total);
+}
+
+async function enregistrerVenteResto() {
+  const resultZone = $("restoResult");
+  const select = $("restoProduit");
+  const qteInput = $("restoQuantite");
+
+  if (!resultZone || !select || !qteInput) return;
+
+  resultZone.style.display = "block";
 
   if (!currentAgent) {
-    showResult("result-message-restaurant", "Veuillez d'abord vous connecter.", "error");
+    resultZone.textContent = "Veuillez vous connecter avant d'enregistrer une vente.";
+    resultZone.className = "result error";
     return;
   }
 
-  const produitSelect = $("#produitSelect");
-  const quantiteInput = $("#quantite");
-  
-  const codeProduit = produitSelect.value;
-  const quantite = parseInt(quantiteInput.value || 1);
+  const code = select.value;
+  const qte = parseInt(qteInput.value || "1", 10);
 
-  if (!codeProduit) {
-    showResult("result-message-restaurant", "Veuillez sélectionner un produit.", "error");
+  if (!code) {
+    resultZone.textContent = "Choisissez un produit.";
+    resultZone.className = "result warn";
     return;
   }
 
-  if (quantite < 1) {
-    showResult("result-message-restaurant", "La quantité doit être au moins 1.", "error");
+  if (!qte || qte <= 0) {
+    resultZone.textContent = "La quantité doit être au moins 1.";
+    resultZone.className = "result warn";
     return;
   }
+
+  const produit = restoProduitsCache.find(
+    (p) => p.code_produit === code
+  );
+
+  if (!produit) {
+    resultZone.textContent = "Produit introuvable.";
+    resultZone.className = "result error";
+    return;
+  }
+
+  const montant = (Number(produit.prix_unitaire) || 0) * qte;
+  const numeroTicket =
+    "R-" + Date.now().toString(36).toUpperCase().slice(-6);
 
   try {
-    // Trouver le produit sélectionné
-    const produit = produitsMenu.find(p => p.code_product === codeProduit);
-    if (!produit) {
-      showResult("result-message-restaurant", "Produit non trouvé.", "error");
-      return;
-    }
-
-    const montantTotal = produit.prix_unitaire * quantite;
-    const nowIso = new Date().toISOString();
-
-    // Générer un numéro de ticket unique
-    const numeroTicket = "R" + Date.now();
-
-    // Enregistrer la vente
     await db.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_VENTES_RESTO_COLLECTION_ID,
       Appwrite.ID.unique(),
       {
         numero_ticket: numeroTicket,
-        date_vente: nowIso,
-        code_produit: codeProduit,
-        quantite: quantite,
-        montant_total: montantTotal,
-        agent_id: currentAgent.login,
-        poste_id: currentAgent.role
+        date_vente: new Date().toISOString(),
+        code_produit: code,
+        quantite: qte,
+        montant_total: montant,
+        agent_id: currentAgent.$id,
+        poste_id: currentAgent.role || "RESTO",
+        mode: "cash"
       }
     );
 
-    showResult("result-message-restaurant",
-      `Vente enregistrée ✅\nTicket: ${numeroTicket}\n${quantite}x ${produit.libelle}\nTotal: ${montantTotal.toLocaleString()} GNF`,
-      "success"
-    );
+    resultZone.textContent =
+      `Vente enregistrée – Ticket ${numeroTicket}, montant ${formatMontantGNF(montant)}.`;
+    resultZone.className = "result ok";
 
-    // Réinitialiser le formulaire
-    produitSelect.selectedIndex = 0;
-    quantiteInput.value = 1;
-    $("#montantTotal").textContent = "0 GNF";
-
+    qteInput.value = "1";
+    majAffichageMontantResto();
   } catch (err) {
-    console.error("[AGENT] Erreur enregistrement vente :", err);
-    showResult("result-message-restaurant", "Erreur lors de l'enregistrement (voir console).", "error");
+    console.error("[AGENT] Erreur enregistrement vente resto :", err);
+    resultZone.textContent =
+      "Erreur lors de l'enregistrement de la vente (voir console).";
+    resultZone.className = "result error";
   }
 }
 
@@ -542,17 +532,7 @@ async function enregistrerVenteRestaurant() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[AGENT] DOMContentLoaded");
 
-  // État initial : déconnecté
   appliquerEtatConnexion(null);
-
-  // Navigation entre les modes
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const mode = btn.dataset.mode;
-      changerMode(mode);
-    });
-  });
 
   // Connexion
   const btnLogin = $("btnLogin");
@@ -572,49 +552,60 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Validation Entrée
+  // Modes
+  const btnModeBillets = $("btnModeBillets");
+  const btnModeResto = $("btnModeResto");
+
+  if (btnModeBillets) {
+    btnModeBillets.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchMode("billets");
+    });
+  }
+  if (btnModeResto) {
+    btnModeResto.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchMode("resto");
+    });
+  }
+
+  // Validation billet
   const btnValidate = $("validateBtn");
   if (btnValidate) {
     btnValidate.addEventListener("click", (e) => {
       e.preventDefault();
-      verifierBilletEntree();
+      verifierBillet();
     });
   }
 
-  // Validation Interne
-  const btnValidateInterne = $("validateBtnInterne");
-  if (btnValidateInterne) {
-    btnValidateInterne.addEventListener("click", (e) => {
-      e.preventDefault();
-      verifierBilletInterne();
-    });
-  }
-
-  // Vente Restaurant
-  const btnVenteRestaurant = $("btnVenteRestaurant");
-  if (btnVenteRestaurant) {
-    btnVenteRestaurant.addEventListener("click", (e) => {
-      e.preventDefault();
-      enregistrerVenteRestaurant();
-    });
-  }
-
-  // Validation par Entrée dans les champs
   const inputTicket = $("ticketNumber");
   if (inputTicket) {
     inputTicket.addEventListener("keyup", (e) => {
       if (e.key === "Enter") {
-        verifierBilletEntree();
+        verifierBillet();
       }
     });
   }
 
-  const inputTicketInterne = $("ticketNumberInterne");
-  if (inputTicketInterne) {
-    inputTicketInterne.addEventListener("keyup", (e) => {
-      if (e.key === "Enter") {
-        verifierBilletInterne();
-      }
+  // Resto
+  const btnResto = $("btnRestoVente");
+  if (btnResto) {
+    btnResto.addEventListener("click", (e) => {
+      e.preventDefault();
+      enregistrerVenteResto();
     });
   }
+
+  const selectResto = $("restoProduit");
+  const qteResto = $("restoQuantite");
+  if (selectResto) {
+    selectResto.addEventListener("change", majAffichageMontantResto);
+  }
+  if (qteResto) {
+    qteResto.addEventListener("input", majAffichageMontantResto);
+  }
+
+  // Charger menu resto au démarrage
+  chargerProduitsResto();
 });
+
