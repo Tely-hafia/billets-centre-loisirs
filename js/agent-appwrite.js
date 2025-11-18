@@ -621,53 +621,499 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnBilletsEntree) {
     btnBilletsEntree.addEventListener("click", (e) => {
-      e.preventDefault();
-      switchBilletsSubMode("ENTREE");
-    });
+      e.preventDefault();console.log("[AGENT] agent-appwrite.js chargé");
+
+// =====================================
+//  Configuration Appwrite
+// =====================================
+
+const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
+const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
+
+const APPWRITE_BILLETS_TABLE_ID = "billets";
+const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne";
+const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
+const APPWRITE_AGENTS_TABLE_ID = "agents";
+const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
+
+// =====================================
+//  Initialisation Appwrite
+// =====================================
+
+const agentClient = new Appwrite.Client();
+agentClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
+
+const agentDB = new Appwrite.Databases(agentClient);
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function formatGNF(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString("fr-FR") + " GNF";
+}
+
+// =====================================
+//  Gestion session agent
+// =====================================
+
+let currentAgent = null; // { $id, login, role, nom }
+
+function saveSession(agent) {
+  if (agent) {
+    sessionStorage.setItem(
+      "agentSession",
+      JSON.stringify({
+        id: agent.$id,
+        login: agent.login,
+        role: agent.role,
+        nom: agent.nom
+      })
+    );
+  } else {
+    sessionStorage.removeItem("agentSession");
   }
-  if (btnBilletsJeux) {
-    btnBilletsJeux.addEventListener("click", (e) => {
-      e.preventDefault();
-      switchBilletsSubMode("JEU");
-    });
+}
+
+function loadSession() {
+  const s = sessionStorage.getItem("agentSession");
+  if (!s) return null;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+function updateUIForAgent() {
+  const loggedIn = !!currentAgent;
+  const sectionLogin = $("section-login");
+  const sectionBillets = $("section-billets-count");
+  const sectionEntree = $("section-entree");
+  const sectionInterne = $("section-interne");
+  const loginStatus = $("loginStatus");
+
+  if (sectionBillets) sectionBillets.classList.toggle("hidden", !loggedIn);
+  if (sectionEntree) sectionEntree.classList.toggle("hidden", !loggedIn);
+  if (sectionInterne) sectionInterne.classList.toggle("hidden", !loggedIn);
+
+  if (loginStatus) {
+    if (loggedIn) {
+      loginStatus.textContent =
+        "Connecté : " + (currentAgent.nom || currentAgent.login) +
+        " (" + (currentAgent.role || "agent") + ")";
+    } else {
+      loginStatus.textContent = "Non connecté.";
+    }
+  }
+}
+
+async function restoreAgentFromSession() {
+  const s = loadSession();
+  if (!s) {
+    currentAgent = null;
+    updateUIForAgent();
+    return;
+  }
+  try {
+    const doc = await agentDB.getDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_AGENTS_TABLE_ID,
+      s.id
+    );
+    if (!doc.actif) {
+      currentAgent = null;
+      saveSession(null);
+    } else {
+      currentAgent = doc;
+    }
+  } catch {
+    currentAgent = null;
+    saveSession(null);
+  }
+  updateUIForAgent();
+  if (currentAgent) {
+    chargerNombreBilletsEntree();
+  }
+}
+
+// =====================================
+//  Connexion / déconnexion
+// =====================================
+
+async function loginAgent() {
+  const login = $("agentLogin")?.value.trim();
+  const pwd = $("agentPassword")?.value.trim();
+
+  const resElt = $("loginStatus");
+  if (!login || !pwd) {
+    if (resElt) resElt.textContent = "Veuillez entrer login et mot de passe.";
+    return;
   }
 
-  // Validation billet
-  const btnValidate = $("validateBtn");
-  if (btnValidate) {
-    btnValidate.addEventListener("click", (e) => {
-      e.preventDefault();
-      verifierBillet();
-    });
+  try {
+    const res = await agentDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_AGENTS_TABLE_ID,
+      [
+        Appwrite.Query.equal("login", [login]),
+        Appwrite.Query.equal("mot_de_passe", [pwd]),
+        Appwrite.Query.equal("actif", [true]),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      if (resElt) resElt.textContent = "Identifiants invalides ou agent inactif.";
+      currentAgent = null;
+      saveSession(null);
+      updateUIForAgent();
+      return;
+    }
+
+    currentAgent = res.documents[0];
+    saveSession(currentAgent);
+    if (resElt) resElt.textContent = "Connexion réussie.";
+    updateUIForAgent();
+    chargerNombreBilletsEntree();
+  } catch (err) {
+    console.error("[AGENT] Erreur login :", err);
+    if (resElt) resElt.textContent = "Erreur de connexion (voir console).";
+  }
+}
+
+function logoutAgent() {
+  currentAgent = null;
+  saveSession(null);
+  updateUIForAgent();
+}
+
+// =====================================
+//  Billets d'entrée : nombre dispo
+// =====================================
+
+async function chargerNombreBilletsEntree() {
+  const elCount = $("ticketCount");
+  if (!elCount) return;
+  if (!currentAgent) {
+    elCount.textContent = "0";
+    return;
   }
 
-  const inputTicket = $("ticketNumber");
-  if (inputTicket) {
-    inputTicket.addEventListener("keyup", (e) => {
-      if (e.key === "Enter") {
-        verifierBillet();
+  try {
+    const res = await agentDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [Appwrite.Query.limit(10000)]
+    );
+    const billets = res.documents || [];
+    // tu peux filtrer statut === "Non utilisé" si tu veux
+    elCount.textContent = billets.length.toString();
+  } catch (err) {
+    console.error("[AGENT] Erreur chargement billets :", err);
+    elCount.textContent = "0";
+  }
+}
+
+// =====================================
+//  Helpers messages
+// =====================================
+
+function showResult(id, text, type) {
+  const zone = $(id);
+  if (!zone) return;
+  zone.textContent = text;
+  zone.className = "result";
+  if (type) zone.classList.add(type); // ok | error | warn
+}
+
+// =====================================
+//  Vérification billet d'entrée
+// =====================================
+
+async function verifierBilletEntree() {
+  if (!currentAgent) {
+    showResult("result-entree", "Veuillez vous connecter.", "error");
+    return;
+  }
+
+  const numero = $("ticketNumberEntree")?.value.trim();
+  const tarifChoice = document.querySelector(
+    'input[name="tarifEntree"]:checked'
+  )?.value || "normal";
+  const numEtu = $("studentNumber")?.value.trim();
+
+  if (!numero) {
+    showResult("result-entree", "Veuillez saisir un numéro de billet.", "error");
+    return;
+  }
+
+  showResult("result-entree", "Vérification en cours...", "warn");
+
+  try {
+    // 1. Chercher le billet
+    const res = await agentDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_billet", [numero]),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      showResult("result-entree", `Billet ${numero} introuvable.`, "error");
+      return;
+    }
+
+    const billet = res.documents[0];
+
+    if (billet.statut === "Validé") {
+      showResult(
+        "result-entree",
+        `Billet ${numero} déjà VALIDÉ ❌`,
+        "error"
+      );
+      return;
+    }
+
+    // 2. Calcul tarif
+    let montant = billet.prix || 0;
+    let tarifNormal = billet.prix || 0;
+    let tarifEtudiant = billet.tarif_universite || 0;
+    let tarifApplique = "normal";
+
+    if (tarifChoice === "etudiant") {
+      if (!numEtu) {
+        showResult(
+          "result-entree",
+          "Numéro étudiant requis pour le tarif étudiant.",
+          "error"
+        );
+        return;
       }
-    });
+
+      // Vérifier l'étudiant
+      const etuRes = await agentDB.listDocuments(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_ETUDIANTS_TABLE_ID,
+        [
+          Appwrite.Query.equal("numero_etudiant", [numEtu]),
+          Appwrite.Query.limit(1)
+        ]
+      );
+      if (!etuRes.documents || etuRes.documents.length === 0) {
+        showResult(
+          "result-entree",
+          "Numéro étudiant introuvable / non enregistré.",
+          "error"
+        );
+        return;
+      }
+
+      montant = tarifEtudiant;
+      tarifApplique = "etudiant";
+    }
+
+    // 3. Mettre à jour le billet (statut Validé)
+    await agentDB.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      billet.$id,
+      {
+        statut: "Validé"
+      }
+    );
+
+    // 4. Enregistrer dans validations
+    const nowIso = new Date().toISOString();
+
+    await agentDB.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        numero_billet: numero,
+        billet_id: billet.$id,
+        date_validation: nowIso,
+        type_acces: billet.type_acces || "Entrée parc",
+        tarif_normal: tarifNormal,
+        tarif_etudiant: tarifEtudiant,
+        tarif_applique: tarifApplique,
+        montant_paye: montant,
+        agent_id: currentAgent.$id || currentAgent.login || "AGENT",
+        poste_id: "ENTREE",
+        numero_etudiant: numEtu || "",
+        mode: "online",
+        source: "agent-entree"
+      }
+    );
+
+    showResult(
+      "result-entree",
+      `Billet ${numero} VALIDÉ ✅ (${billet.type_acces} – ${formatGNF(
+        montant
+      )})`,
+      "ok"
+    );
+
+    $("ticketNumberEntree").value = "";
+    $("studentNumber").value = "";
+    chargerNombreBilletsEntree();
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification billet entrée :", err);
+    showResult(
+      "result-entree",
+      "Erreur lors de la vérification (voir console).",
+      "error"
+    );
+  }
+}
+
+// =====================================
+//  Vérification billet interne (jeux)
+// =====================================
+
+async function verifierBilletInterne() {
+  if (!currentAgent) {
+    showResult("result-interne", "Veuillez vous connecter.", "error");
+    return;
   }
 
-  // Resto
-  const btnResto = $("btnRestoVente");
-  if (btnResto) {
-    btnResto.addEventListener("click", (e) => {
+  const numero = $("ticketNumberInterne")?.value.trim();
+  if (!numero) {
+    showResult(
+      "result-interne",
+      "Veuillez saisir un numéro de billet interne.",
+      "error"
+    );
+    return;
+  }
+
+  showResult("result-interne", "Vérification en cours...", "warn");
+
+  try {
+    // 1. Chercher le billet interne
+    const res = await agentDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_INTERNE_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_billet", [numero]),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      showResult("result-interne", `Billet interne ${numero} introuvable.`, "error");
+      return;
+    }
+
+    const billet = res.documents[0];
+
+    // 2. Vérifier si déjà utilisé (dans validations)
+    const valRes = await agentDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_billet", [numero]),
+        Appwrite.Query.equal("poste_id", ["INTERNE"]),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (valRes.documents && valRes.documents.length > 0) {
+      showResult(
+        "result-interne",
+        `Billet interne ${numero} déjà utilisé ❌`,
+        "error"
+      );
+      return;
+    }
+
+    const montant = billet.prix || 0;
+    const nowIso = new Date().toISOString();
+
+    await agentDB.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        numero_billet: numero,
+        billet_id: billet.$id,
+        date_validation: nowIso,
+        type_acces: billet.type_billet || "Jeu interne",
+        tarif_normal: montant,
+        tarif_etudiant: 0,
+        tarif_applique: "normal",
+        montant_paye: montant,
+        agent_id: currentAgent.$id || currentAgent.login || "AGENT",
+        poste_id: "INTERNE",
+        numero_etudiant: "",
+        mode: "online",
+        source: "agent-interne"
+      }
+    );
+
+    showResult(
+      "result-interne",
+      `Billet interne ${numero} VALIDÉ ✅ (${billet.type_billet} – ${formatGNF(
+        montant
+      )})`,
+      "ok"
+    );
+    $("ticketNumberInterne").value = "";
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification billet interne :", err);
+    showResult(
+      "result-interne",
+      "Erreur lors de la vérification (voir console).",
+      "error"
+    );
+  }
+}
+
+// =====================================
+//  Initialisation
+// =====================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("[AGENT] DOMContentLoaded");
+
+  const btnLogin = $("btnLoginAgent");
+  const btnLogout = $("btnLogoutAgent");
+  const btnEntree = $("btnValidateEntree");
+  const btnInterne = $("btnValidateInterne");
+
+  if (btnLogin) {
+    btnLogin.addEventListener("click", (e) => {
       e.preventDefault();
-      enregistrerVenteResto();
+      loginAgent();
     });
   }
 
-  const selectResto = $("restoProduit");
-  const qteResto = $("restoQuantite");
-  if (selectResto) {
-    selectResto.addEventListener("change", majAffichageMontantResto);
-  }
-  if (qteResto) {
-    qteResto.addEventListener("input", majAffichageMontantResto);
+  if (btnLogout) {
+    btnLogout.addEventListener("click", (e) => {
+      e.preventDefault();
+      logoutAgent();
+    });
   }
 
-  // Charger menu resto au démarrage
-  chargerProduitsResto();
+  if (btnEntree) {
+    btnEntree.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifierBilletEntree();
+    });
+  }
+
+  if (btnInterne) {
+    btnInterne.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifierBilletInterne();
+    });
+  }
+
+  restoreAgentFromSession();
 });
+
