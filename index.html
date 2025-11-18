@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Contrôle des billets - Poste agent</title>
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=7" />
 </head>
 <body>
 
@@ -46,66 +46,116 @@
   <!-- 2. ZONE APRES CONNEXION (PAGE 2) -->
   <div id="agent-zone" style="display:none;">
 
-    <!-- 2.1 Billets disponibles -->
-    <section class="card">
-      <h2>Billets disponibles</h2>
-      <p style="font-size:1.15rem;font-weight:600;">
-        <span id="ticketCount">0</span> billets disponibles
-      </p>
-    </section>
-
-    <!-- 2.2 Validation d'un billet -->
-    <section class="card">
-      <h2>Validation d’un billet</h2>
-
-      <!-- Infos agent connecté + bouton déconnexion -->
-      <p id="agent-connected-info" class="status" style="display:none;margin-bottom:0.8rem;">
-        Connecté :
-        <strong id="agent-connected-name"></strong>
+    <!-- Navigation entre les postes -->
+    <section class="card" id="navigation-card">
+      <h2>Sélection du poste</h2>
+      <div class="mode-navigation">
+        <button id="btn-mode-entree" class="mode-btn active" data-mode="entree">
+          🎫 Entrée
+        </button>
+        <button id="btn-mode-interne" class="mode-btn" data-mode="interne">
+          🎮 Interne
+        </button>
+        <button id="btn-mode-restaurant" class="mode-btn" data-mode="restaurant">
+          🍔 Restaurant
+        </button>
+      </div>
+      
+      <!-- Infos agent connecté -->
+      <p id="agent-connected-info" class="status" style="margin-top:1rem;">
+        Connecté : <strong id="agent-connected-name"></strong>
         <button id="btnLogout" type="button" style="margin-left:0.75rem;">
           Se déconnecter
         </button>
       </p>
-
-      <!-- Choix du tarif -->
-      <div style="margin-bottom:0.6rem;">
-        <label>Tarif appliqué :</label><br />
-        <label style="margin-right:1rem;">
-          <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
-          Normal
-        </label>
-        <label>
-          <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
-          Étudiant
-        </label>
-      </div>
-
-      <!-- Numéro étudiant -->
-      <div style="margin-bottom:0.6rem;">
-        <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
-        <input
-          type="text"
-          id="etuNumber"
-          placeholder="Ex : USTG-12345"
-        />
-      </div>
-
-      <!-- Numéro de billet -->
-      <div style="margin-bottom:0.8rem;">
-        <label for="ticketNumber">Numéro du billet :</label><br />
-        <input
-          type="text"
-          id="ticketNumber"
-          placeholder="Ex : 26-0001"
-        />
-      </div>
-
-      <button id="validateBtn" type="button">
-        Valider ▶▶
-      </button>
-
-      <div id="result-message" class="result" style="display:none;"></div>
     </section>
+
+    <!-- MODE ENTRÉE -->
+    <div id="mode-entree" class="mode-content">
+      <!-- Billets disponibles -->
+      <section class="card">
+        <h2>Billets disponibles</h2>
+        <p style="font-size:1.15rem;font-weight:600;">
+          <span id="ticketCount">0</span> billets disponibles
+        </p>
+      </section>
+
+      <!-- Validation d'un billet -->
+      <section class="card">
+        <h2>Validation d'un billet (Entrée)</h2>
+
+        <!-- Choix du tarif -->
+        <div style="margin-bottom:0.6rem;">
+          <label>Tarif appliqué :</label><br />
+          <label style="margin-right:1rem;">
+            <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
+            Normal
+          </label>
+          <label>
+            <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
+            Étudiant
+          </label>
+        </div>
+
+        <!-- Numéro étudiant -->
+        <div style="margin-bottom:0.6rem;">
+          <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
+          <input type="text" id="etuNumber" placeholder="Ex : USTG-12345" />
+        </div>
+
+        <!-- Numéro de billet -->
+        <div style="margin-bottom:0.8rem;">
+          <label for="ticketNumber">Numéro du billet :</label><br />
+          <input type="text" id="ticketNumber" placeholder="Ex : 26-0001" />
+        </div>
+
+        <button id="validateBtn" type="button">Valider ▶▶</button>
+        <div id="result-message" class="result" style="display:none;"></div>
+      </section>
+    </div>
+
+    <!-- MODE INTERNE -->
+    <div id="mode-interne" class="mode-content" style="display:none;">
+      <section class="card">
+        <h2>Validation interne (Jeux)</h2>
+        
+        <div style="margin-bottom:0.8rem;">
+          <label for="ticketNumberInterne">Numéro du billet :</label><br />
+          <input type="text" id="ticketNumberInterne" placeholder="Ex : 26-0001" />
+        </div>
+
+        <button id="validateBtnInterne" type="button">Valider le billet ▶▶</button>
+        <div id="result-message-interne" class="result" style="display:none;"></div>
+      </section>
+    </div>
+
+    <!-- MODE RESTAURANT -->
+    <div id="mode-restaurant" class="mode-content" style="display:none;">
+      <section class="card">
+        <h2>Vente Restaurant / Bar</h2>
+        
+        <div style="margin-bottom:0.6rem;">
+          <label for="produitSelect">Produit :</label><br />
+          <select id="produitSelect" style="width:100%;padding:0.5rem;">
+            <option value="">Choisir un produit...</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:0.6rem;">
+          <label for="quantite">Quantité :</label><br />
+          <input type="number" id="quantite" value="1" min="1" style="width:100px;" />
+        </div>
+
+        <div style="margin-bottom:0.8rem;padding:0.5rem;background:var(--accent-soft);border-radius:8px;">
+          <strong>Total : </strong>
+          <span id="montantTotal" style="font-size:1.2rem;font-weight:bold;color:var(--accent);">0 GNF</span>
+        </div>
+
+        <button id="btnVenteRestaurant" type="button">Enregistrer la vente ▶▶</button>
+        <div id="result-message-restaurant" class="result" style="display:none;"></div>
+      </section>
+    </div>
+
   </div>
 
 </main>
@@ -114,11 +164,10 @@
   <p>© Centre de loisirs - Poste Agent</p>
 </footer>
 
-<!-- SDK Appwrite v13 (comme côté admin) -->
+<!-- SDK Appwrite v13 -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 <!-- Script agent -->
-<script src="js/agent-appwrite.js"></script>
+<script src="js/agent-appwrite.js?v=3"></script>
 
 </body>
 </html>
-
