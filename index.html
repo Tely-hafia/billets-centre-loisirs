@@ -4,8 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Contrôle des billets - Poste agent</title>
-
-    <link rel="stylesheet" href="css/styles.css?v=3" />
+    <link rel="stylesheet" href="css/styles.css?v=4" />
 </head>
 
 <body>
@@ -20,116 +19,114 @@
 </header>
 
 <main>
+    <!-- Section Connexion - Toujours visible -->
+    <section class="card" id="loginSection">
+        <h2>🔐 Connexion agent</h2>
 
-<section class="card" id="loginSection">
-  <h2>🔐 Connexion agent</h2>
+        <div class="form-row">
+            <label for="agentCode">Code agent :</label>
+            <input
+                type="text"
+                id="agentCode"
+                placeholder="agent"
+                autocomplete="username"
+            />
+        </div>
 
-  <div class="form-row">
-    <label for="agentCode">Code agent :</label>
-    <input
-      type="text"
-      id="agentCode"
-      placeholder="agent"
-      autocomplete="username"
-    />
-  </div>
+        <div class="form-row">
+            <label for="agentPassword">Mot de passe :</label>
+            <input
+                type="password"
+                id="agentPassword"
+                placeholder="••••"
+                autocomplete="current-password"
+            />
+        </div>
 
-  <div class="form-row">
-    <label for="agentPassword">Mot de passe :</label>
-    <input
-      type="password"
-      id="agentPassword"
-      placeholder="••••"
-      autocomplete="current-password"
-    />
-  </div>
+        <button id="btnLogin" class="btn-primary">
+            Se connecter ▸
+        </button>
 
-  <button id="btnLogin" class="btn-primary">
-    Se connecter ▸
-  </button>
+        <button id="btnLogout" class="btn-secondary" style="display:none;">
+            Se déconnecter
+        </button>
 
-  <button id="btnLogout" class="btn-secondary" style="display:none;">
-    Se déconnecter
-  </button>
+        <p id="loginMessage" class="message"></p>
+        <p id="agentInfo" class="agent-info" style="display:none;"></p>
+    </section>
 
-  <p id="loginMessage" class="message"></p>
-  <p id="agentInfo" class="agent-info" style="display:none;"></p>
-</section>
+    <!-- Sections cachées par défaut - Affichées après connexion -->
+    <div id="dashboardSection" style="display:none;">
+        <section class="card" id="billetsSection">
+            <h2>🎫 Billets disponibles</h2>
+            <p class="big-number">
+                <span id="ticketCount">0</span> billets disponibles
+            </p>
+        </section>
 
+        <section class="card" id="validationSection">
+            <h2>🎟️ Validation d'un billet</h2>
 
-    <section class="card" id="billetsSection">
-  <h2>🎫 Billets disponibles</h2>
-  <p class="big-number">
-    <span id="ticketCount">0</span> billets disponibles
-  </p>
-</section>
+            <div class="form-row">
+                <span>Tarif appliqué :</span>
+                <label class="radio-inline">
+                    <input type="radio" name="tarifType" value="normal" checked>
+                    Normal
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="tarifType" value="etudiant">
+                    Étudiant
+                </label>
+            </div>
 
+            <div class="form-row">
+                <label for="studentNumber">Numéro étudiant (si tarif étudiant) :</label>
+                <input type="text" id="studentNumber" placeholder="Ex : USTG-12345" />
+            </div>
 
-   <section class="card" id="validationSection" style="display:none;">
-  <h2>🎟️ Validation d’un billet</h2>
+            <div class="form-row">
+                <label for="ticketNumber">Numéro du billet :</label>
+                <input type="text" id="ticketNumber" placeholder="Ex : 26-0001" />
+                <button id="validateBtn" class="btn-primary">Valider ▶▶</button>
+            </div>
 
-  <div class="form-row">
-    <span>Tarif appliqué :</span>
-    <label class="radio-inline">
-      <input type="radio" name="tarifType" value="normal" checked>
-      Normal
-    </label>
-    <label class="radio-inline">
-      <input type="radio" name="tarifType" value="etudiant">
-      Étudiant
-    </label>
-  </div>
+            <p id="result-message" class="message"></p>
 
-  <div class="form-row">
-    <label for="studentNumber">Numéro étudiant (si tarif étudiant) :</label>
-    <input type="text" id="studentNumber" placeholder="Ex : USTG-12345" />
-  </div>
+            <!-- Carte récap visuelle -->
+            <div id="validationSummary" class="validation-summary" style="display:none;">
+                <h3>Détail de la validation</h3>
 
-  <div class="form-row">
-    <label for="ticketNumber">Numéro du billet :</label>
-    <input type="text" id="ticketNumber" placeholder="Ex : 26-0001" />
-    <button id="validateBtn" class="btn-primary">Valider ▶▶</button>
-  </div>
-
-  <p id="result-message" class="message"></p>
-
-  <!-- Carte récap visuelle -->
-  <div id="validationSummary" class="validation-summary" style="display:none;">
-    <h3>Détail de la validation</h3>
-
-    <div class="summary-row">
-      <span class="label">Billet</span>
-      <span class="value" id="valNumBillet"></span>
+                <div class="summary-row">
+                    <span class="label">Billet</span>
+                    <span class="value" id="valNumBillet"></span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">Type d'accès</span>
+                    <span class="value" id="valTypeAcces"></span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">Tarif choisi</span>
+                    <span class="value" id="valTarifChoisi"></span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">Tarif normal</span>
+                    <span class="value" id="valTarifNormal"></span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">Tarif étudiant</span>
+                    <span class="value" id="valTarifEtudiant"></span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">Montant payé</span>
+                    <span class="value" id="valMontantPaye"></span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">N° étudiant</span>
+                    <span class="value" id="valNumeroEtudiant"></span>
+                </div>
+            </div>
+        </section>
     </div>
-    <div class="summary-row">
-      <span class="label">Type d’accès</span>
-      <span class="value" id="valTypeAcces"></span>
-    </div>
-    <div class="summary-row">
-      <span class="label">Tarif choisi</span>
-      <span class="value" id="valTarifChoisi"></span>
-    </div>
-    <div class="summary-row">
-      <span class="label">Tarif normal</span>
-      <span class="value" id="valTarifNormal"></span>
-    </div>
-    <div class="summary-row">
-      <span class="label">Tarif étudiant</span>
-      <span class="value" id="valTarifEtudiant"></span>
-    </div>
-    <div class="summary-row">
-      <span class="label">Montant payé</span>
-      <span class="value" id="valMontantPaye"></span>
-    </div>
-    <div class="summary-row">
-      <span class="label">N° étudiant</span>
-      <span class="value" id="valNumeroEtudiant"></span>
-    </div>
-  </div>
-</section>
-
-
-
 </main>
 
 <footer>
@@ -141,6 +138,5 @@
 <script src="js/agent-appwrite.js"></script>
 </body>
 </html>
-
 
 
