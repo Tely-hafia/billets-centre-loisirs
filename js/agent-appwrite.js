@@ -86,12 +86,57 @@ function getTarifChoisi() {
 //  ETAT GLOBAL
 // ===============================
 
-let currentAgent = null;   // Pas de session persistante
+let currentAgent = null;            // Pas de session persistante
 let restoProduitsCache = [];
-let currentMode = "billets";
+let currentMode = "billets";        // "billets" ou "resto"
+let currentBilletsSubMode = "ENTREE"; // "ENTREE" ou "JEU"
 
 // ===============================
 //  UI MODES
+// ===============================
+
+function switchMode(mode) {
+  currentMode = mode;
+
+  const modeBillets = $("mode-billets");
+  const modeResto = $("mode-resto");
+  const modeLabel = $("mode-label");
+
+  if (modeBillets) modeBillets.style.display = mode === "billets" ? "block" : "none";
+  if (modeResto) modeResto.style.display = mode === "resto" ? "block" : "none";
+  if (modeLabel) {
+    modeLabel.textContent =
+      mode === "billets" ? "Contrôle billets" : "Restauration / Chicha";
+  }
+}
+
+function switchBilletsSubMode(mode) {
+  currentBilletsSubMode = mode; // "ENTREE" ou "JEU"
+
+  const btnEntree = $("btnBilletsEntree");
+  const btnJeux = $("btnBilletsJeux");
+  const hint = $("billetsSubHint");
+
+  if (btnEntree) {
+    btnEntree.classList.toggle("active-submode", mode === "ENTREE");
+  }
+  if (btnJeux) {
+    btnJeux.classList.toggle("active-submode", mode === "JEU");
+  }
+
+  if (hint) {
+    if (mode === "ENTREE") {
+      hint.textContent =
+        "Mode : billets d’entrée (bracelets). Saisir le numéro imprimé sur le bracelet.";
+    } else {
+      hint.textContent =
+        "Mode : billets JEUX internes. Saisir le numéro imprimé sur le ticket de jeu (ex : J-0001).";
+    }
+  }
+}
+
+// ===============================
+//  CONNEXION / ETAT AGENT
 // ===============================
 
 function appliquerEtatConnexion(agent) {
@@ -123,7 +168,7 @@ function appliquerEtatConnexion(agent) {
       roleStr.includes("bar") ||
       roleStr.includes("chicha");
 
-    // Si rien n'est détecté, on considère l'agent "complet" (accès aux deux)
+    // Si rien n'est détecté, accès aux deux
     if (!canBillets && !canResto) {
       canBillets = true;
       canResto = true;
@@ -146,15 +191,14 @@ function appliquerEtatConnexion(agent) {
 
     // Mode par défaut selon le type d'agent
     if (canBillets && !canResto) {
-      // Agent billets uniquement
       switchMode("billets");
+      switchBilletsSubMode("ENTREE");
       chargerNombreBillets();
     } else if (!canBillets && canResto) {
-      // Agent resto uniquement
       switchMode("resto");
     } else {
-      // Agent qui peut tout faire → par défaut billets
       switchMode("billets");
+      switchBilletsSubMode("ENTREE");
       chargerNombreBillets();
     }
   } else {
@@ -169,24 +213,6 @@ function appliquerEtatConnexion(agent) {
     clearResult();
   }
 }
-
-
-function switchMode(mode) {
-  currentMode = mode;
-
-  const modeBillets = $("mode-billets");
-  const modeResto = $("mode-resto");
-  const modeLabel = $("mode-label");
-
-  if (modeBillets) modeBillets.style.display = mode === "billets" ? "block" : "none";
-  if (modeResto) modeResto.style.display = mode === "resto" ? "block" : "none";
-  if (modeLabel) modeLabel.textContent =
-    mode === "billets" ? "Contrôle billets" : "Restauration / Chicha";
-}
-
-// ===============================
-//  CONNEXION / DÉCONNEXION
-// ===============================
 
 async function connecterAgent() {
   const login = $("agentLogin")?.value.trim();
@@ -294,7 +320,26 @@ async function verifierBillet() {
       return;
     }
 
-    // Tarif étudiant → vérifier etudiant
+    // Vérifier cohérence avec le sous-onglet choisi (Entrée / Jeux)
+    const typeBillet = (billet.type_billet || "").toUpperCase();
+
+    if (currentBilletsSubMode === "ENTREE" && typeBillet === "JEU") {
+      showResult(
+        "Ce numéro correspond à un billet JEUX. Utilisez l'onglet 'Billets Jeux internes'.",
+        "error"
+      );
+      return;
+    }
+
+    if (currentBilletsSubMode === "JEU" && typeBillet === "ENTREE") {
+      showResult(
+        "Ce numéro correspond à un billet d'ENTRÉE. Utilisez l'onglet 'Billets Entrée'.",
+        "error"
+      );
+      return;
+    }
+
+    // Tarif étudiant → vérifier étudiant
     if (tarifChoisi === "etudiant") {
       if (!numeroEtu) {
         showResult(
@@ -552,7 +597,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Modes
+  // Modes principaux
   const btnModeBillets = $("btnModeBillets");
   const btnModeResto = $("btnModeResto");
 
@@ -560,12 +605,30 @@ document.addEventListener("DOMContentLoaded", () => {
     btnModeBillets.addEventListener("click", (e) => {
       e.preventDefault();
       switchMode("billets");
+      chargerNombreBillets();
     });
   }
   if (btnModeResto) {
     btnModeResto.addEventListener("click", (e) => {
       e.preventDefault();
       switchMode("resto");
+    });
+  }
+
+  // Sous-onglets Billets
+  const btnBilletsEntree = $("btnBilletsEntree");
+  const btnBilletsJeux = $("btnBilletsJeux");
+
+  if (btnBilletsEntree) {
+    btnBilletsEntree.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchBilletsSubMode("ENTREE");
+    });
+  }
+  if (btnBilletsJeux) {
+    btnBilletsJeux.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchBilletsSubMode("JEU");
     });
   }
 
@@ -608,4 +671,3 @@ document.addEventListener("DOMContentLoaded", () => {
   // Charger menu resto au démarrage
   chargerProduitsResto();
 });
-
