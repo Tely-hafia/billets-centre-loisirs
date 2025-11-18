@@ -642,3 +642,7 @@ footer {
     font-size: 0.9rem;
   }
 }
+
+.btn-submode { font-size:0.85rem; padding:0.3rem 0.9rem; }
+.active-submode { box-shadow:0 0 0 2px rgba(59,130,246,0.3); }
+
