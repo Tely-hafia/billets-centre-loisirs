@@ -21,16 +21,32 @@
 <main>
 
   <!-- 1. IMPORT CSV -->
-  <section class="card">
-    <h2>📥 Importer des billets (CSV)</h2>
+ <section class="card">
+  <h2>📥 Importer des billets (CSV)</h2>
 
-    <p>Choisissez un fichier CSV exporté depuis Excel (colonnes : numero_billet, date_acces, type_acces, prix, tarif_universite, statut, semaine_code).</p>
+  <p>Type de billets à importer :</p>
+  <div style="margin-bottom:0.5rem;">
+    <label style="margin-right:1rem;">
+      <input type="radio" name="importType" value="entree" checked />
+      Billets d'entrée (parc)
+    </label>
+    <label>
+      <input type="radio" name="importType" value="interne" />
+      Billets internes (jeux)
+    </label>
+  </div>
 
-    <input type="file" id="csvFile" accept=".csv" />
-    <button id="btnImportCsv">Importer ▶▶</button>
+  <p>
+    Pour les billets d'entrée : <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
+    Pour les billets internes : <code>numero_billet;type_billet;prix</code>
+  </p>
 
-    <p id="importStatus" class="note" style="margin-top:0.5rem;"></p>
-  </section>
+  <input type="file" id="csvFile" accept=".csv" />
+  <button id="btnImportCsv">Importer ▶▶</button>
+
+  <p id="importStatus" class="note" style="margin-top:0.5rem;"></p>
+</section>
+
 
   <!-- 2. STATISTIQUES -->
   <!-- 2. Statistiques à partir des validations -->
