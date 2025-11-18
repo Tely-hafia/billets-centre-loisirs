@@ -204,6 +204,9 @@ async function loginAgent() {
     showLoginMessage("Connexion réussie.", "success");
     console.log("[AGENT] Connecté :", currentAgent);
 
+    // Recharger les billets après connexion
+    await chargerBilletsDepuisAppwrite();
+    
     updateUIForAgent();
   } catch (err) {
     console.error("[AGENT] Erreur login agent :", err);
@@ -213,33 +216,66 @@ async function loginAgent() {
 
 function updateUIForAgent() {
   const loginSection = $("loginSection");
-  const validationSection = $("validationSection");
-  const billetsSection = $("billetsSection");
+  const dashboardSection = $("dashboardSection");
   const agentInfo = $("agentInfo");
   const logoutBtn = $("btnLogout");
+  const loginBtn = $("btnLogin");
 
   if (currentAgent) {
-    if (loginSection) loginSection.style.display = "block"; // on garde la carte mais avec info
-    if (validationSection) validationSection.style.display = "block";
-    if (billetsSection) billetsSection.style.display = "block";
-
+    // Mode connecté : afficher le dashboard, masquer le formulaire de connexion
+    if (loginSection) {
+      loginSection.style.display = "block"; // On garde la section mais on réduit son importance
+      loginSection.style.opacity = "0.7";
+    }
+    if (dashboardSection) {
+      dashboardSection.style.display = "block";
+    }
     if (agentInfo) {
       agentInfo.style.display = "block";
       agentInfo.textContent = `Connecté : ${currentAgent.login} (${currentAgent.role})`;
     }
-
     if (logoutBtn) logoutBtn.style.display = "inline-block";
-  } else {
-    if (loginSection) loginSection.style.display = "block";
-    if (validationSection) validationSection.style.display = "none";
-    if (billetsSection) billetsSection.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "none";
 
+    // Masquer les champs de connexion
+    const agentCode = $("agentCode");
+    const agentPassword = $("agentPassword");
+    if (agentCode) agentCode.style.display = "none";
+    if (agentPassword) agentPassword.style.display = "none";
+
+    // Mettre à jour les labels
+    const labels = loginSection.querySelectorAll('label[for="agentCode"], label[for="agentPassword"]');
+    labels.forEach(label => label.style.display = "none");
+
+  } else {
+    // Mode déconnecté : afficher uniquement le formulaire de connexion
+    if (loginSection) {
+      loginSection.style.display = "block";
+      loginSection.style.opacity = "1";
+    }
+    if (dashboardSection) dashboardSection.style.display = "none";
     if (agentInfo) {
       agentInfo.style.display = "none";
       agentInfo.textContent = "";
     }
-
     if (logoutBtn) logoutBtn.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "inline-block";
+
+    // Afficher les champs de connexion
+    const agentCode = $("agentCode");
+    const agentPassword = $("agentPassword");
+    if (agentCode) {
+      agentCode.style.display = "block";
+      agentCode.value = "";
+    }
+    if (agentPassword) {
+      agentPassword.style.display = "block";
+      agentPassword.value = "";
+    }
+
+    // Afficher les labels
+    const labels = loginSection.querySelectorAll('label[for="agentCode"], label[for="agentPassword"]');
+    labels.forEach(label => label.style.display = "block");
   }
 }
 
@@ -439,6 +475,10 @@ async function verifierBillet() {
     input.value = "";
     const studentInput = $("studentNumber");
     if (studentInput) studentInput.value = "";
+
+    // Actualiser le compteur de billets
+    await chargerBilletsDepuisAppwrite();
+
   } catch (err) {
     console.error("[AGENT] Erreur lors de la vérification :", err);
     showMessage("Erreur lors de la vérification (voir console).", "error");
@@ -487,6 +527,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Charger les billets
-  chargerBilletsDepuisAppwrite();
+  // Charger les billets seulement si connecté
+  if (currentAgent) {
+    chargerBilletsDepuisAppwrite();
+  }
 });
