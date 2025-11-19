@@ -83,13 +83,14 @@ function getTarifChoisi() {
 // ===============================
 let currentAgent = null;
 let restoProduitsCache = [];
-let currentMode = "billets"; // "billets" ou "resto"
+let currentMode = "billets";        // "billets" ou "resto"
 let currentBilletsSubMode = "ENTREE"; // "ENTREE" ou "JEU"
 
 // ===============================
 //  UI MODES
 // ===============================
 function switchMode(mode) {
+  console.log("[AGENT] switchMode:", mode);
   currentMode = mode;
 
   const modeBillets = $("mode-billets");
@@ -106,10 +107,11 @@ function switchMode(mode) {
 
 function updateBilletsSubUI() {
   const hint = $("billetsSubHint");
-  const etuBlock = $("etuNumber") ? $("etuNumber").parentElement : null;
-  const tarifBlock = $("tarif-normal")
-    ? $("tarif-normal").closest("div")
-    : null;
+  const etuInput = $("etuNumber");
+  const tarifNormal = $("tarif-normal");
+
+  const etuBlock = etuInput ? etuInput.parentElement : null;
+  const tarifBlock = tarifNormal ? tarifNormal.closest("div") : null;
 
   if (currentBilletsSubMode === "ENTREE") {
     if (hint) {
@@ -123,13 +125,14 @@ function updateBilletsSubUI() {
       hint.textContent =
         "Mode : billets JEUX internes. Saisir le numéro imprimé sur le ticket de jeu (ex : J-0001).";
     }
-    // billets jeux → pas de tarif étudiant, ni de numéro étudiant
+    // jeux internes → pas de tarif étudiant
     if (etuBlock) etuBlock.style.display = "none";
     if (tarifBlock) tarifBlock.style.display = "none";
   }
 }
 
 function switchBilletsSubMode(mode) {
+  console.log("[AGENT] switchBilletsSubMode:", mode);
   currentBilletsSubMode = mode;
 
   const btnEntree = $("btnBilletsEntree");
@@ -161,6 +164,7 @@ function appliquerEtatConnexion(agent) {
   const btnModeResto = $("btnModeResto");
 
   if (agent) {
+    console.log("[AGENT] Agent connecté:", agent.login, agent.role);
     const roleStr = (agent.role || "").toLowerCase();
 
     let canBillets =
@@ -207,6 +211,7 @@ function appliquerEtatConnexion(agent) {
 
     chargerNombreBillets();
   } else {
+    console.log("[AGENT] Déconnexion agent");
     if (loginCard) loginCard.style.display = "block";
     if (appZone) appZone.style.display = "none";
 
@@ -287,6 +292,7 @@ async function chargerNombreBillets() {
       );
     }
     const nb = res.documents ? res.documents.length : 0;
+    console.log("[AGENT] Billets non utilisés (mode", currentBilletsSubMode, "):", nb);
     setTicketCount(nb);
   } catch (err) {
     console.error("[AGENT] Erreur chargement billets :", err);
@@ -294,7 +300,7 @@ async function chargerNombreBillets() {
 }
 
 // ===============================
-//  VALIDATION BILLETS
+//  VALIDATION BILLETS ENTREE
 // ===============================
 async function verifierBilletEntree() {
   clearResult();
@@ -307,6 +313,8 @@ async function verifierBilletEntree() {
   const numeroBillet = $("ticketNumber")?.value.trim();
   const numeroEtu = $("etuNumber")?.value.trim();
   const tarifChoisi = getTarifChoisi();
+
+  console.log("[AGENT] Vérification billet entrée", numeroBillet, "tarif", tarifChoisi);
 
   if (!numeroBillet) {
     showResult("Veuillez saisir un numéro de billet.", "error");
@@ -331,6 +339,7 @@ async function verifierBilletEntree() {
     }
 
     billet = res.documents[0];
+    console.log("[AGENT] Billet entrée trouvé:", billet);
 
     if (billet.statut === "Validé") {
       showResult(`Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
@@ -373,6 +382,7 @@ async function verifierBilletEntree() {
       }
     }
 
+    // mise à jour billet
     await db.updateDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_TABLE_ID,
@@ -387,8 +397,7 @@ async function verifierBilletEntree() {
       "success"
     );
 
-    const ticketInput = $("ticketNumber");
-    if (ticketInput) ticketInput.value = "";
+    $("ticketNumber").value = "";
     $("etuNumber").value = "";
 
     chargerNombreBillets();
@@ -398,7 +407,7 @@ async function verifierBilletEntree() {
     return;
   }
 
-  // journalisation dans validations
+  // journalisation
   try {
     const nowIso = new Date().toISOString();
 
@@ -423,6 +432,8 @@ async function verifierBilletEntree() {
       numero_etudiant: numeroEtu || ""
     };
 
+    console.log("[AGENT] Création validation entrée:", validationDoc);
+
     await db.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
@@ -437,6 +448,9 @@ async function verifierBilletEntree() {
   }
 }
 
+// ===============================
+//  VALIDATION BILLETS JEUX
+// ===============================
 async function verifierBilletJeu() {
   clearResult();
 
@@ -446,6 +460,7 @@ async function verifierBilletJeu() {
   }
 
   const numeroBillet = $("ticketNumber")?.value.trim();
+  console.log("[AGENT] Vérification billet jeu", numeroBillet);
 
   if (!numeroBillet) {
     showResult("Veuillez saisir un numéro de billet.", "error");
@@ -470,6 +485,7 @@ async function verifierBilletJeu() {
     }
 
     billet = res.documents[0];
+    console.log("[AGENT] Billet interne trouvé:", billet);
 
     if (billet.statut === "Validé") {
       showResult(`Billet interne ${numeroBillet} déjà utilisé ❌`, "error");
@@ -488,9 +504,7 @@ async function verifierBilletJeu() {
       "success"
     );
 
-    const ticketInput = $("ticketNumber");
-    if (ticketInput) ticketInput.value = "";
-
+    $("ticketNumber").value = "";
     chargerNombreBillets();
   } catch (err) {
     console.error("[AGENT] ERREUR critique validation billet interne :", err);
@@ -498,7 +512,7 @@ async function verifierBilletJeu() {
     return;
   }
 
-  // journalisation dans validations (normal uniquement)
+  // journalisation
   try {
     const nowIso = new Date().toISOString();
     const montant = parseInt(billet.prix || 0, 10) || 0;
@@ -518,6 +532,8 @@ async function verifierBilletJeu() {
       poste_id: currentAgent.role || "INTERNE",
       numero_etudiant: ""
     };
+
+    console.log("[AGENT] Création validation interne:", validationDoc);
 
     await db.createDocument(
       APPWRITE_DATABASE_ID,
@@ -671,7 +687,6 @@ document.addEventListener("DOMContentLoaded", () => {
   appliquerEtatConnexion(null);
   updateBilletsSubUI();
 
-  // Connexion / déconnexion
   const btnLogin = $("btnLogin");
   if (btnLogin) {
     btnLogin.addEventListener("click", (e) => {
@@ -688,7 +703,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Modes principaux
   const btnModeBillets = $("btnModeBillets");
   const btnModeResto = $("btnModeResto");
 
@@ -707,7 +721,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Sous-onglets Billets
   const btnBilletsEntree = $("btnBilletsEntree");
   const btnBilletsJeux = $("btnBilletsJeux");
 
@@ -724,11 +737,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Validation billet (bouton "Valider le billet ▶▶")
+  // bouton "Valider le billet ▶▶"
   const validateBtn = $("validateBtn");
   if (validateBtn) {
     validateBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      console.log("[AGENT] click validateBtn, submode =", currentBilletsSubMode);
       if (currentBilletsSubMode === "ENTREE") {
         verifierBilletEntree();
       } else {
@@ -737,7 +751,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Resto
   const restoSelect = $("restoProduit");
   const restoQte = $("restoQuantite");
   const btnRestoVente = $("btnRestoVente");
