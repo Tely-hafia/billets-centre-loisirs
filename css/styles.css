@@ -646,3 +646,70 @@ footer {
 .btn-submode { font-size:0.85rem; padding:0.3rem 0.9rem; }
 .active-submode { box-shadow:0 0 0 2px rgba(59,130,246,0.3); }
 
+/* =========================
+   Bloc histogramme / évolution des entrées
+   ========================= */
+
+.chart-card {
+  margin-top: 1.5rem;
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.chart-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  min-height: 180px;
+  padding: 1rem 0 0.75rem;
+  overflow-x: auto;
+}
+
+.chart-bar {
+  flex: 0 0 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chart-bar-inner {
+  width: 100%;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(
+    180deg,
+    var(--accent-secondary),
+    var(--accent-primary)
+  );
+  transition: height 0.3s ease;
+}
+
+.chart-bar-value {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  color: var(--text-main);
+}
+
+.chart-bar-label {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Petit ajustement responsive pour le graphe */
+@media (max-width: 768px) {
+  .chart-bar {
+    flex: 0 0 60px;
+  }
+}
