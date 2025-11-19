@@ -122,6 +122,10 @@ function switchBilletsSubMode(mode) {
   const btnEntree = $("btnBilletsEntree");
   const btnJeux = $("btnBilletsJeux");
   const hint = $("billetsSubHint");
+  const tarifZone = $("tarif-zone");
+  const etuZone = $("etu-zone");
+  const etuInput = $("etuNumber");
+  const tarifNormal = $("tarif-normal");
 
   if (btnEntree) {
     btnEntree.classList.toggle("active-submode", mode === "ENTREE");
@@ -130,14 +134,23 @@ function switchBilletsSubMode(mode) {
     btnJeux.classList.toggle("active-submode", mode === "JEU");
   }
 
-  if (hint) {
-    if (mode === "ENTREE") {
+  if (mode === "ENTREE") {
+    if (hint) {
       hint.textContent =
         "Mode : billets d’entrée (bracelets). Saisir le numéro imprimé sur le bracelet.";
-    } else {
+    }
+    if (tarifZone) tarifZone.style.display = "block";
+    if (etuZone) etuZone.style.display = "block";
+  } else {
+    // mode JEUX : on cache la partie tarif / étudiant
+    if (hint) {
       hint.textContent =
         "Mode : billets JEUX internes. Saisir le numéro imprimé sur le ticket de jeu (ex : J-0001).";
     }
+    if (tarifZone) tarifZone.style.display = "none";
+    if (etuZone) etuZone.style.display = "none";
+    if (etuInput) etuInput.value = "";
+    if (tarifNormal) tarifNormal.checked = true;
   }
 }
 
@@ -295,6 +308,8 @@ async function verifierBillet() {
     return;
   }
 
+  console.log("[AGENT] Vérification billet", numeroBillet, "mode", currentBilletsSubMode);
+
   // ========= MODE ENTREE =========
   if (currentBilletsSubMode === "ENTREE") {
     let billet;
@@ -358,7 +373,6 @@ async function verifierBillet() {
         }
       }
 
-      // Met à jour le billet : statut = Validé
       await db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_TABLE_ID,
@@ -424,10 +438,9 @@ async function verifierBillet() {
     return;
   }
 
-  // ========= MODE JEU (billets internes) =========
+  // ========= MODE JEU =========
   if (currentBilletsSubMode === "JEU") {
     try {
-      // 1. Chercher billet interne
       const res = await db.listDocuments(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_INTERNE_TABLE_ID,
@@ -444,7 +457,6 @@ async function verifierBillet() {
 
       const billet = res.documents[0];
 
-      // 2. Vérifier s'il est déjà utilisé (dans validations)
       const valRes = await db.listDocuments(
         APPWRITE_DATABASE_ID,
         APPWRITE_VALIDATIONS_TABLE_ID,
@@ -646,6 +658,7 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("[AGENT] DOMContentLoaded");
 
   appliquerEtatConnexion(null);
+  switchBilletsSubMode("ENTREE");
 
   // Connexion / déconnexion
   const btnLogin = $("btnLogin");
@@ -693,36 +706,5 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   if (btnBilletsJeux) {
-    btnBilletsJeux.addEventListener("click", (e) => {
-      e.preventDefault();
-      switchBilletsSubMode("JEU");
-    });
-  }
+    btnBillet
 
-  // Validation billet (bouton principal)
-  const btnCheckTicket = $("btnCheckTicket");
-  if (btnCheckTicket) {
-    btnCheckTicket.addEventListener("click", (e) => {
-      e.preventDefault();
-      verifierBillet();
-    });
-  }
-
-  // RESTO events
-  const restoProduit = $("restoProduit");
-  const restoQuantite = $("restoQuantite");
-  const btnRestoValider = $("btnRestoValider");
-
-  if (restoProduit) {
-    restoProduit.addEventListener("change", majAffichageMontantResto);
-  }
-  if (restoQuantite) {
-    restoQuantite.addEventListener("input", majAffichageMontantResto);
-  }
-  if (btnRestoValider) {
-    btnRestoValider.addEventListener("click", (e) => {
-      e.preventDefault();
-      enregistrerVenteResto();
-    });
-  }
-});
