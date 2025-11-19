@@ -37,24 +37,55 @@
     </div>
 
     <p>
-      Pour les billets d'entrée : <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
-      Pour les billets internes : <code>numero_billet;type_billet;prix</code>
+      Pour les billets d'entrée :
+      <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
+      Pour les billets internes :
+      <code>numero_billet;type_billet;prix;statut</code>
     </p>
 
     <input type="file" id="csvFile" accept=".csv" />
-    <button id="btnImportCsv" class="btn-primary">Importer ▶▶</button>
+    <button id="btnImportCsv" class="btn-primary" type="button">
+      Importer ▶▶
+    </button>
 
-    <p id="importStatus" class="note" style="margin-top:0.5rem;"></p>
+    <p id="importStatus" class="status" style="margin-top:0.5rem;"></p>
   </section>
 
   <!-- 2. STATISTIQUES -->
   <section class="card">
     <h2>📊 Statistiques des validations</h2>
 
-    <button id="refreshStatsBtn" class="btn-secondary">
+    <!-- Filtre période -->
+    <div class="form-row" style="margin-top:0.5rem; margin-bottom:0.5rem;">
+      <label for="stats-range">Période analysée :</label>
+      <select id="stats-range">
+        <option value="today">Aujourd'hui</option>
+        <option value="week" selected>Cette semaine</option>
+        <option value="month">Ce mois-ci</option>
+        <option value="year">Cette année</option>
+        <option value="all">Depuis le début</option>
+        <option value="custom">Période personnalisée…</option>
+      </select>
+    </div>
+
+    <div class="form-row" id="stats-custom-range" style="display:none;">
+      <label for="stats-from">Du :</label>
+      <input type="date" id="stats-from" />
+      <label for="stats-to">Au :</label>
+      <input type="date" id="stats-to" />
+    </div>
+
+    <button id="refreshStatsBtn" class="btn-primary" type="button" style="margin-top:0.5rem;">
       Actualiser les stats
     </button>
 
+    <p class="status" style="margin-top:0.4rem;">
+      Les montants sont calculés à partir de la collection
+      <strong>validations</strong>. Tu peux supprimer les billets chaque semaine
+      sans perdre l’historique.
+    </p>
+
+    <!-- Statistiques globales -->
     <div class="stats-grid">
       <div class="stat-item">
         <h3>Billets validés</h3>
@@ -74,12 +105,13 @@
       </div>
     </div>
 
+    <!-- Détail par type d'accès -->
     <h3 style="margin-top:2rem;">Détail par type d'accès</h3>
     <div class="table-wrapper">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Type d'accès</th>
+            <th>Type d'accès / billet</th>
             <th>Nb validations</th>
             <th>Recette (GNF)</th>
           </tr>
@@ -90,27 +122,28 @@
       </table>
     </div>
 
-    <p id="stats-message" class="message"></p>
+    <p id="stats-message" class="message status"></p>
   </section>
 
-  <!-- 3. MAINTENANCE -->
+  <!-- 3. MAINTENANCE DES DONNÉES -->
   <section class="card">
     <h2>🧹 Maintenance des données</h2>
+
     <p>
-      Ce bouton supprime tous les <strong>billets d'entrée</strong> et
-      <strong>billets internes (jeux)</strong> dans Appwrite.
-      <br />
-      <strong>Les validations sont conservées</strong> pour garder l'historique
-      de la journée / semaine.
+      Cette action ne supprime que les collections
+      <strong>billets</strong> et <strong>billets_interne</strong> (stock des
+      billets). La collection <strong>validations</strong> est conservée pour
+      l'historique et les bilans.
     </p>
 
-    <button id="clearDataBtn" class="btn-danger">
-      Effacer tous les billets (entrée + internes)
+    <button id="clearDataBtn" class="btn-danger" type="button">
+      Effacer tous les billets (entrée + internes) ❌
     </button>
 
     <p class="message message-warning" style="margin-top:1rem;">
-      ⚠️ Action irréversible. À utiliser uniquement en début / fin de période
-      (par exemple avant de recharger une nouvelle série de billets).
+      ⚠️ Avant un bilan annuel, tu peux télécharger les données de
+      <strong>validations</strong> depuis le dashboard Appwrite, puis les
+      supprimer manuellement si tu veux repartir sur une nouvelle année.
     </p>
   </section>
 
