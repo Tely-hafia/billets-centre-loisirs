@@ -706,5 +706,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   if (btnBilletsJeux) {
-    btnBillet
+    btnBilletsJeux.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchBilletsSubMode("JEU");
+    });
+  }
 
+  // Validation billet (bouton principal)
+  const btnCheckTicket = $("btnCheckTicket") || $("validateBtn");
+  if (btnCheckTicket) {
+    btnCheckTicket.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifierBillet();
+    });
+  }
+
+  // RESTO events
+  const restoProduit = $("restoProduit");
+  const restoQuantite = $("restoQuantite");
+  const btnRestoValider = $("btnRestoValider") || $("btnRestoVente");
+
+  if (restoProduit) {
+    restoProduit.addEventListener("change", majAffichageMontantResto);
+  }
+  if (restoQuantite) {
+    restoQuantite.addEventListener("input", majAffichageMontantResto);
+  }
+  if (btnRestoValider) {
+    btnRestoValider.addEventListener("click", (e) => {
+      e.preventDefault();
+      enregistrerVenteResto();
+    });
+  }
+});
