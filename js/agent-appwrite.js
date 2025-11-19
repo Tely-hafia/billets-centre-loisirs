@@ -475,7 +475,7 @@ async function verifierBillet() {
         return;
       }
 
-      const montant = parseInt(billet.prix || 0, 10) || 0;
+         const montant = parseInt(billet.prix || 0, 10) || 0;
       const nowIso = new Date().toISOString();
 
       await db.createDocument(
@@ -488,6 +488,7 @@ async function verifierBillet() {
           date_validation: nowIso,
           type_acces: billet.type_billet || "Jeu interne",
           type_billet: billet.type_billet || "Jeu interne",
+          code_offre: billet.code_offre || "",   // <<< LIGNE AJOUTÉE
           tarif_normal: montant,
           tarif_etudiant: 0,
           tarif_applique: "normal",
@@ -497,6 +498,7 @@ async function verifierBillet() {
           numero_etudiant: ""
         }
       );
+
 
       showResult(
         `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet} – ${formatMontantGNF(montant)})`,
