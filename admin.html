@@ -76,13 +76,91 @@
     </div>
 
     <button id="refreshStatsBtn" class="btn-primary" type="button" style="margin-top:0.5rem;">
+      Actualiser les stats<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administration – Billets</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-badge">CL</div>
+    <div>
+      <h1>Administration – Billets</h1>
+      <p>Import CSV, statistiques et gestion des données Appwrite.</p>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- 1. IMPORT CSV -->
+  <section class="card">
+    <h2>📥 Importer des billets (CSV)</h2>
+
+    <p>Type de billets à importer :</p>
+    <div style="margin-bottom:0.5rem;">
+      <label style="margin-right:1rem;">
+        <input type="radio" name="importType" value="entree" checked />
+        Billets d'entrée (parc)
+      </label>
+      <label>
+        <input type="radio" name="importType" value="interne" />
+        Billets internes (jeux)
+      </label>
+    </div>
+
+    <p>
+      Pour les billets d'entrée :
+      <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
+      Pour les billets internes :
+      <code>numero_billet;type_billet;prix;statut</code>
+    </p>
+
+    <input type="file" id="csvFile" accept=".csv" />
+    <button id="btnImportCsv" class="btn-primary" type="button">
+      Importer ▶▶
+    </button>
+
+    <p id="importStatus" class="status" style="margin-top:0.5rem;"></p>
+  </section>
+
+  <!-- 2. STATISTIQUES -->
+  <section class="card">
+    <h2>📊 Statistiques des validations</h2>
+
+    <!-- Filtre période -->
+    <div class="form-row" style="margin-top:0.5rem; margin-bottom:0.5rem;">
+      <label for="stats-range">Période analysée :</label>
+      <select id="stats-range">
+        <option value="today">Aujourd'hui</option>
+        <option value="week" selected>7 derniers jours</option>
+        <option value="month">Ce mois-ci</option>
+        <option value="year">Cette année</option>
+        <option value="all">Depuis le début</option>
+        <option value="custom">Période personnalisée…</option>
+      </select>
+    </div>
+
+    <div class="form-row" id="stats-custom-range" style="display:none; gap:0.5rem;">
+      <label for="stats-from">Du :</label>
+      <input type="date" id="stats-from" />
+      <label for="stats-to">Au :</label>
+      <input type="date" id="stats-to" />
+    </div>
+
+    <button id="refreshStatsBtn" class="btn-primary" type="button" style="margin-top:0.5rem;">
       Actualiser les stats
     </button>
 
     <p class="status" style="margin-top:0.4rem;">
       Les montants sont calculés à partir de la collection
-      <strong>validations</strong>. Tu peux supprimer les billets chaque semaine
-      sans perdre l’historique.
+      <strong>validations</strong> (entrées + jeux) et
+      <strong>ventes_resto</strong> (bar/resto/chicha).
     </p>
 
     <!-- Statistiques globales -->
@@ -92,7 +170,7 @@
         <p id="stat-validations-count">0</p>
       </div>
       <div class="stat-item">
-        <h3>Recette totale</h3>
+        <h3>Recette totale billets</h3>
         <p id="stat-revenue-total">0 GNF</p>
       </div>
       <div class="stat-item">
@@ -103,6 +181,10 @@
         <h3>Recette tarif étudiant</h3>
         <p id="stat-revenue-etudiant">0 GNF</p>
       </div>
+      <div class="stat-item">
+        <h3>Recette resto/chicha</h3>
+        <p id="stat-revenue-resto">0 GNF</p>
+      </div>
     </div>
 
     <!-- Détail par type d'accès -->
@@ -110,14 +192,65 @@
     <div class="table-wrapper">
       <table class="data-table">
         <thead>
-          <tr>
-            <th>Type d'accès / billet</th>
-            <th>Nb validations</th>
-            <th>Recette (GNF)</th>
-          </tr>
+        <tr>
+          <th>Type d'accès / billet</th>
+          <th>Nb validations</th>
+          <th>Recette (GNF)</th>
+        </tr>
         </thead>
         <tbody id="stats-type-body">
-          <!-- rempli par JS -->
+        <!-- rempli par JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Top billets -->
+    <h3 style="margin-top:2rem;">Top billets les plus vendus</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+        <tr>
+          <th>Billet</th>
+          <th>Nb validations</th>
+          <th>Recette (GNF)</th>
+        </tr>
+        </thead>
+        <tbody id="stats-top-billets-body">
+        <!-- rempli par JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Jours les plus chargés -->
+    <h3 style="margin-top:2rem;">Jours avec le plus d'entrées</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+        <tr>
+          <th>Jour</th>
+          <th>Nb validations</th>
+          <th>Recette billets (GNF)</th>
+        </tr>
+        </thead>
+        <tbody id="stats-top-days-body">
+        <!-- rempli par JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Produits resto -->
+    <h3 style="margin-top:2rem;">Top produits resto / chicha</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+        <tr>
+          <th>Produit</th>
+          <th>Quantité vendue</th>
+          <th>Recette (GNF)</th>
+        </tr>
+        </thead>
+        <tbody id="stats-top-resto-body">
+        <!-- rempli par JS -->
         </tbody>
       </table>
     </div>
@@ -132,8 +265,9 @@
     <p>
       Cette action ne supprime que les collections
       <strong>billets</strong> et <strong>billets_interne</strong> (stock des
-      billets). La collection <strong>validations</strong> est conservée pour
-      l'historique et les bilans.
+      billets). La collection <strong>validations</strong> et
+      <strong>ventes_resto</strong> sont conservées pour l'historique et les
+      bilans.
     </p>
 
     <button id="clearDataBtn" class="btn-danger" type="button">
@@ -141,9 +275,10 @@
     </button>
 
     <p class="message message-warning" style="margin-top:1rem;">
-      ⚠️ Avant un bilan annuel, tu peux télécharger les données de
-      <strong>validations</strong> depuis le dashboard Appwrite, puis les
-      supprimer manuellement si tu veux repartir sur une nouvelle année.
+      ⚠️ Pour le bilan annuel : exporte les données
+      <strong>validations</strong> et <strong>ventes_resto</strong> depuis le
+      dashboard Appwrite (CSV), puis, si besoin, tu peux les nettoyer à la
+      main dans Appwrite pour repartir sur une nouvelle année.
     </p>
   </section>
 
