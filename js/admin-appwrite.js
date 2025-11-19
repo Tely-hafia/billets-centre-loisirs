@@ -8,9 +8,9 @@ const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
-const APPWRITE_BILLETS_TABLE_ID = "billets";                // billets d'entrée
+const APPWRITE_BILLETS_TABLE_ID = "billets";                 // billets d'entrée
 const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux internes
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";        // historique validations
+const APPWRITE_VALIDATIONS_TABLE_ID = "validations";         // historique validations
 
 // =====================================
 //  Initialisation du client Appwrite
@@ -18,7 +18,7 @@ const APPWRITE_VALIDATIONS_TABLE_ID = "validations";        // historique valida
 
 if (typeof Appwrite === "undefined") {
   console.error(
-    "[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@13.0.0\"></script>"
+    '[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>'
   );
 }
 
@@ -44,6 +44,39 @@ function formatGNF(n) {
 }
 
 // =====================================
+//  Helpers CSV
+// =====================================
+
+// détecte le séparateur le plus probable sur la 1ère ligne
+function detectDelimiter(firstLine) {
+  const semi = (firstLine.match(/;/g) || []).length;
+  const comma = (firstLine.match(/,/g) || []).length;
+  if (semi === 0 && comma === 0) return ";";
+  return semi >= comma ? ";" : ",";
+}
+
+// normalise un nom de colonne pour faire les indexOf de manière robuste
+function normalizeHeaderName(h) {
+  if (!h) return "";
+  return h
+    .replace(/^\uFEFF/, "")       // enlève BOM UTF-8 éventuelle
+    .replace(/^\"|\"$/g, "")      // enlève guillemets de début/fin
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")         // espaces → underscore
+    .replace(/[^a-z0-9_]/g, "_"); // enlève les caractères exotiques
+}
+
+// renvoie l’index d’une colonne parmi une liste de noms possibles
+function findColumnIndex(headersNorm, possibleNames) {
+  for (const name of possibleNames) {
+    const idx = headersNorm.indexOf(name);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+// =====================================
 //  1. IMPORT CSV
 // =====================================
 
@@ -60,35 +93,46 @@ async function importerCSVDansBillets(file) {
 
   reader.onload = async (e) => {
     const text = e.target.result;
+
+    // découpe des lignes, on enlève les vides
     const lignes = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
     if (lignes.length <= 1) {
-      alert("Le fichier CSV semble vide.");
+      alert("Le fichier CSV semble vide (aucune ligne de données).");
       return;
     }
 
-    const header = lignes[0].split(";").map((h) => h.trim());
-    console.log("[ADMIN] En-têtes CSV :", header);
+    // détection séparateur
+    const delimiter = detectDelimiter(lignes[0]);
+    console.log("[ADMIN] Délimiteur détecté pour le CSV :", delimiter);
+
+    // préparation en-têtes
+    const rawHeaders = lignes[0].split(delimiter);
+    const headersNorm = rawHeaders.map(normalizeHeaderName);
+
+    console.log("[ADMIN] En-têtes CSV brutes :", rawHeaders);
+    console.log("[ADMIN] En-têtes CSV normalisées :", headersNorm);
 
     let count = 0;
 
     if (typeImport === "entree") {
       // ======== BILLETS D'ENTRÉE ========
-      const idxNumero = header.indexOf("numero_billet");
-      const idxType = header.indexOf("type_acces");
-      const idxPrix = header.indexOf("prix");
-      const idxTarifUni = header.indexOf("tarif_universite");
-      const idxStatut = header.indexOf("statut");
+      const idxNumero = findColumnIndex(headersNorm, ["numero_billet", "num_billet", "numero"]);
+      const idxType   = findColumnIndex(headersNorm, ["type_acces", "type_acces_entree", "type"]);
+      const idxPrix   = findColumnIndex(headersNorm, ["prix", "tarif", "montant"]);
+      const idxTarifUni = findColumnIndex(headersNorm, ["tarif_universite", "tarif_etu", "tarif_etudiant"]);
+      const idxStatut = findColumnIndex(headersNorm, ["statut", "status"]);
 
       if (idxNumero === -1 || idxType === -1) {
         alert(
-          "Pour les billets d'entrée, le CSV doit contenir au minimum : numero_billet;type_acces"
+          "Pour les billets d'entrée, le CSV doit contenir au minimum les colonnes : numero_billet ; type_acces\n" +
+          "En-têtes détectées : " + rawHeaders.join(" | ")
         );
         return;
       }
 
       for (let i = 1; i < lignes.length; i++) {
-        const cols = lignes[i].split(";");
+        const cols = lignes[i].split(delimiter);
         if (!cols[idxNumero]) continue;
 
         const numero = cols[idxNumero].trim();
@@ -96,11 +140,9 @@ async function importerCSVDansBillets(file) {
         if (!numero || !typeAcces) continue;
 
         const prix =
-          idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
+          idxPrix !== -1 ? parseInt((cols[idxPrix] || "0").replace(/\D/g, ""), 10) || 0 : 0;
         const tarifUni =
-          idxTarifUni !== -1
-            ? parseInt(cols[idxTarifUni].trim() || "0", 10) || 0
-            : 0;
+          idxTarifUni !== -1 ? parseInt((cols[idxTarifUni] || "0").replace(/\D/g, ""), 10) || 0 : 0;
         const statut =
           idxStatut !== -1 && cols[idxStatut]
             ? cols[idxStatut].trim()
@@ -123,7 +165,7 @@ async function importerCSVDansBillets(file) {
           );
           count++;
         } catch (err) {
-          console.error("[ADMIN] Erreur création billet entrée ligne", i, err);
+          console.error("[ADMIN] Erreur création billet entrée ligne", i + 1, err);
         }
       }
 
@@ -131,29 +173,28 @@ async function importerCSVDansBillets(file) {
 
     } else {
       // ======== BILLETS INTERNES (JEUX) ========
-      const idxNumero = header.indexOf("numero_billet");
-      const idxTypeBillet = header.indexOf("type_billet");
-      const idxPrix = header.indexOf("prix");
+      const idxNumero = findColumnIndex(headersNorm, ["numero_billet", "num_billet", "numero"]);
+      const idxTypeBillet = findColumnIndex(headersNorm, ["type_billet", "type", "jeu", "type_jeu"]);
+      const idxPrix = findColumnIndex(headersNorm, ["prix", "tarif", "montant"]);
 
       if (idxNumero === -1 || idxTypeBillet === -1) {
         alert(
-          "Pour les billets internes, le CSV doit contenir au minimum : numero_billet;type_billet"
+          "Pour les billets internes, le CSV doit contenir au minimum les colonnes : numero_billet ; type_billet\n" +
+          "En-têtes détectées : " + rawHeaders.join(" | ")
         );
         return;
       }
 
       for (let i = 1; i < lignes.length; i++) {
-        const cols = lignes[i].split(";");
+        const cols = lignes[i].split(delimiter);
         if (!cols[idxNumero]) continue;
 
         const numero = cols[idxNumero].trim();
-        const typeBillet = cols[idxTypeBillet]
-          ? cols[idxTypeBillet].trim()
-          : "";
+        const typeBillet = cols[idxTypeBillet] ? cols[idxTypeBillet].trim() : "";
         if (!numero || !typeBillet) continue;
 
         const prix =
-          idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
+          idxPrix !== -1 ? parseInt((cols[idxPrix] || "0").replace(/\D/g, ""), 10) || 0 : 0;
 
         const doc = {
           numero_billet: numero,
@@ -170,7 +211,7 @@ async function importerCSVDansBillets(file) {
           );
           count++;
         } catch (err) {
-          console.error("[ADMIN] Erreur création billet interne ligne", i, err);
+          console.error("[ADMIN] Erreur création billet interne ligne", i + 1, err);
         }
       }
 
