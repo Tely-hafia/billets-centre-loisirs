@@ -1,4 +1,4 @@
-cconsole.log("[ADMIN] admin-appwrite.js chargé");
+console.log("[ADMIN] admin-appwrite.js chargé");
 
 // =====================================
 //  Configuration Appwrite
