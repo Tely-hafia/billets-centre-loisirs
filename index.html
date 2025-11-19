@@ -74,67 +74,30 @@
     </section>
 
     <!-- MODE 1 : Contrôle billets (entrée + jeux internes) -->
-    <section class="card" id="mode-billets">
-      <h2>Contrôle des billets</h2>
+   <section class="card" id="mode-billets">
+  <h2>Contrôle des billets</h2>
 
-      <!-- Sous-onglets : Entrée / Jeux internes -->
-      <div style="margin:0.4rem 0 0.8rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
-        <button type="button" id="btnBilletsEntree" class="btn-submode active-submode">
-          Billets Entrée
-        </button>
-        <button type="button" id="btnBilletsJeux" class="btn-submode">
-          Billets Jeux internes
-        </button>
-      </div>
+  <!-- Sous-onglets : Entrée / Jeux internes -->
+  ...
+  <p id="billetsSubHint" ...>...</p>
 
-      <!-- Texte d'aide selon le sous-mode -->
-      <p id="billetsSubHint" class="status" style="margin-bottom:0.4rem;">
-        Mode : billets d’entrée (bracelets). Saisir le numéro imprimé sur le bracelet.
-      </p>
+  <p>Billets non utilisés : <span id="ticketCount">0</span></p>
 
-      <p style="font-size:1rem; font-weight:600;">
-        Billets non utilisés : <span id="ticketCount">0</span>
-      </p>
+  <!-- Choix du tarif -->
+  <div style="margin-bottom:0.6rem; margin-top:0.8rem;">
+    ...
+  </div>
 
-      <!-- Choix du tarif -->
-      <div style="margin-bottom:0.6rem; margin-top:0.8rem;">
-        <label>Tarif appliqué :</label><br />
-        <label style="margin-right:1rem;">
-          <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
-          Normal
-        </label>
-        <label>
-          <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
-          Étudiant
-        </label>
-      </div>
-
-      <!-- Numéro étudiant -->
-      <div style="margin-bottom:0.6rem;">
-        <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
-        <input
-          type="text"
-          id="etuNumber"
-          placeholder="Ex : USTG-12345"
-        />
-      </div>
-
-      <!-- Numéro de billet -->
-      <div style="margin-bottom:0.8rem;">
-        <label for="ticketNumber">Numéro du billet :</label><br />
-        <input
-          type="text"
-          id="ticketNumber"
-          placeholder="Ex : 26-0001 ou J-0001"
-        />
-      </div>
-
-      <button id="validateBtn" type="button">
-        Valider le billet ▶▶
-      </button>
-
-      <div id="result-message" class="result" style="display:none;"></div>
-    </section>
+  <!-- Numéro étudiant -->
+  <div style="margin-bottom:0.6rem;">
+    ...
+  </div>
+  ...
+  <button id="validateBtn" type="button">
+    Valider le billet ▶▶
+  </button>
+  ...
+</section>
 
     <!-- MODE 2 : Restauration / Chicha -->
     <section class="card" id="mode-resto" style="display:none;">
