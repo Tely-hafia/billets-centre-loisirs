@@ -1,392 +1,364 @@
-console.log("[ADMIN] admin-appwrite.js chargé");
+console.log("[AGENT] agent-appwrite.js chargé");
 
-// =====================================
-//  Configuration Appwrite
-// =====================================
-
+// =======================================
+// CONFIG APPWRITE
+// =======================================
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
-const APPWRITE_BILLETS_TABLE_ID = "billets";                // billets d'entrée
-const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux internes
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";        // historique validations
+const APPWRITE_BILLETS_TABLE_ID = "billets";                 // billets entrée
+const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux
+const APPWRITE_VALIDATIONS_TABLE_ID = "validations";         // validations
+const APPWRITE_PRODUITS_TABLE_ID = "produits_resto";         // resto/chicha
 
-// =====================================
-//  Initialisation du client Appwrite
-// =====================================
+// =======================================
+// INIT SDK
+// =======================================
+const client = new Appwrite.Client();
+client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 
-if (typeof Appwrite === "undefined") {
-  console.error(
-    "[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@13.0.0\"></script>"
-  );
-}
+const db = new Appwrite.Databases(client);
+const acc = new Appwrite.Account(client);
 
-const adminClient = new Appwrite.Client();
-adminClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-
-const adminDB = new Appwrite.Databases(adminClient);
-
+// =======================================
 // Helpers DOM
+// =======================================
 function $(id) {
   return document.getElementById(id);
 }
 
-function getImportType() {
-  const r = document.querySelector('input[name="importType"]:checked');
-  return r ? r.value : "entree";
+function showResult(msg, type) {
+  const zone = $("result-message");
+  zone.style.display = "block";
+  zone.className = "result " + type;
+  zone.textContent = msg;
 }
 
-// Format monnaie
+function showResto(msg, type) {
+  const zone = $("restoResult");
+  zone.style.display = "block";
+  zone.className = "result " + type;
+  zone.textContent = msg;
+}
+
 function formatGNF(n) {
-  const v = Number(n) || 0;
-  return v.toLocaleString("fr-FR") + " GNF";
+  return (Number(n) || 0).toLocaleString("fr-FR") + " GNF";
 }
 
-// =====================================
-//  1. IMPORT CSV
-// =====================================
+// =======================================
+// LOGIN AGENT
+// =======================================
+let currentAgent = null;
 
-async function importerCSVDansBillets(file) {
-  if (!file) {
-    alert("Veuillez choisir un fichier CSV.");
+$("btnLogin").addEventListener("click", async () => {
+  const login = $("agentLogin").value.trim();
+  const pass = $("agentPassword").value.trim();
+
+  if (!login || !pass) {
+    $("login-message").textContent = "Veuillez remplir tous les champs.";
+    $("login-message").className = "message-error";
     return;
   }
 
-  const typeImport = getImportType(); // "entree" ou "interne"
-  console.log("[ADMIN] Import type =", typeImport);
+  try {
+    await acc.createEmailSession(login, pass);
+    currentAgent = await acc.get();
 
-  const reader = new FileReader();
+    $("agent-connected-name").textContent = currentAgent.name;
+    $("agent-connected-role").textContent = currentAgent.prefs?.role || "agent";
 
-  reader.onload = async (e) => {
-    const text = e.target.result;
-    const lignes = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    $("card-login").style.display = "none";
+    $("app-zone").style.display = "block";
 
-    if (lignes.length <= 1) {
-      alert("Le fichier CSV semble vide.");
+  } catch (err) {
+    $("login-message").textContent = "Erreur de connexion.";
+    $("login-message").className = "message-error";
+  }
+});
+
+// =======================================
+// LOGOUT
+// =======================================
+$("btnLogout").addEventListener("click", async () => {
+  await acc.deleteSessions();
+  location.reload();
+});
+
+// =======================================
+// MODE (Billets / Resto)
+// =======================================
+let currentMode = "BILLETS";
+$("btnModeBillets").onclick = () => {
+  currentMode = "BILLETS";
+  $("mode-label").textContent = "Contrôle billets";
+  $("mode-billets").style.display = "block";
+  $("mode-resto").style.display = "none";
+};
+$("btnModeResto").onclick = () => {
+  currentMode = "RESTO";
+  $("mode-label").textContent = "Restauration / Chicha";
+  $("mode-billets").style.display = "none";
+  $("mode-resto").style.display = "block";
+};
+
+// =======================================
+// SUBMODE (Entrée / Jeux internes)
+// =======================================
+let currentBilletsSubMode = "ENTREE";
+
+$("btnBilletsEntree").onclick = () => {
+  currentBilletsSubMode = "ENTREE";
+  $("btnBilletsEntree").classList.add("active-submode");
+  $("btnBilletsJeux").classList.remove("active-submode");
+
+  $("billetsSubHint").textContent =
+    "Mode : billets d’entrée (bracelets). Saisir le numéro imprimé sur le bracelet.";
+};
+
+$("btnBilletsJeux").onclick = () => {
+  currentBilletsSubMode = "JEU";
+  $("btnBilletsJeux").classList.add("active-submode");
+  $("btnBilletsEntree").classList.remove("active-submode");
+
+  $("billetsSubHint").textContent =
+    "Mode : billets JEUX internes. Saisir le numéro imprimé sur le ticket.";
+};
+
+// =======================================
+// CHARGER PRODUITS RESTO/CHICHA
+// =======================================
+async function chargerProduits() {
+  try {
+    const r = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_PRODUITS_TABLE_ID,
+      [Appwrite.Query.limit(100)]
+    );
+
+    const sel = $("restoProduit");
+    sel.innerHTML = "";
+
+    r.documents.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.$id;
+      opt.textContent = `${p.nom} – ${formatGNF(p.prix)}`;
+      opt.dataset.prix = p.prix;
+      sel.appendChild(opt);
+    });
+
+  } catch (err) {
+    showResto("Erreur chargement produits.", "error");
+  }
+}
+
+chargerProduits();
+
+// =======================================
+// AFFICHAGE MONTANT RESTO
+// =======================================
+$("restoProduit").onchange = () => {
+  const opt = $("restoProduit").selectedOptions[0];
+  if (!opt) return;
+
+  const prix = Number(opt.dataset.prix || 0);
+  const qte = Number($("restoQuantite").value || 1);
+  $("restoMontant").textContent = "Montant : " + formatGNF(prix * qte);
+};
+
+$("restoQuantite").oninput = () => $("restoProduit").onchange();
+
+// =======================================
+// ENREGISTRER VENTE RESTO
+// =======================================
+$("btnRestoVente").onclick = async () => {
+  const opt = $("restoProduit").selectedOptions[0];
+  if (!opt) {
+    showResto("Choisissez un produit.", "error");
+    return;
+  }
+
+  const prix = Number(opt.dataset.prix || 0);
+  const qte = Number($("restoQuantite").value || 1);
+
+  try {
+    await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        numero_billet: "",
+        billet_id: "",
+        date_validation: new Date().toISOString(),
+        type_acces: "RESTO",
+        type_billet: opt.textContent,
+        tarif_normal: prix,
+        tarif_etudiant: 0,
+        montant_paye: prix * qte,
+        tarif_applique: "normal",
+        agent_id: currentAgent.$id,
+        poste_id: "RESTO",
+        numero_etudiant: "",
+        code_offre: ""
+      }
+    );
+
+    showResto("Vente enregistrée ✔", "success");
+  } catch (err) {
+    showResto("Erreur enregistrement vente.", "error");
+  }
+};
+
+// =======================================
+// VALIDATION DES BILLETS
+// =======================================
+$("btnCheckTicket").onclick = verifierBillet;
+
+async function verifierBillet() {
+  const numero = $("ticketNumber").value.trim();
+
+  if (!numero) {
+    showResult("Saisir un numéro.", "error");
+    return;
+  }
+
+  if (currentBilletsSubMode === "ENTREE") {
+    return verifierBilletEntree(numero);
+  } else {
+    return verifierBilletJeu(numero);
+  }
+}
+
+// =======================================
+// 1. BILLET ENTRÉE
+// =======================================
+async function verifierBilletEntree(numero) {
+  try {
+    const r = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [Appwrite.Query.equal("numero_billet", numero)]
+    );
+
+    if (r.total === 0) {
+      showResult("Billet inconnu ❌", "error");
       return;
     }
 
-    const header = lignes[0].split(";").map((h) => h.trim());
-    console.log("[ADMIN] En-têtes CSV :", header);
+    const billet = r.documents[0];
 
-    let count = 0;
-
-    if (typeImport === "entree") {
-      // ======== BILLETS D'ENTRÉE ========
-      const idxNumero = header.indexOf("numero_billet");
-      const idxType = header.indexOf("type_acces");
-      const idxPrix = header.indexOf("prix");
-      const idxTarifUni = header.indexOf("tarif_universite");
-      const idxStatut = header.indexOf("statut");
-
-      if (idxNumero === -1 || idxType === -1) {
-        alert(
-          "Pour les billets d'entrée, le CSV doit contenir au minimum : numero_billet;type_acces"
-        );
-        return;
-      }
-
-      for (let i = 1; i < lignes.length; i++) {
-        const cols = lignes[i].split(";");
-        if (!cols[idxNumero]) continue;
-
-        const numero = cols[idxNumero].trim();
-        const typeAcces = cols[idxType] ? cols[idxType].trim() : "";
-        if (!numero || !typeAcces) continue;
-
-        const prix =
-          idxPrix !== -1 ? parseInt((cols[idxPrix] || "0").trim(), 10) || 0 : 0;
-        const tarifUni =
-          idxTarifUni !== -1
-            ? parseInt((cols[idxTarifUni] || "0").trim(), 10) || 0
-            : 0;
-
-        const statutCSV =
-          idxStatut !== -1 && cols[idxStatut]
-            ? cols[idxStatut].trim()
-            : "";
-
-        const doc = {
-          numero_billet: numero,
-          type_acces: typeAcces,
-          prix: prix,
-          tarif_universite: tarifUni,
-          statut: statutCSV || "Non utilisé"   // <<< statut toujours envoyé
-        };
-
-        try {
-          await adminDB.createDocument(
-            APPWRITE_DATABASE_ID,
-            APPWRITE_BILLETS_TABLE_ID,
-            Appwrite.ID.unique(),
-            doc
-          );
-          count++;
-        } catch (err) {
-          console.error("[ADMIN] Erreur création billet entrée ligne", i, err);
-        }
-      }
-
-      alert(`Import billets d'entrée terminé : ${count} billets créés.`);
-
-    } else {
-      // ======== BILLETS INTERNES (JEUX) ========
-      const idxNumero = header.indexOf("numero_billet");
-      const idxTypeBillet = header.indexOf("type_billet");
-      const idxPrix = header.indexOf("prix");
-
-      if (idxNumero === -1 || idxTypeBillet === -1) {
-        alert(
-          "Pour les billets internes, le CSV doit contenir au minimum : numero_billet;type_billet"
-        );
-        return;
-      }
-
-      for (let i = 1; i < lignes.length; i++) {
-        const cols = lignes[i].split(";");
-        if (!cols[idxNumero]) continue;
-
-        const numero = cols[idxNumero].trim();
-        const typeBillet = cols[idxTypeBillet]
-          ? cols[idxTypeBillet].trim()
-          : "";
-        if (!numero || !typeBillet) continue;
-
-        const prix =
-          idxPrix !== -1 ? parseInt((cols[idxPrix] || "0").trim(), 10) || 0 : 0;
-
-        const doc = {
-          numero_billet: numero,
-          type_billet: typeBillet,
-          prix: prix,
-          statut: "Non utilisé"   // <<< OBLIGATOIRE pour ta collection billets_interne
-        };
-
-        try {
-          await adminDB.createDocument(
-            APPWRITE_DATABASE_ID,
-            APPWRITE_BILLETS_INTERNE_TABLE_ID,
-            Appwrite.ID.unique(),
-            doc
-          );
-          count++;
-        } catch (err) {
-          console.error("[ADMIN] Erreur création billet interne ligne", i, err);
-        }
-      }
-
-      alert(`Import billets internes terminé : ${count} billets créés.`);
+    if (billet.statut === "Validé") {
+      showResult("Billet déjà utilisé ❌", "error");
+      return;
     }
 
-    console.log("[ADMIN] Import CSV terminé. Billets créés :", count);
-  };
+    const tarif = document.querySelector('input[name="tarif"]:checked').value;
 
-  reader.readAsText(file, "UTF-8");
-}
+    const montant =
+      tarif === "normal"
+        ? billet.prix
+        : billet.tarif_universite || billet.prix;
 
-// =====================================
-//  2. STATS à partir de "validations"
-// =====================================
+    const etu = $("etuNumber").value.trim();
 
-async function chargerStatsValidations() {
-  const msg = $("stats-message");
-  if (msg) {
-    msg.textContent = "Chargement des stats...";
-    msg.className = "message message-info";
-  }
+    if (tarif === "etudiant" && !etu) {
+      showResult("Numéro étudiant requis.", "error");
+      return;
+    }
 
-  try {
-    const res = await adminDB.listDocuments(
+    await db.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
-      [Appwrite.Query.limit(10000)]
+      Appwrite.ID.unique(),
+      {
+        numero_billet: numero,
+        billet_id: billet.$id,
+        date_validation: new Date().toISOString(),
+        type_acces: billet.type_acces,
+        type_billet: billet.type_acces,
+        code_offre: billet.code_offre || "",
+        tarif_normal: billet.prix,
+        tarif_etudiant: billet.tarif_universite,
+        tarif_applique: tarif,
+        montant_paye: montant,
+        agent_id: currentAgent.$id,
+        poste_id: "ENTREE",
+        numero_etudiant: etu
+      }
     );
 
-    const docs = res.documents || [];
-    console.log("[ADMIN] Validations récupérées :", docs.length);
-
-    const totalValidations = docs.length;
-
-    let recetteTotale = 0;
-    let recetteNormal = 0;
-    let recetteEtudiant = 0;
-
-    const parType = {}; // { type_acces: { count, montant } }
-
-    docs.forEach((d) => {
-      const montant = parseInt(d.montant_paye || 0, 10) || 0;
-      recetteTotale += montant;
-
-      if (d.tarif_applique === "normal") {
-        recetteNormal += montant;
-      } else if (d.tarif_applique === "etudiant") {
-        recetteEtudiant += montant;
-      }
-
-      const type = d.type_acces || "Non renseigné";
-      if (!parType[type]) {
-        parType[type] = { count: 0, montant: 0 };
-      }
-      parType[type].count += 1;
-      parType[type].montant += montant;
-    });
-
-    const elCount = $("stat-validations-count");
-    const elTotal = $("stat-revenue-total");
-    const elNormal = $("stat-revenue-normal");
-    const elEtu = $("stat-revenue-etudiant");
-
-    if (elCount) elCount.textContent = totalValidations.toString();
-    if (elTotal) elTotal.textContent = formatGNF(recetteTotale);
-    if (elNormal) elNormal.textContent = formatGNF(recetteNormal);
-    if (elEtu) elEtu.textContent = formatGNF(recetteEtudiant);
-
-    const tbody = $("stats-type-body");
-    if (tbody) {
-      tbody.innerHTML = "";
-
-      const types = Object.keys(parType);
-      if (types.length === 0) {
-        const row = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 3;
-        td.textContent = "Aucune validation pour le moment.";
-        row.appendChild(td);
-        tbody.appendChild(row);
-      } else {
-        types.forEach((type) => {
-          const row = document.createElement("tr");
-
-          const tdType = document.createElement("td");
-          tdType.textContent = type;
-
-          const tdCount = document.createElement("td");
-          tdCount.textContent = parType[type].count.toString();
-
-          const tdMontant = document.createElement("td");
-          tdMontant.textContent = formatGNF(parType[type].montant);
-
-          row.appendChild(tdType);
-          row.appendChild(tdCount);
-          row.appendChild(tdMontant);
-
-          tbody.appendChild(row);
-        });
-      }
-    }
-
-    if (msg) {
-      msg.textContent = "Stats mises à jour.";
-      msg.className = "message message-success";
-    }
-  } catch (err) {
-    console.error("[ADMIN] Erreur chargement stats validations :", err);
-    if (msg) {
-      msg.textContent = "Erreur lors du chargement des stats (voir console).";
-      msg.className = "message message-error";
-    }
-  }
-}
-
-// =====================================
-//  3. Nettoyage des BILLETS (pas validations)
-// =====================================
-
-async function effacerTousLesBillets() {
-  const ok = confirm(
-    "CONFIRMATION : effacer TOUS les billets d'entrée ET les billets internes ?\n(Les validations NE seront PAS effacées.)"
-  );
-  if (!ok) return;
-
-  try {
-    // billets d'entrée
-    const billetsRes = await adminDB.listDocuments(
+    await db.updateDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_TABLE_ID,
-      [Appwrite.Query.limit(10000)]
+      billet.$id,
+      { statut: "Validé" }
     );
-    const billets = billetsRes.documents || [];
 
-    for (const b of billets) {
-      try {
-        await adminDB.deleteDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_BILLETS_TABLE_ID,
-          b.$id
-        );
-      } catch (err) {
-        console.error("[ADMIN] Erreur suppression billet", b.$id, err);
-      }
-    }
+    showResult("Billet validé ✔", "success");
 
-    // billets internes
-    const biRes = await adminDB.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_INTERNE_TABLE_ID,
-      [Appwrite.Query.limit(10000)]
-    );
-    const billetsInt = biRes.documents || [];
-
-    for (const bi of billetsInt) {
-      try {
-        await adminDB.deleteDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_BILLETS_INTERNE_TABLE_ID,
-          bi.$id
-        );
-      } catch (err) {
-        console.error("[ADMIN] Erreur suppression billet interne", bi.$id, err);
-      }
-    }
-
-    alert(
-      "Tous les billets (entrée + internes) ont été supprimés.\nLes validations sont conservées."
-    );
-    console.log(
-      "[ADMIN] Nettoyage billets terminé. Entrée:",
-      billets.length,
-      "Internes:",
-      billetsInt.length
-    );
-  } catch (err) {
-    console.error("[ADMIN] Erreur lors du nettoyage des billets :", err);
-    alert("Erreur lors du nettoyage (voir console).");
+  } catch (e) {
+    showResult("Erreur validation billet (voir console).", "error");
+    console.error(e);
   }
 }
 
-// =====================================
-//  4. Initialisation des événements
-// =====================================
+// =======================================
+// 2. BILLET JEUX INTERNES
+// =======================================
+async function verifierBilletJeu(numero) {
+  try {
+    const r = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_INTERNE_TABLE_ID,
+      [Appwrite.Query.equal("numero_billet", numero)]
+    );
 
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("[ADMIN] DOMContentLoaded");
+    if (r.total === 0) {
+      showResult("Billet interne inconnu ❌", "error");
+      return;
+    }
 
-  const csvInput = $("csvFile");
-  const importBtn = $("btnImportCsv");
+    const billet = r.documents[0];
 
-  if (importBtn && csvInput) {
-    importBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      importerCSVDansBillets(csvInput.files[0]);
-    });
+    if (billet.statut === "Validé") {
+      showResult("Billet déjà utilisé ❌", "error");
+      return;
+    }
+
+    const montant = billet.prix || 0;
+
+    await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        numero_billet: numero,
+        billet_id: billet.$id,
+        date_validation: new Date().toISOString(),
+        type_acces: "JEU",
+        type_billet: billet.type_billet,
+        tarif_normal: montant,
+        tarif_etudiant: 0,
+        tarif_applique: "normal",
+        montant_paye: montant,
+        agent_id: currentAgent.$id,
+        poste_id: "INTERNE",
+        numero_etudiant: "",
+        code_offre: billet.code_offre || ""
+      }
+    );
+
+    await db.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_INTERNE_TABLE_ID,
+      billet.$id,
+      { statut: "Validé" }
+    );
+
+    showResult("Billet de jeu validé ✔", "success");
+
+  } catch (e) {
+    showResult("Erreur lors de la vérification du billet de jeu.", "error");
+    console.error(e);
   }
-
-  const refreshStatsBtn = $("refreshStatsBtn");
-  if (refreshStatsBtn) {
-    refreshStatsBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      chargerStatsValidations();
-    });
-  }
-
-  const clearDataBtn = $("clearDataBtn");
-  if (clearDataBtn) {
-    clearDataBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      effacerTousLesBillets();
-    });
-  }
-
-  chargerStatsValidations();
-});
+}
