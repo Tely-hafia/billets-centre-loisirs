@@ -1,4 +1,4 @@
-console.log("[AGENT] agent-appwrite.js chargé");
+cconsole.log("[AGENT] agent-appwrite.js chargé");
 
 // =======================================
 // CONFIG APPWRITE
