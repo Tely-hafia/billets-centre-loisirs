@@ -478,7 +478,7 @@ async function verifierBillet() {
          const montant = parseInt(billet.prix || 0, 10) || 0;
       const nowIso = new Date().toISOString();
 
-      await db.createDocument(
+            await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VALIDATIONS_TABLE_ID,
         Appwrite.ID.unique(),
@@ -488,7 +488,7 @@ async function verifierBillet() {
           date_validation: nowIso,
           type_acces: billet.type_billet || "Jeu interne",
           type_billet: billet.type_billet || "Jeu interne",
-          code_offre: billet.code_offre || "",   // <<< LIGNE AJOUTÉE
+          code_offre: billet.code_offre || "",
           tarif_normal: montant,
           tarif_etudiant: 0,
           tarif_applique: "normal",
@@ -498,6 +498,20 @@ async function verifierBillet() {
           numero_etudiant: ""
         }
       );
+
+      // <<< AJOUT pour marquer le billet interne comme utilisé
+      await db.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_BILLETS_INTERNE_TABLE_ID,
+        billet.$id,
+        { statut: "Validé" }
+      );
+
+      showResult(
+        `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet} – ${formatMontantGNF(montant)})`,
+        "success"
+      );
+
 
 
       showResult(
