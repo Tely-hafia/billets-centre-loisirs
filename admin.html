@@ -21,102 +21,97 @@
 <main>
 
   <!-- 1. IMPORT CSV -->
- <section class="card">
-  <h2>📥 Importer des billets (CSV)</h2>
+  <section class="card">
+    <h2>📥 Importer des billets (CSV)</h2>
 
-  <p>Type de billets à importer :</p>
-  <div style="margin-bottom:0.5rem;">
-    <label style="margin-right:1rem;">
-      <input type="radio" name="importType" value="entree" checked />
-      Billets d'entrée (parc)
-    </label>
-    <label>
-      <input type="radio" name="importType" value="interne" />
-      Billets internes (jeux)
-    </label>
-  </div>
+    <p>Type de billets à importer :</p>
+    <div style="margin-bottom:0.5rem;">
+      <label style="margin-right:1rem;">
+        <input type="radio" name="importType" value="entree" checked />
+        Billets d'entrée (parc)
+      </label>
+      <label>
+        <input type="radio" name="importType" value="interne" />
+        Billets internes (jeux)
+      </label>
+    </div>
 
-  <p>
-    Pour les billets d'entrée : <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
-    Pour les billets internes : <code>numero_billet;type_billet;prix</code>
-  </p>
+    <p>
+      Pour les billets d'entrée : <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
+      Pour les billets internes : <code>numero_billet;type_billet;prix</code>
+    </p>
 
-  <input type="file" id="csvFile" accept=".csv" />
-  <button id="btnImportCsv">Importer ▶▶</button>
+    <input type="file" id="csvFile" accept=".csv" />
+    <button id="btnImportCsv" class="btn-primary">Importer ▶▶</button>
 
-  <p id="importStatus" class="note" style="margin-top:0.5rem;"></p>
-</section>
-
+    <p id="importStatus" class="note" style="margin-top:0.5rem;"></p>
+  </section>
 
   <!-- 2. STATISTIQUES -->
-  <!-- 2. Statistiques à partir des validations -->
-<section class="card">
-  <h2>Statistiques des validations</h2>
+  <section class="card">
+    <h2>📊 Statistiques des validations</h2>
 
-  <button id="refreshStatsBtn" class="btn-primary">
-    Actualiser les stats
-  </button>
+    <button id="refreshStatsBtn" class="btn-secondary">
+      Actualiser les stats
+    </button>
 
-  <div class="stats-grid">
-    <div class="stat-item">
-      <h3>Billets validés</h3>
-      <p id="stat-validations-count">0</p>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <h3>Billets validés</h3>
+        <p id="stat-validations-count">0</p>
+      </div>
+      <div class="stat-item">
+        <h3>Recette totale</h3>
+        <p id="stat-revenue-total">0 GNF</p>
+      </div>
+      <div class="stat-item">
+        <h3>Recette tarif normal</h3>
+        <p id="stat-revenue-normal">0 GNF</p>
+      </div>
+      <div class="stat-item">
+        <h3>Recette tarif étudiant</h3>
+        <p id="stat-revenue-etudiant">0 GNF</p>
+      </div>
     </div>
-    <div class="stat-item">
-      <h3>Recette totale</h3>
-      <p id="stat-revenue-total">0 GNF</p>
+
+    <h3 style="margin-top:2rem;">Détail par type d'accès</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type d'accès</th>
+            <th>Nb validations</th>
+            <th>Recette (GNF)</th>
+          </tr>
+        </thead>
+        <tbody id="stats-type-body">
+          <!-- rempli par JS -->
+        </tbody>
+      </table>
     </div>
-    <div class="stat-item">
-      <h3>Recette tarif normal</h3>
-      <p id="stat-revenue-normal">0 GNF</p>
-    </div>
-    <div class="stat-item">
-      <h3>Recette tarif étudiant</h3>
-      <p id="stat-revenue-etudiant">0 GNF</p>
-    </div>
-  </div>
 
-  <h3 style="margin-top:2rem;">Détail par type d'accès</h3>
-  <div class="table-wrapper">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Type d'accès</th>
-          <th>Nb validations</th>
-          <th>Recette (GNF)</th>
-        </tr>
-      </thead>
-      <tbody id="stats-type-body">
-        <!-- rempli par JS -->
-      </tbody>
-    </table>
-  </div>
-
-  <p id="stats-message" class="message"></p>
-</section>
-
-<!-- 3. Maintenance des données -->
-<section class="card">
-  <h2>Maintenance des données</h2>
-
-  <button id="clearDataBtn" class="btn-danger">
-    Effacer TOUS les billets et validations
-  </button>
-
-  <p class="message message-warning" style="margin-top:1rem;">
-    ⚠️ Attention : cette action supprime <strong>tous</strong> les documents des
-    collections <strong>billets</strong> et <strong>validations</strong> dans Appwrite.
-    À utiliser uniquement en fin / début de semaine.
-  </p>
-</section>
+    <p id="stats-message" class="message"></p>
+  </section>
 
   <!-- 3. MAINTENANCE -->
   <section class="card">
     <h2>🧹 Maintenance des données</h2>
-    <p>Utilisez ce bouton pour effacer tous les billets de la base Appwrite, par exemple avant d'importer une nouvelle semaine.</p>
-    <button id="btnDeleteBillets" style="background:#e53935;color:white;padding:0.6rem 1.2rem;border-radius:999px;border:none;cursor:pointer;">
-      Effacer tous les billets ❌
+    <p>
+      Ce bouton supprime tous les <strong>billets d'entrée</strong> et
+      <strong>billets internes (jeux)</strong> dans Appwrite.
+      <br />
+      <strong>Les validations sont conservées</strong> pour garder l'historique
+      de la journée / semaine.
+    </p>
+
+    <button id="clearDataBtn" class="btn-danger">
+      Effacer tous les billets (entrée + internes)
     </button>
+
+    <p class="message message-warning" style="margin-top:1rem;">
+      ⚠️ Action irréversible. À utiliser uniquement en début / fin de période
+      (par exemple avant de recharger une nouvelle série de billets).
+    </p>
   </section>
 
 </main>
