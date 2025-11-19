@@ -20,174 +20,194 @@
 
 <main>
 
-  <!-- ========== 1. GESTION DES BILLETS (IMPORT / EXPORT) ========== -->
+  <!-- 1. GESTION DES BILLETS (IMPORT / EXPORT) -->
   <section class="card">
-  <h2>📁 Gestion des billets (CSV)</h2>
+    <h2>📁 Gestion des billets (CSV)</h2>
 
-  <div style="display:flex; flex-wrap:wrap; gap:2rem; align-items:flex-start; margin-top:1rem;">
+    <div style="display:flex; flex-wrap:wrap; gap:2rem; align-items:flex-start; margin-top:1rem;">
 
-    <!-- IMPORT -->
-    <div style="flex:1 1 260px; min-width:260px;">
-      <h3 style="margin-bottom:0.5rem;">Import de billets</h3>
+      <!-- IMPORT -->
+      <div style="flex:1 1 260px; min-width:260px;">
+        <h3 style="margin-bottom:0.5rem;">Import de billets</h3>
 
-      <p style="margin-bottom:0.4rem;">Type de billets à importer :</p>
-      <div style="margin-bottom:0.5rem;">
-        <label style="margin-right:1rem;">
-          <input type="radio" name="importType" value="entree" checked />
-          Billets d'entrée (parc)
-        </label>
-        <label>
-          <input type="radio" name="importType" value="interne" />
-          Billets internes (jeux)
-        </label>
+        <p style="margin-bottom:0.4rem;">Type de billets à importer :</p>
+        <div style="margin-bottom:0.5rem;">
+          <label style="margin-right:1rem;">
+            <input type="radio" name="importType" value="entree" checked />
+            Billets d'entrée (parc)
+          </label>
+          <label>
+            <input type="radio" name="importType" value="interne" />
+            Billets internes (jeux)
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.4rem;">
+          Pour les billets d'entrée :
+          <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
+          Pour les billets internes :
+          <code>numero_billet;type_billet;prix;statut</code>
+        </p>
+
+        <input type="file" id="csvFile" accept=".csv" style="margin-top:0.4rem; width:100%;" />
+
+        <button id="btnImportCsv" class="btn-primary" style="margin-top:0.8rem;">
+          Importer ▶▶
+        </button>
+
+        <p id="importStatus" class="status" style="margin-top:0.4rem;"></p>
       </div>
 
-      <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.4rem;">
-        Pour les billets d'entrée : <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
-        Pour les billets internes : <code>numero_billet;type_billet;prix;statut</code>
-      </p>
+      <!-- EXPORT -->
+      <div style="flex:1 1 220px; min-width:220px;">
+        <h3 style="margin-bottom:0.5rem;">Export des données</h3>
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.8rem;">
+          Permet de sauvegarder les validations avant une remise à zéro annuelle.
+          L’export respecte la période sélectionnée dans la section statistiques.
+        </p>
 
-      <input type="file" id="csvFile" accept=".csv" style="margin-top:0.4rem; width:100%;" />
-
-      <button id="btnImportCsv" class="btn-primary" style="margin-top:0.8rem;">
-        Importer ▶▶
-      </button>
-
-      <p id="importStatus" class="status" style="margin-top:0.4rem;"></p>
+        <button id="exportValidationsBtn" type="button" class="btn-secondary" style="max-width:340px;">
+          Exporter les validations (période filtrée)
+        </button>
+      </div>
     </div>
+  </section>
 
-    <!-- EXPORT (UN SEUL BOUTON) -->
-    <div style="flex:1 1 220px; min-width:220px;">
-      <h3 style="margin-bottom:0.5rem;">Export des données</h3>
-      <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.8rem;">
-        Permet de sauvegarder les validations avant une remise à zéro annuelle.
-        L’export respecte la période choisie dans les statistiques.
-      </p>
-
-      <button id="exportValidationsBtn" type="button" class="btn-secondary" style="max-width:340px;">
-        Exporter les validations (période filtrée)
-      </button>
-    </div>
-  </div>
-</section>
-
-
-  <!-- ========== 2. STATISTIQUES DES VALIDATIONS ========== -->
+  <!-- 2. STATISTIQUES DES VALIDATIONS -->
   <section class="card">
     <h2>📊 Statistiques des validations</h2>
 
-    <!-- Filtres -->
     <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; margin-bottom:1rem;">
       <div style="flex:1 1 220px;">
-        <label for="stats-period" style="font-weight:600;">Période analysée :</label>
-        <select id="stats-period" style="width:100%; margin-top:0.3rem;">
+        <label for="stats-period">Période analysée :</label><br />
+        <select id="stats-period" style="margin-top:0.25rem; width:100%;">
           <option value="7d">7 derniers jours</option>
           <option value="30d">30 derniers jours</option>
-          <option value="thisWeek">Cette semaine</option>
           <option value="thisMonth">Ce mois-ci</option>
           <option value="thisYear">Cette année</option>
-          <option value="all">Depuis le début</option>
+          <option value="all">Tout l'historique</option>
         </select>
       </div>
 
-      <div style="flex:1 1 200px;">
-        <label for="stats-group-by" style="font-weight:600;">Regrouper par :</label>
-        <select id="stats-group-by" style="width:100%; margin-top:0.3rem;">
-          <option value="week">Semaine</option>
-          <option value="day">Jour</option>
-          <option value="month">Mois</option>
+      <div style="flex:1 1 220px;">
+        <label for="stats-group">Regrouper par :</label><br />
+        <select id="stats-group" style="margin-top:0.25rem; width:100%;">
+          <option value="semaine">Semaine</option>
+          <option value="jour">Jour</option>
+          <option value="mois">Mois</option>
         </select>
       </div>
 
       <div>
-        <button id="refreshStatsBtn" type="button" class="btn-primary">
+        <button id="refreshStatsBtn" class="btn-primary">
           Actualiser les stats
         </button>
       </div>
     </div>
 
-    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem;">
+    <p class="status" style="margin-bottom:1rem;">
       Les montants sont calculés à partir des collections
       <strong>validations</strong> (entrées + jeux) et
       <strong>ventes_resto</strong> (bar / resto / chicha).
     </p>
 
-    <!-- KPIs -->
+    <!-- TUILES RÉSUMÉ -->
     <div class="stats-grid">
       <div class="stat-item">
-        <h3>BILLETS VALIDÉS</h3>
+        <h3>Billets validés</h3>
         <p id="stat-validations-count">0</p>
       </div>
       <div class="stat-item">
-        <h3>RECETTE TOTALE BILLETS</h3>
+        <h3>Recette totale billets</h3>
         <p id="stat-revenue-total">0 GNF</p>
       </div>
       <div class="stat-item">
-        <h3>RECETTE TARIF NORMAL</h3>
+        <h3>Recette tarif normal</h3>
         <p id="stat-revenue-normal">0 GNF</p>
       </div>
       <div class="stat-item">
-        <h3>RECETTE TARIF ÉTUDIANT</h3>
+        <h3>Recette tarif étudiant</h3>
         <p id="stat-revenue-etudiant">0 GNF</p>
       </div>
       <div class="stat-item">
-        <h3>RECETTE RESTO / CHICHA</h3>
-        <p id="stat-resto-revenue">0 GNF</p>
+        <h3>Recette resto / chicha</h3>
+        <p id="stat-revenue-resto">0 GNF</p>
       </div>
     </div>
 
-    <!-- Histogramme -->
-    <div style="margin-top:2rem;">
-      <h3 style="margin-bottom:0.5rem;">Évolution des entrées</h3>
-      <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">
-        Les semaines sont affichées comme
+    <!-- HISTOGRAMME -->
+    <div class="chart-card">
+      <h3>Évolution des entrées</h3>
+      <p class="status" style="margin-top:0.25rem;">
+        Les périodes sont affichées comme
         <strong>Semaine 27 – Juillet 2025</strong> pour une meilleure lecture.
       </p>
 
-      <div class="table-wrapper" style="padding:1rem;">
-        <canvas id="statsChart" style="width:100%; max-height:280px;"></canvas>
+      <div id="stats-chart-empty" class="message message-info" style="margin-top:0.75rem; display:none;">
+        Aucune validation sur la période sélectionnée.
+      </div>
+
+      <div id="stats-chart" class="chart-bars">
+        <!-- barres générées en JS -->
       </div>
     </div>
 
-    <!-- Top billets / produits -->
-    <div style="margin-top:2rem;">
-      <h3 style="margin-bottom:0.5rem;">Top types d'accès / billets</h3>
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Type d'accès / billet</th>
-              <th>Nb validations</th>
-              <th>Recette (GNF)</th>
-            </tr>
-          </thead>
-          <tbody id="stats-type-body">
-            <!-- rempli par JS -->
-          </tbody>
-        </table>
-      </div>
+    <!-- TABLEAU TOP TYPES D'ACCÈS / BILLETS -->
+    <h3 style="margin-top:2rem;">Top types d'accès / billets</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type d'accès / billet</th>
+            <th>Nb validations</th>
+            <th>Recette (GNF)</th>
+          </tr>
+        </thead>
+        <tbody id="stats-type-body">
+          <!-- rempli par JS -->
+        </tbody>
+      </table>
     </div>
 
-    <!-- Jours / semaines avec le plus d'entrées -->
-    <div style="margin-top:2rem;">
-      <h3 style="margin-bottom:0.5rem;">Jours / semaines avec le plus d'entrées</h3>
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Période</th>
-              <th>Nb validations</th>
-              <th>Recette billets (GNF)</th>
-            </tr>
-          </thead>
-          <tbody id="top-days-body">
-            <!-- rempli par JS -->
-          </tbody>
-        </table>
-      </div>
+    <!-- TABLEAU TOP PÉRIODES -->
+    <h3 style="margin-top:2rem;">Jours / semaines avec le plus d'entrées</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Période</th>
+            <th>Nb validations</th>
+            <th>Recette (GNF)</th>
+          </tr>
+        </thead>
+        <tbody id="stats-period-body">
+          <!-- rempli par JS -->
+        </tbody>
+      </table>
     </div>
 
-    <p id="stats-message" class="status" style="margin-top:1rem;"></p>
+    <p id="stats-message" class="status" style="margin-top:0.75rem;"></p>
+  </section>
+
+  <!-- 3. MAINTENANCE DES DONNÉES -->
+  <section class="card">
+    <h2>🧹 Maintenance des données</h2>
+
+    <p>
+      Utilisez ce bouton pour effacer tous les billets (entrée + internes) dans Appwrite,
+      par exemple avant d'importer une nouvelle semaine.
+      <strong>Les validations et les ventes resto/chicha ne sont pas effacées.</strong>
+    </p>
+
+    <button id="clearDataBtn" class="btn-danger">
+      Effacer TOUS les billets
+    </button>
+
+    <p class="message message-warning" style="margin-top:1rem;">
+      ⚠️ Action irréversible : les collections
+      <strong>billets</strong> et <strong>billets_interne</strong> seront vidées.
+      Pensez à exporter les données importantes avant.
+    </p>
   </section>
 
 </main>
@@ -203,3 +223,4 @@
 
 </body>
 </html>
+
