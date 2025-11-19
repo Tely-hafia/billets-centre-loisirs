@@ -278,405 +278,458 @@ function getPeriodKeyLabel(dateObj, group) {
 
 async function chargerStatsValidations() {
   const msg = $("stats-message");
-  if (msg) {
-    msg.textContent = "Chargement des stats...";
-  }
-
   const periodSelect = $("stats-period");
   const groupSelect = $("stats-group");
-  const periodValue = periodSelect ? periodSelect.value : "7d";
-  const groupValue = groupSelect ? groupSelect.value : "semaine";
 
-  const { start, end } = getPeriodRange(periodValue);
-
-  const queriesValidations = [];
-  const queriesVentes = [];
-
-  if (start) {
-    queriesValidations.push(Appwrite.Query.greaterThanEqual("date_validation", start));
-    queriesVentes.push(Appwrite.Query.greaterThanEqual("date_vente", start));
-  }
-  if (end) {
-    queriesValidations.push(Appwrite.Query.lessThanEqual("date_validation", end));
-    queriesVentes.push(Appwrite.Query.lessThanEqual("date_vente", end));
+  if (msg) {
+    msg.textContent = "Chargement des statistiques...";
+    msg.className = "status";
   }
 
-  queriesValidations.push(Appwrite.Query.limit(10000));
-  queriesVentes.push(Appwrite.Query.limit(10000));
+  const period = periodSelect ? periodSelect.value : "7j";
+  const groupMode = groupSelect ? groupSelect.value : "semaine";
+
+  const dateMin = getDateMinFromPeriod(period);
 
   try {
-    const [valRes, ventesRes] = await Promise.all([
-      adminDB.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_VALIDATIONS_TABLE_ID,
-        queriesValidations
-      ),
-      adminDB.listDocuments(
+    // --------- 1. Récup validations (billets) ----------
+    const filters = [];
+    if (dateMin) {
+      filters.push(
+        Appwrite.Query.greaterThanEqual(
+          "date_validation",
+          dateMin.toISOString()
+        )
+      );
+    }
+    filters.push(Appwrite.Query.limit(10000));
+
+    const res = await adminDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      filters
+    );
+    const validations = res.documents || [];
+
+    // --------- 2. Récup ventes resto éventuelles ----------
+    let ventesResto = [];
+    try {
+      const filtersR = [];
+      if (dateMin) {
+        filtersR.push(
+          Appwrite.Query.greaterThanEqual(
+            "date_vente",
+            dateMin.toISOString()
+          )
+        );
+      }
+      filtersR.push(Appwrite.Query.limit(10000));
+
+      const restoRes = await adminDB.listDocuments(
         APPWRITE_DATABASE_ID,
         APPWRITE_VENTES_RESTO_COLLECTION_ID,
-        queriesVentes
-      )
-    ]);
+        filtersR
+      );
+      ventesResto = restoRes.documents || [];
+    } catch (errResto) {
+      console.warn("[ADMIN] Impossible de charger ventes_resto :", errResto);
+    }
 
-    const validations = valRes.documents || [];
-    const ventes = ventesRes.documents || [];
-
-    console.log(
-      "[ADMIN] Stats – validations:", validations.length,
-      "ventes resto:", ventes.length
-    );
-
-    // ---- RÉSUMÉ GLOBAL ----
-    const totalValidations = validations.length;
-
+    // --------- 3. Agrégations globales ----------
+    let totalValidations = 0;
     let recetteTotaleBillets = 0;
-    let recetteNormal = 0;
-    let recetteEtudiant = 0;
+    let recetteTarifNormal = 0;
+    let recetteTarifEtudiant = 0;
     let recetteResto = 0;
 
-    const parType = {};   // { libelle: { count, montant } }
+    const parType = {};   // { type: { count, montant } }
     const parPeriode = {}; // { key: { label, count, montant } }
 
     validations.forEach((d) => {
       const montant = parseInt(d.montant_paye || 0, 10) || 0;
+      totalValidations += 1;
       recetteTotaleBillets += montant;
 
       if (d.tarif_applique === "etudiant") {
-        recetteEtudiant += montant;
+        recetteTarifEtudiant += montant;
       } else {
-        recetteNormal += montant;
+        recetteTarifNormal += montant;
       }
 
-      const type =
-        d.type_acces ||
-        d.type_billet ||
-        "Non renseigné";
-
-      if (!parType[type]) {
-        parType[type] = { count: 0, montant: 0 };
-      }
+      const type = d.type_acces || d.type_billet || "Non renseigné";
+      if (!parType[type]) parType[type] = { count: 0, montant: 0 };
       parType[type].count += 1;
       parType[type].montant += montant;
 
-      // Périodes pour histogramme (on ignore éventuellement les validations sans date)
-      if (d.date_validation) {
-        const dateObj = new Date(d.date_validation);
-        const { key, label } = getPeriodKeyLabel(dateObj, groupValue);
-        if (!parPeriode[key]) {
-          parPeriode[key] = { label, count: 0, montant: 0 };
-        }
-        parPeriode[key].count += 1;
-        parPeriode[key].montant += montant;
+      const grp = buildGroupKey(d.date_validation, groupMode);
+      if (!parPeriode[grp.key]) {
+        parPeriode[grp.key] = {
+          label: grp.label,
+          sortKey: grp.sortKey,
+          count: 0,
+          montant: 0
+        };
       }
+      parPeriode[grp.key].count += 1;
+      parPeriode[grp.key].montant += montant;
     });
 
-    ventes.forEach((v) => {
-      const m = parseInt(v.montant_total || 0, 10) || 0;
-      recetteResto += m;
+    ventesResto.forEach((v) => {
+      recetteResto += parseInt(v.montant_total || 0, 10) || 0;
     });
 
-    // ---- MAJ TUILES ----
-    const elCount = $("stat-validations-count");
-    const elTotal = $("stat-revenue-total");
-    const elNormal = $("stat-revenue-normal");
-    const elEtu = $("stat-revenue-etudiant");
-    const elResto = $("stat-revenue-resto");
+    // --------- 4. Mise à jour des tuiles ----------
+    $("stat-validations-count").textContent = String(totalValidations);
+    $("stat-revenue-total").textContent = formatGNF(recetteTotaleBillets);
+    $("stat-revenue-normal").textContent = formatGNF(recetteTarifNormal);
+    $("stat-revenue-etudiant").textContent = formatGNF(recetteTarifEtudiant);
+    $("stat-revenue-resto").textContent = formatGNF(recetteResto);
 
-    if (elCount) elCount.textContent = totalValidations.toString();
-    if (elTotal) elTotal.textContent = formatGNF(recetteTotaleBillets);
-    if (elNormal) elNormal.textContent = formatGNF(recetteNormal);
-    if (elEtu) elEtu.textContent = formatGNF(recetteEtudiant);
-    if (elResto) elResto.textContent = formatGNF(recetteResto);
-
-    // ---- HISTOGRAMME ----
-    const chart = $("stats-chart");
-    const chartEmpty = $("stats-chart-empty");
-    if (chart) chart.innerHTML = "";
-
-    const periodeKeys = Object.keys(parPeriode);
-
-    if (chart && chartEmpty) {
-      if (periodeKeys.length === 0) {
-        chart.style.display = "none";
-        chartEmpty.style.display = "block";
+    // --------- 5. Tableau Évolution des entrées ----------
+    const evolBody = $("stats-evol-body");
+    if (evolBody) {
+      evolBody.innerHTML = "";
+      const items = Object.values(parPeriode).sort((a, b) =>
+        a.sortKey.localeCompare(b.sortKey)
+      );
+      if (items.length === 0) {
+        evolBody.innerHTML =
+          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
       } else {
-        chart.style.display = "flex";
-        chartEmpty.style.display = "none";
-
-        // tri chronologique
-        periodeKeys.sort(); // format YYYY-MM-DD, YYYY-MM, YYYY-Wxx -> tri OK
-
-        let maxCount = 0;
-        periodeKeys.forEach((k) => {
-          if (parPeriode[k].count > maxCount) maxCount = parPeriode[k].count;
-        });
-        if (maxCount <= 0) maxCount = 1;
-
-        periodeKeys.forEach((key) => {
-          const p = parPeriode[key];
-          const bar = document.createElement("div");
-          bar.className = "chart-bar";
-
-          const inner = document.createElement("div");
-          inner.className = "chart-bar-inner";
-          const h = 10 + (p.count / maxCount) * 90; // 10% min
-          inner.style.height = h + "%";
-
-          const label = document.createElement("div");
-          label.className = "chart-bar-label";
-          label.textContent = p.label;
-
-          const value = document.createElement("div");
-          value.className = "chart-bar-value";
-          value.textContent = p.count.toString();
-
-          bar.appendChild(inner);
-          bar.appendChild(value);
-          bar.appendChild(label);
-
-          chart.appendChild(bar);
+        items.forEach((it) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${it.label}</td>
+            <td>${it.count}</td>
+            <td>${formatGNF(it.montant)}</td>
+          `;
+          evolBody.appendChild(tr);
         });
       }
     }
 
-    // ---- TABLEAU TOP TYPES D'ACCÈS / BILLETS ----
-    const tbodyType = $("stats-type-body");
-    if (tbodyType) {
-      tbodyType.innerHTML = "";
-      const types = Object.keys(parType);
-
+    // --------- 6. Tableau Top types d'accès / billets ----------
+    const typeBody = $("stats-type-body");
+    if (typeBody) {
+      typeBody.innerHTML = "";
+      const types = Object.entries(parType).sort(
+        (a, b) => b[1].montant - a[1].montant
+      );
       if (types.length === 0) {
-        const row = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 3;
-        td.textContent = "Aucune validation pour la période sélectionnée.";
-        row.appendChild(td);
-        tbodyType.appendChild(row);
+        typeBody.innerHTML =
+          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
       } else {
-        types
-          .sort((a, b) => parType[b].montant - parType[a].montant)
-          .forEach((type) => {
-            const row = document.createElement("tr");
-
-            const tdType = document.createElement("td");
-            tdType.textContent = type;
-
-            const tdCount = document.createElement("td");
-            tdCount.textContent = parType[type].count.toString();
-
-            const tdMontant = document.createElement("td");
-            tdMontant.textContent = formatGNF(parType[type].montant);
-
-            row.appendChild(tdType);
-            row.appendChild(tdCount);
-            row.appendChild(tdMontant);
-
-            tbodyType.appendChild(row);
-          });
+        types.forEach(([type, info]) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${type}</td>
+            <td>${info.count}</td>
+            <td>${formatGNF(info.montant)}</td>
+          `;
+          typeBody.appendChild(tr);
+        });
       }
     }
 
-    // ---- TABLEAU TOP PÉRIODES ----
-    const tbodyPeriode = $("stats-period-body");
-    if (tbodyPeriode) {
-      tbodyPeriode.innerHTML = "";
+    // --------- 7. Tableau Top jours / semaines ----------
+    const topBody = $("stats-topdays-body");
+    if (topBody) {
+      topBody.innerHTML = "";
+      const items = Object.values(parPeriode)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
 
-      if (periodeKeys.length === 0) {
-        const row = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 3;
-        td.textContent = "Aucune validation pour la période sélectionnée.";
-        row.appendChild(td);
-        tbodyPeriode.appendChild(row);
+      if (items.length === 0) {
+        topBody.innerHTML =
+          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
       } else {
-        // tri par volume décroissant
-        const sortedKeys = [...periodeKeys].sort(
-          (a, b) => parPeriode[b].count - parPeriode[a].count
-        );
-
-        sortedKeys.slice(0, 10).forEach((key) => {
-          const p = parPeriode[key];
-          const row = document.createElement("tr");
-
-          const tdLabel = document.createElement("td");
-          tdLabel.textContent = p.label;
-
-          const tdCount = document.createElement("td");
-          tdCount.textContent = p.count.toString();
-
-          const tdMontant = document.createElement("td");
-          tdMontant.textContent = formatGNF(p.montant);
-
-          row.appendChild(tdLabel);
-          row.appendChild(tdCount);
-          row.appendChild(tdMontant);
-
-          tbodyPeriode.appendChild(row);
+        items.forEach((it) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${it.label}</td>
+            <td>${it.count}</td>
+            <td>${formatGNF(it.montant)}</td>
+          `;
+          topBody.appendChild(tr);
         });
       }
     }
 
     if (msg) {
-      msg.textContent = "Stats mises à jour.";
+      msg.textContent = "Statistiques mises à jour.";
+      msg.className = "status";
     }
   } catch (err) {
     console.error("[ADMIN] Erreur chargement stats validations :", err);
     if (msg) {
-      msg.textContent = "Erreur lors du chargement des stats (voir console).";
+      msg.textContent =
+        "Erreur lors du chargement des stats (voir console).";
+      msg.className = "status";
     }
   }
 }
+function getDateMinFromPeriod(period) {
+  const now = new Date();
+  const d = new Date(now);
+
+  switch (period) {
+    case "7j":
+      d.setDate(now.getDate() - 7);
+      return d;
+    case "30j":
+      d.setDate(now.getDate() - 30);
+      return d;
+    case "thisMonth":
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    case "thisYear":
+      return new Date(now.getFullYear(), 0, 1);
+    case "all":
+    default:
+      return null; // pas de filtre date
+  }
+}
+
+// clé + label lisible pour regroupement
+function buildGroupKey(dateStr, mode) {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return { key: "inconnu", label: "Date inconnue", sortKey: "9999" };
+
+  const year = d.getFullYear();
+  const month = d.toLocaleString("fr-FR", { month: "long" });
+  const day = d.toLocaleDateString("fr-FR");
+
+  if (mode === "jour") {
+    return {
+      key: day,
+      label: day,
+      sortKey: d.toISOString()
+    };
+  }
+
+  if (mode === "mois") {
+    const key = `${year}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return {
+      key,
+      label: `${month} ${year}`,
+      sortKey: key
+    };
+  }
+
+  // mode "semaine" par défaut
+  const tmp = new Date(d);
+  tmp.setHours(0, 0, 0, 0);
+  // ISO week
+  const dayNum = (tmp.getDay() + 6) % 7; // 0=lundi
+  tmp.setDate(tmp.getDate() - dayNum + 3);
+  const firstThursday = new Date(tmp.getFullYear(), 0, 4);
+  const diff = tmp - firstThursday;
+  const week = 1 + Math.round(diff / (7 * 24 * 3600 * 1000));
+
+  return {
+    key: `${year}-W${String(week).padStart(2, "0")}`,
+    label: `Semaine ${week} – ${month} ${year}`,
+    sortKey: `${year}-${String(week).padStart(2, "0")}`
+  };
+}
+
 
 // =====================================
 //  3. Export CSV des validations (période filtrée)
 // =====================================
 
-function convertToCSV(rows) {
-  if (!rows || rows.length === 0) return "";
-
-  const headers = Object.keys(rows[0]);
-  const lines = [headers.join(";")];
-
-  rows.forEach((r) => {
-    const line = headers
-      .map((h) => {
-        const value = r[h] != null ? String(r[h]) : "";
-        return value.replace(/;/g, ",");
-      })
-      .join(";");
-    lines.push(line);
-  });
-
-  return lines.join("\n");
-}
-
-function downloadCSV(filename, csvContent) {
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-async function exporterValidationsCourantes() {
+async function chargerStatsValidations() {
+  const msg = $("stats-message");
   const periodSelect = $("stats-period");
-  const periodValue = periodSelect ? periodSelect.value : "thisYear";
-  const { start, end } = getPeriodRange(periodValue);
+  const groupSelect = $("stats-group");
 
-  const queries = [];
-  if (start) queries.push(Appwrite.Query.greaterThanEqual("date_validation", start));
-  if (end) queries.push(Appwrite.Query.lessThanEqual("date_validation", end));
-  queries.push(Appwrite.Query.limit(10000));
+  if (msg) {
+    msg.textContent = "Chargement des statistiques...";
+    msg.className = "status";
+  }
+
+  const period = periodSelect ? periodSelect.value : "7j";
+  const groupMode = groupSelect ? groupSelect.value : "semaine";
+
+  const dateMin = getDateMinFromPeriod(period);
 
   try {
+    // --------- 1. Récup validations (billets) ----------
+    const filters = [];
+    if (dateMin) {
+      filters.push(
+        Appwrite.Query.greaterThanEqual(
+          "date_validation",
+          dateMin.toISOString()
+        )
+      );
+    }
+    filters.push(Appwrite.Query.limit(10000));
+
     const res = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
-      queries
+      filters
     );
-    const docs = res.documents || [];
-    if (docs.length === 0) {
-      alert("Aucune validation à exporter pour cette période.");
-      return;
+    const validations = res.documents || [];
+
+    // --------- 2. Récup ventes resto éventuelles ----------
+    let ventesResto = [];
+    try {
+      const filtersR = [];
+      if (dateMin) {
+        filtersR.push(
+          Appwrite.Query.greaterThanEqual(
+            "date_vente",
+            dateMin.toISOString()
+          )
+        );
+      }
+      filtersR.push(Appwrite.Query.limit(10000));
+
+      const restoRes = await adminDB.listDocuments(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_VENTES_RESTO_COLLECTION_ID,
+        filtersR
+      );
+      ventesResto = restoRes.documents || [];
+    } catch (errResto) {
+      console.warn("[ADMIN] Impossible de charger ventes_resto :", errResto);
     }
 
-    const rows = docs.map((d) => ({
-      numero_billet: d.numero_billet || "",
-      billet_id: d.billet_id || "",
-      date_validation: d.date_validation || "",
-      type_acces: d.type_acces || "",
-      type_billet: d.type_billet || "",
-      code_offre: d.code_offre || "",
-      tarif_normal: d.tarif_normal || 0,
-      tarif_etudiant: d.tarif_etudiant || 0,
-      tarif_applique: d.tarif_applique || "",
-      montant_paye: d.montant_paye || 0,
-      agent_id: d.agent_id || "",
-      poste_id: d.poste_id || "",
-      numero_etudiant: d.numero_etudiant || "",
-      mode: d.mode || "",
-      source: d.source || ""
-    }));
+    // --------- 3. Agrégations globales ----------
+    let totalValidations = 0;
+    let recetteTotaleBillets = 0;
+    let recetteTarifNormal = 0;
+    let recetteTarifEtudiant = 0;
+    let recetteResto = 0;
 
-    const csv = convertToCSV(rows);
-    const now = new Date();
-    const suffix = now.toISOString().slice(0, 10);
-    downloadCSV(`validations_${suffix}.csv`, csv);
-  } catch (err) {
-    console.error("[ADMIN] Erreur export validations :", err);
-    alert("Erreur lors de l'export (voir console).");
-  }
-}
+    const parType = {};   // { type: { count, montant } }
+    const parPeriode = {}; // { key: { label, count, montant } }
 
-// =====================================
-//  4. Nettoyage des BILLETS (pas validations)
-// =====================================
+    validations.forEach((d) => {
+      const montant = parseInt(d.montant_paye || 0, 10) || 0;
+      totalValidations += 1;
+      recetteTotaleBillets += montant;
 
-async function effacerTousLesBillets() {
-  const ok = confirm(
-    "CONFIRMATION : effacer TOUS les billets d'entrée ET les billets internes ?\n(Les validations et ventes resto/chicha NE seront PAS effacées.)"
-  );
-  if (!ok) return;
+      if (d.tarif_applique === "etudiant") {
+        recetteTarifEtudiant += montant;
+      } else {
+        recetteTarifNormal += montant;
+      }
 
-  try {
-    // billets d'entrée
-    const billetsRes = await adminDB.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_TABLE_ID,
-      [Appwrite.Query.limit(10000)]
-    );
-    const billets = billetsRes.documents || [];
+      const type = d.type_acces || d.type_billet || "Non renseigné";
+      if (!parType[type]) parType[type] = { count: 0, montant: 0 };
+      parType[type].count += 1;
+      parType[type].montant += montant;
 
-    for (const b of billets) {
-      try {
-        await adminDB.deleteDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_BILLETS_TABLE_ID,
-          b.$id
-        );
-      } catch (err) {
-        console.error("[ADMIN] Erreur suppression billet", b.$id, err);
+      const grp = buildGroupKey(d.date_validation, groupMode);
+      if (!parPeriode[grp.key]) {
+        parPeriode[grp.key] = {
+          label: grp.label,
+          sortKey: grp.sortKey,
+          count: 0,
+          montant: 0
+        };
+      }
+      parPeriode[grp.key].count += 1;
+      parPeriode[grp.key].montant += montant;
+    });
+
+    ventesResto.forEach((v) => {
+      recetteResto += parseInt(v.montant_total || 0, 10) || 0;
+    });
+
+    // --------- 4. Mise à jour des tuiles ----------
+    $("stat-validations-count").textContent = String(totalValidations);
+    $("stat-revenue-total").textContent = formatGNF(recetteTotaleBillets);
+    $("stat-revenue-normal").textContent = formatGNF(recetteTarifNormal);
+    $("stat-revenue-etudiant").textContent = formatGNF(recetteTarifEtudiant);
+    $("stat-revenue-resto").textContent = formatGNF(recetteResto);
+
+    // --------- 5. Tableau Évolution des entrées ----------
+    const evolBody = $("stats-evol-body");
+    if (evolBody) {
+      evolBody.innerHTML = "";
+      const items = Object.values(parPeriode).sort((a, b) =>
+        a.sortKey.localeCompare(b.sortKey)
+      );
+      if (items.length === 0) {
+        evolBody.innerHTML =
+          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
+      } else {
+        items.forEach((it) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${it.label}</td>
+            <td>${it.count}</td>
+            <td>${formatGNF(it.montant)}</td>
+          `;
+          evolBody.appendChild(tr);
+        });
       }
     }
 
-    // billets internes
-    const biRes = await adminDB.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_INTERNE_TABLE_ID,
-      [Appwrite.Query.limit(10000)]
-    );
-    const billetsInt = biRes.documents || [];
-
-    for (const bi of billetsInt) {
-      try {
-        await adminDB.deleteDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_BILLETS_INTERNE_TABLE_ID,
-          bi.$id
-        );
-      } catch (err) {
-        console.error("[ADMIN] Erreur suppression billet interne", bi.$id, err);
+    // --------- 6. Tableau Top types d'accès / billets ----------
+    const typeBody = $("stats-type-body");
+    if (typeBody) {
+      typeBody.innerHTML = "";
+      const types = Object.entries(parType).sort(
+        (a, b) => b[1].montant - a[1].montant
+      );
+      if (types.length === 0) {
+        typeBody.innerHTML =
+          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
+      } else {
+        types.forEach(([type, info]) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${type}</td>
+            <td>${info.count}</td>
+            <td>${formatGNF(info.montant)}</td>
+          `;
+          typeBody.appendChild(tr);
+        });
       }
     }
 
-    alert(
-      "Tous les billets (entrée + internes) ont été supprimés.\nLes validations et ventes resto/chicha sont conservées."
-    );
-    console.log(
-      "[ADMIN] Nettoyage billets terminé. Entrée:",
-      billets.length,
-      "Internes:",
-      billetsInt.length
-    );
+    // --------- 7. Tableau Top jours / semaines ----------
+    const topBody = $("stats-topdays-body");
+    if (topBody) {
+      topBody.innerHTML = "";
+      const items = Object.values(parPeriode)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      if (items.length === 0) {
+        topBody.innerHTML =
+          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
+      } else {
+        items.forEach((it) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${it.label}</td>
+            <td>${it.count}</td>
+            <td>${formatGNF(it.montant)}</td>
+          `;
+          topBody.appendChild(tr);
+        });
+      }
+    }
+
+    if (msg) {
+      msg.textContent = "Statistiques mises à jour.";
+      msg.className = "status";
+    }
   } catch (err) {
-    console.error("[ADMIN] Erreur lors du nettoyage des billets :", err);
-    alert("Erreur lors du nettoyage (voir console).");
+    console.error("[ADMIN] Erreur chargement stats validations :", err);
+    if (msg) {
+      msg.textContent =
+        "Erreur lors du chargement des stats (voir console).";
+      msg.className = "status";
+    }
   }
 }
+
 
 // =====================================
 //  5. Initialisation des événements
