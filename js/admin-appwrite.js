@@ -196,11 +196,13 @@ async function importerCSVDansBillets(file) {
         const prix =
           idxPrix !== -1 ? parseInt((cols[idxPrix] || "0").replace(/\D/g, ""), 10) || 0 : 0;
 
-        const doc = {
-          numero_billet: numero,
-          type_billet: typeBillet,
-          prix: prix
-        };
+    const doc = {
+  numero_billet: numero,
+  type_billet: typeBillet,
+  prix: prix,
+  statut: "Non utilisé"   // <<< ajouté
+};
+
 
         try {
           await adminDB.createDocument(
