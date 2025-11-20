@@ -810,7 +810,13 @@ function viderPanier() {
   }
 }
 
+// Enregistrer la vente
 async function enregistrerVenteResto() {
+  const msg = $("restoResult");
+  const receipt = $("restoReceipt");
+  const receiptNumber = $("receiptNumber");
+  const receiptContent = $("receiptContent");
+
   if (!currentAgent) {
     showTempMessage("❌ Veuillez vous connecter", "error");
     return;
@@ -821,7 +827,8 @@ async function enregistrerVenteResto() {
     return;
   }
 
-  const numeroVente = genererNumeroVente();
+  // Un numéro de vente unique pour TOUTE la commande (toutes les lignes)
+  const numeroVente = "V-" + Date.now().toString(36).toUpperCase().slice(-6);
   const nowIso = new Date().toISOString();
   const orderType =
     document.querySelector('input[name="orderType"]:checked')?.value ||
@@ -831,6 +838,7 @@ async function enregistrerVenteResto() {
   let totalGlobal = 0;
 
   try {
+    // Enregistrer chaque ligne de vente
     for (const item of restoPanier) {
       const montant = item.prix_unitaire * item.quantite;
       totalGlobal += montant;
@@ -840,6 +848,7 @@ async function enregistrerVenteResto() {
         APPWRITE_VENTES_RESTO_COLLECTION_ID,
         Appwrite.ID.unique(),
         {
+          // Champs requis dans Appwrite
           numero_vente: numeroVente,
           date_vente: nowIso,
           code_produit: item.code_produit,
@@ -847,18 +856,32 @@ async function enregistrerVenteResto() {
           montant_total: montant,
           agent_id: currentAgent.$id,
           poste_id: currentAgent.role || "resto_chicha",
+
+          // Compat éventuelle avec l’ancien champ "mode"
+          mode: orderType, // ex: "sur_place" ou "a_emporter"
+
+          // Champs complémentaires (ajoute-les en non-requis dans Appwrite)
+          libelle: item.libelle,
+          prix_unitaire: item.prix_unitaire,
           type_commande: orderType,
           notes: notes
         }
       );
     }
 
+    // Afficher le reçu
     afficherReçu(numeroVente, totalGlobal, orderType, notes);
+
+    if (msg) msg.style.display = "none";
   } catch (err) {
     console.error("[RESTO] Erreur enregistrement vente :", err);
-    showTempMessage("❌ Erreur lors de l'enregistrement", "error");
+    showTempMessage(
+      "❌ Erreur lors de l'enregistrement : " + (err?.message || ""),
+      "error"
+    );
   }
 }
+
 
 function afficherReçu(numeroVente, total, orderType, notes) {
   const receipt = $("restoReceipt");
