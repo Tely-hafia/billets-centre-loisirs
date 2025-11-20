@@ -541,6 +541,7 @@ async function verifierBillet() {
     return;
   }
 }
+}
 
 // ===============================
 //  RESTO - VERSION SIMPLIFIÉE
