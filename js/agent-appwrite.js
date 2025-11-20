@@ -554,31 +554,33 @@ function creerOngletsCategories() {
     new Set(restoProduitsCache.map(p => p.categorie || "Autre"))
   ).sort();
 
-  categoriesTabs.innerHTML = '';
+  categoriesTabs.innerHTML = "";
 
+  // Bouton "Tous les plats"
   const allButton = document.createElement("button");
   allButton.type = "button";
   allButton.className = "resto-category-tab active";
   allButton.textContent = "Tous les plats";
   allButton.onclick = () => {
-    document.querySelectorAll('.resto-category-tab').forEach(tab => {
-      tab.classList.remove('active');
+    document.querySelectorAll(".resto-category-tab").forEach(tab => {
+      tab.classList.remove("active");
     });
-    allButton.classList.add('active');
+    allButton.classList.add("active");
     afficherTousLesProduits();
   };
   categoriesTabs.appendChild(allButton);
 
-  categories.forEach(categorie => {
+  // Boutons par catégorie
+  categories.forEach((categorie) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "resto-category-tab";
     button.textContent = categorie;
     button.onclick = () => {
-      document.querySelectorAll('.resto-category-tab').forEach(tab => {
-        tab.classList.remove('active');
+      document.querySelectorAll(".resto-category-tab").forEach(tab => {
+        tab.classList.remove("active");
       });
-      button.classList.add('active');
+      button.classList.add("active");
       filtrerProduitsParCategorie(categorie);
     };
     categoriesTabs.appendChild(button);
@@ -590,8 +592,8 @@ function afficherTousLesProduits() {
 }
 
 function filtrerProduitsParCategorie(categorie) {
-  const produitsFiltres = restoProduitsCache.filter(p =>
-    (p.categorie || "Autre") === categorie
+  const produitsFiltres = restoProduitsCache.filter(
+    (p) => (p.categorie || "Autre") === categorie
   );
   afficherProduits(produitsFiltres);
 }
@@ -600,7 +602,7 @@ function afficherProduits(produits) {
   const productsGrid = $("restoProductsGrid");
   if (!productsGrid) return;
 
-  if (produits.length === 0) {
+  if (!produits || produits.length === 0) {
     productsGrid.innerHTML = `
       <div class="resto-loading">
         Aucun produit dans cette catégorie
@@ -609,7 +611,9 @@ function afficherProduits(produits) {
     return;
   }
 
-  productsGrid.innerHTML = produits.map(produit => `
+  productsGrid.innerHTML = produits
+    .map(
+      (produit) => `
     <div class="resto-product-card" onclick="ajouterProduitAuPanier('${produit.code_produit}')">
       <div class="resto-product-name">${produit.libelle}</div>
       <div class="resto-product-price">${formatMontantGNF(produit.prix_unitaire)}</div>
@@ -619,87 +623,91 @@ function afficherProduits(produits) {
         </button>
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join("");
 }
 
-// Charger les produits et initialiser l'interface
 async function chargerProduitsResto() {
   const productsGrid = $("restoProductsGrid");
+  if (!productsGrid) return;
+
+  productsGrid.innerHTML =
+    '<div class="resto-loading">Chargement du menu...</div>';
 
   try {
     const res = await db.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_MENU_RESTO_COLLECTION_ID,
-      [
-        Appwrite.Query.equal("actif", true),
-        Appwrite.Query.limit(200)
-      ]
+      [Appwrite.Query.equal("actif", true), Appwrite.Query.limit(200)]
     );
 
     restoProduitsCache = res.documents || [];
     console.log("[RESTO] Produits chargés :", restoProduitsCache.length);
 
     if (restoProduitsCache.length === 0) {
-      if (productsGrid) {
-        productsGrid.innerHTML = `
-          <div class="resto-loading" style="color: var(--accent-primary);">
-            ❌ Aucun produit trouvé dans le menu
-          </div>
-        `;
-      }
+      productsGrid.innerHTML = `
+        <div class="resto-loading" style="color: var(--accent-primary);">
+          ❌ Aucun produit trouvé dans le menu
+        </div>
+      `;
       return;
     }
 
     await initialiserDernierNumeroVente();
     creerOngletsCategories();
     afficherTousLesProduits();
-
   } catch (err) {
     console.error("[RESTO] Erreur chargement menu :", err);
-    if (productsGrid) {
-      productsGrid.innerHTML = `
-        <div class="resto-loading" style="color: var(--accent-primary);">
-          ❌ Erreur de chargement du menu
-        </div>
-      `;
-    }
+    productsGrid.innerHTML = `
+      <div class="resto-loading" style="color: var(--accent-primary);">
+        ❌ Erreur de chargement du menu : ${err.message}
+      </div>
+    `;
   }
 }
 
+// Dernier numéro de vente (V-001, V-002, ...)
 async function initialiserDernierNumeroVente() {
   try {
     const res = await db.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_VENTES_RESTO_COLLECTION_ID,
-      [
-        Appwrite.Query.orderDesc("$createdAt"),
-        Appwrite.Query.limit(1)
-      ]
+      [Appwrite.Query.orderDesc("$createdAt"), Appwrite.Query.limit(1)]
     );
 
     if (res.documents.length > 0) {
       const lastNum = res.documents[0].numero_vente;
       const match = lastNum && lastNum.match(/V-(\d+)/);
       if (match) {
-        lastVenteNumber = parseInt(match[1]);
+        lastVenteNumber = parseInt(match[1], 10) || 0;
       }
     }
   } catch (err) {
-    console.warn("[RESTO] Impossible de récupérer le dernier numéro de vente :", err);
+    console.warn(
+      "[RESTO] Impossible de récupérer le dernier numéro de vente :",
+      err
+    );
     lastVenteNumber = 0;
   }
 }
 
 function genererNumeroVente() {
-  lastVenteNumber++;
+  lastVenteNumber += 1;
   return `V-${lastVenteNumber.toString().padStart(3, "0")}`;
 }
 
+// --------- Gestion du panier ---------
+
 function ajouterProduitAuPanier(codeProduit) {
-  const produit = restoProduitsCache.find(p => p.code_produit === codeProduit);
+  const produit = restoProduitsCache.find(
+    (p) => p.code_produit === codeProduit
+  );
   if (!produit) return;
 
-  const existant = restoPanier.find(item => item.code_produit === codeProduit);
+  const existant = restoPanier.find(
+    (item) => item.code_produit === codeProduit
+  );
 
   if (existant) {
     existant.quantite += 1;
@@ -708,7 +716,7 @@ function ajouterProduitAuPanier(codeProduit) {
       code_produit: produit.code_produit,
       libelle: produit.libelle,
       prix_unitaire: Number(produit.prix_unitaire) || 0,
-      quantite: 1
+      quantite: 1,
     });
   }
 
@@ -741,7 +749,10 @@ function actualiserPanier() {
 
   if (!cartItems) return;
 
-  const totalArticles = restoPanier.reduce((sum, item) => sum + item.quantite, 0);
+  const totalArticles = restoPanier.reduce(
+    (sum, item) => sum + item.quantite,
+    0
+  );
   const totalMontant = restoPanier.reduce(
     (sum, item) => sum + item.prix_unitaire * item.quantite,
     0
@@ -781,28 +792,25 @@ function actualiserPanier() {
 function modifierQuantitePanier(index, delta) {
   if (index < 0 || index >= restoPanier.length) return;
 
-  const newQuantity = restoPanier[index].quantite + delta;
-
-  if (newQuantity <= 0) {
+  const newQte = restoPanier[index].quantite + delta;
+  if (newQte <= 0) {
     supprimerDuPanier(index);
   } else {
-    restoPanier[index].quantite = newQuantity;
+    restoPanier[index].quantite = newQte;
     actualiserPanier();
   }
 }
 
 function supprimerDuPanier(index) {
   if (index < 0 || index >= restoPanier.length) return;
-
-  const produitNom = restoPanier[index].libelle;
+  const nom = restoPanier[index].libelle;
   restoPanier.splice(index, 1);
   actualiserPanier();
-  showTempMessage(`🗑️ ${produitNom} retiré du panier`, "warn");
+  showTempMessage(`🗑️ ${nom} retiré du panier`, "warn");
 }
 
 function viderPanier() {
   if (restoPanier.length === 0) return;
-
   if (confirm("Vider tout le panier ?")) {
     restoPanier = [];
     actualiserPanier();
@@ -810,12 +818,10 @@ function viderPanier() {
   }
 }
 
-// Enregistrer la vente
+// --------- Enregistrement vente ---------
+
 async function enregistrerVenteResto() {
   const msg = $("restoResult");
-  const receipt = $("restoReceipt");
-  const receiptNumber = $("receiptNumber");
-  const receiptContent = $("receiptContent");
 
   if (!currentAgent) {
     showTempMessage("❌ Veuillez vous connecter", "error");
@@ -827,8 +833,7 @@ async function enregistrerVenteResto() {
     return;
   }
 
-  // Un numéro de vente unique pour TOUTE la commande (toutes les lignes)
-  const numeroVente = "V-" + Date.now().toString(36).toUpperCase().slice(-6);
+  const numeroVente = genererNumeroVente();
   const nowIso = new Date().toISOString();
   const orderType =
     document.querySelector('input[name="orderType"]:checked')?.value ||
@@ -838,17 +843,16 @@ async function enregistrerVenteResto() {
   let totalGlobal = 0;
 
   try {
-    // Enregistrer chaque ligne de vente
     for (const item of restoPanier) {
       const montant = item.prix_unitaire * item.quantite;
       totalGlobal += montant;
 
+      // ⚠️ On n'envoie QUE les colonnes existantes dans ventes_resto
       await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VENTES_RESTO_COLLECTION_ID,
         Appwrite.ID.unique(),
         {
-          // Champs requis dans Appwrite
           numero_vente: numeroVente,
           date_vente: nowIso,
           code_produit: item.code_produit,
@@ -856,32 +860,17 @@ async function enregistrerVenteResto() {
           montant_total: montant,
           agent_id: currentAgent.$id,
           poste_id: currentAgent.role || "resto_chicha",
-
-          // Compat éventuelle avec l’ancien champ "mode"
-          mode: orderType, // ex: "sur_place" ou "a_emporter"
-
-          // Champs complémentaires (ajoute-les en non-requis dans Appwrite)
-          libelle: item.libelle,
-          prix_unitaire: item.prix_unitaire,
-          type_commande: orderType,
-          notes: notes
         }
       );
     }
 
-    // Afficher le reçu
     afficherReçu(numeroVente, totalGlobal, orderType, notes);
-
     if (msg) msg.style.display = "none";
   } catch (err) {
     console.error("[RESTO] Erreur enregistrement vente :", err);
-    showTempMessage(
-      "❌ Erreur lors de l'enregistrement : " + (err?.message || ""),
-      "error"
-    );
+    showTempMessage("❌ Erreur lors de l'enregistrement", "error");
   }
 }
-
 
 function afficherReçu(numeroVente, total, orderType, notes) {
   const receipt = $("restoReceipt");
@@ -893,15 +882,18 @@ function afficherReçu(numeroVente, total, orderType, notes) {
 
   if (receiptNumber) receiptNumber.textContent = numeroVente;
 
-  let receiptHTML = `
+  let html = `
     <div style="margin-bottom: 1rem;">
-      <div><strong>Date:</strong> ${new Date().toLocaleString("fr-FR")}</div>
-      <div><strong>Type:</strong> ${
+      <div><strong>Date :</strong> ${new Date().toLocaleString("fr-FR")}</div>
+      <div><strong>Type :</strong> ${
         orderType === "sur_place" ? "Sur place" : "À emporter"
       }</div>
       ${
         notes
-          ? `<div><strong>Notes:</strong> ${notes}</div>`
+          ? `<div><strong>Notes :</strong> ${notes.replace(
+              /</g,
+              "&lt;"
+            )}</div>`
           : ""
       }
     </div>
@@ -910,7 +902,7 @@ function afficherReçu(numeroVente, total, orderType, notes) {
 
   restoPanier.forEach((item) => {
     const sousTotal = item.prix_unitaire * item.quantite;
-    receiptHTML += `
+    html += `
       <div class="receipt-item">
         <div>${item.quantite}x ${item.libelle}</div>
         <div>${sousTotal.toLocaleString("fr-FR")} GNF</div>
@@ -918,18 +910,18 @@ function afficherReçu(numeroVente, total, orderType, notes) {
     `;
   });
 
-  receiptHTML += `
+  html += `
     <div style="border-bottom: 1px dashed #ccc; margin: 0.5rem 0;"></div>
     <div class="receipt-item receipt-total">
       <div>TOTAL</div>
       <div>${total.toLocaleString("fr-FR")} GNF</div>
     </div>
-    <div style="text-align: center; margin-top: 1rem; font-style: italic;">
+    <div style="text-align:center; margin-top:1rem; font-style:italic;">
       Merci pour votre commande !
     </div>
   `;
 
-  if (receiptContent) receiptContent.innerHTML = receiptHTML;
+  if (receiptContent) receiptContent.innerHTML = html;
 
   receipt.style.display = "block";
   if (productsSide) productsSide.style.display = "none";
@@ -949,6 +941,7 @@ function nouvelleCommandeResto() {
 
   showTempMessage("🆕 Nouvelle commande prête", "success");
 }
+
 
 // ===============================
 //  INIT
@@ -1018,9 +1011,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const btnRestoValider           = $("btnRestoValider");
-  const btnRestoVider             = $("btnRestoVider");
-  const btnRestoNouvelleCommande  = $("btnRestoNouvelleCommande");
+    const btnRestoValider = $("btnRestoValider");
+  const btnRestoVider = $("btnRestoVider");
+  const btnRestoNouvelleCommande = $("btnRestoNouvelleCommande");
+  const btnRestoImprimer = $("btnRestoImprimer");
 
   if (btnRestoValider) {
     btnRestoValider.addEventListener("click", (e) => {
@@ -1042,4 +1036,10 @@ document.addEventListener("DOMContentLoaded", () => {
       nouvelleCommandeResto();
     });
   }
-});
+
+  if (btnRestoImprimer) {
+    btnRestoImprimer.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.print(); // imprime la page avec le reçu visible
+    });
+  }
