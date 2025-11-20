@@ -75,16 +75,18 @@
     <div id="admin-zone-saisie">
 
       <!-- Enregistrement d'un étudiant -->
+            <!-- Enregistrement d'un étudiant -->
       <section class="card">
         <h2>Enregistrer un étudiant</h2>
 
         <p class="status" style="margin-bottom:0.8rem;">
-          Ajoute un étudiant dans la collection <strong>etudiants</strong> (pour le tarif étudiant).
+          Ajoute un étudiant dans la collection <strong>etudiants</strong> (pour le tarif étudiant).<br>
+          Le numéro étudiant est <strong>généré automatiquement</strong> : <code>UNIV-XX-1234</code>.
         </p>
 
         <div class="form-row">
-          <label for="admin-etu-numero">Numéro étudiant <span style="color:#ef4444;">*</span></label>
-          <input type="text" id="admin-etu-numero" placeholder="Ex : USTG-12345" />
+          <label for="admin-etu-universite">Université / École <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="admin-etu-universite" placeholder="Ex : USTG, UNIC, etc." />
         </div>
 
         <div class="form-row">
@@ -95,11 +97,6 @@
         <div class="form-row">
           <label for="admin-etu-prenom">Prénom <span style="color:#ef4444;">*</span></label>
           <input type="text" id="admin-etu-prenom" placeholder="Prénom" />
-        </div>
-
-        <div class="form-row">
-          <label for="admin-etu-universite">Université / École <span style="color:#ef4444;">*</span></label>
-          <input type="text" id="admin-etu-universite" placeholder="Ex : USTG, UNIC, ... " />
         </div>
 
         <div class="form-row">
@@ -123,6 +120,7 @@
 
         <p id="admin-etu-message" class="status"></p>
       </section>
+
 
       <!-- Création d'un agent -->
       <section class="card">
