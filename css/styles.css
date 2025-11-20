@@ -292,7 +292,8 @@ input[type="text"],
 input[type="password"],
 input[type="file"],
 input[type="number"],
-select {
+select,
+textarea {
   padding: 1rem 1.25rem;
   border: 2px solid var(--border-soft);
   border-radius: var(--radius-md);
@@ -303,7 +304,8 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1);
@@ -571,58 +573,280 @@ footer {
   margin-top: 3rem;
 }
 
-/* Responsive */
+/* =========================
+   STYLES RESTAURANT - NOUVEAU
+   ========================= */
 
-@media (max-width: 768px) {
-  main {
+.resto-container {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Colonne produits */
+.resto-products-side {
+  min-height: 500px;
+}
+
+.resto-categories-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.resto-category-tab {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: white;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.resto-category-tab:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+}
+
+.resto-category-tab.active {
+  background: linear-gradient(135deg, var(--accent-primary), #ff8e53);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.resto-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.resto-product-card {
+  background: white;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+.resto-product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-soft);
+  border-color: var(--accent-primary);
+}
+
+.resto-product-card:active {
+  transform: translateY(-1px);
+}
+
+.resto-product-name {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+
+.resto-product-price {
+  font-weight: 700;
+  color: var(--accent-primary);
+  font-size: 1.1rem;
+}
+
+.resto-product-emoji {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* Colonne panier */
+.resto-cart-side {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  position: sticky;
+  top: 1rem;
+  border: 1px solid var(--border-soft);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.resto-cart-header {
+  border-bottom: 2px solid var(--border-soft);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.resto-cart-header h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.resto-cart-info {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.resto-cart-items {
+  min-height: 200px;
+  margin-bottom: 1.5rem;
+}
+
+.resto-cart-empty {
+  text-align: center;
+  color: var(--text-light);
+  font-style: italic;
+  padding: 2rem;
+}
+
+.resto-cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.resto-cart-item:last-child {
+  border-bottom: none;
+}
+
+.resto-cart-item-info {
+  flex: 1;
+}
+
+.resto-cart-item-name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.resto-cart-item-price {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.resto-cart-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resto-cart-item-quantity {
+  font-weight: 600;
+  min-width: 30px;
+  text-align: center;
+}
+
+.resto-cart-item-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  transition: var(--transition-fast);
+}
+
+.resto-cart-item-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-primary);
+}
+
+.resto-cart-item-remove {
+  color: #ef4444;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.resto-order-options {
+  border-top: 2px solid var(--border-soft);
+  padding-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.resto-cart-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Reçu */
+.resto-receipt {
+  background: white;
+  border: 2px solid var(--accent-secondary);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.receipt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-soft);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.receipt-header h4 {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.receipt-content {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.receipt-total {
+  border-top: 1px dashed var(--text-main);
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .resto-container {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
-    margin: 1rem auto 2rem;
-    padding: 0 1rem;
   }
   
-  .card {
-    padding: 1.5rem;
+  .resto-cart-side {
+    position: static;
+    max-height: none;
   }
   
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .header-inner {
-    flex-direction: column;
-    text-align: center;
-    gap: 1rem;
-  }
-  
-  header h1 {
-    font-size: 1.5rem;
-  }
-  
-  .big-number {
-    font-size: 2.5rem;
-  }
-  
-  button {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .form-row {
-    margin-bottom: 1rem;
-  }
-  
-  .mode-navigation {
-    flex-direction: column;
-  }
-  
-  .mode-btn {
-    min-width: auto;
+  .resto-products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
 
 @media (max-width: 480px) {
+  .resto-products-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .resto-categories-tabs {
+    justify-content: center;
+  }
+  
   .card {
     padding: 1rem;
   }
