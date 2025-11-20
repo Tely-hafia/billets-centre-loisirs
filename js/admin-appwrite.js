@@ -9,9 +9,10 @@ const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
 const APPWRITE_BILLETS_TABLE_ID = "billets";                // billets d'entrée
-const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne";// billets jeux internes
+const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux internes
 const APPWRITE_VALIDATIONS_TABLE_ID = "validations";        // historique validations
-const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto"; // ventes resto/chicha
+const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";            // étudiants
+const APPWRITE_AGENTS_TABLE_ID = "agents";                  // agents
 
 // =====================================
 //  Initialisation du client Appwrite
@@ -33,28 +34,148 @@ function $(id) {
   return document.getElementById(id);
 }
 
-function getImportType() {
-  const r = document.querySelector('input[name="importType"]:checked');
-  return r ? r.value : "entree";
-}
-
 // Format monnaie
 function formatGNF(n) {
   const v = Number(n) || 0;
   return v.toLocaleString("fr-FR") + " GNF";
 }
 
+function getImportType() {
+  const r = document.querySelector('input[name="importType"]:checked');
+  return r ? r.value : "entree";
+}
+
 // =====================================
-//  1. IMPORT CSV
+//  ÉTAT GLOBAL ADMIN
 // =====================================
 
-async function importerCSVDansBillets(file) {
-  if (!file) {
-    alert("Veuillez choisir un fichier CSV.");
+let currentAdmin = null;
+let adminCurrentMode = "saisie"; // "saisie" ou "gestion"
+
+// =====================================
+//  UI Connexion Admin
+// =====================================
+
+function showAdminLoginMessage(text, type) {
+  const el = $("admin-login-message");
+  if (!el) return;
+  el.textContent = text || "";
+  el.style.color =
+    type === "success" ? "#16a34a" :
+    type === "error"   ? "#b91c1c" :
+    "#6b7280";
+}
+
+function appliquerEtatConnexionAdmin(admin) {
+  currentAdmin = admin;
+
+  const loginCard = $("admin-login-card");
+  const appZone  = $("admin-app-zone");
+  const nameEl  = $("admin-connected-name");
+  const roleEl  = $("admin-connected-role");
+
+  if (admin) {
+    if (loginCard) loginCard.style.display = "none";
+    if (appZone) appZone.style.display = "block";
+
+    if (nameEl) nameEl.textContent = admin.nom || admin.login || "";
+    if (roleEl) roleEl.textContent = admin.role || "";
+
+    // Mode par défaut : saisie
+    switchAdminMode("saisie");
+
+    // Charger les stats (optionnel)
+    chargerStatsValidations();
+  } else {
+    if (loginCard) loginCard.style.display = "block";
+    if (appZone) appZone.style.display = "none";
+
+    if (nameEl) nameEl.textContent = "";
+    if (roleEl) roleEl.textContent = "";
+
+    showAdminLoginMessage("Non connecté.", "info");
+  }
+}
+
+async function adminLogin() {
+  const login = $("adminLogin")?.value.trim();
+  const password = $("adminPassword")?.value.trim();
+
+  if (!login || !password) {
+    showAdminLoginMessage("Veuillez saisir le login admin et le mot de passe.", "error");
     return;
   }
 
-  const typeImport = getImportType(); // "entree" ou "interne";
+  showAdminLoginMessage("Vérification en cours...", "info");
+
+  try {
+    const res = await adminDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_AGENTS_TABLE_ID,
+      [
+        Appwrite.Query.equal("login", login),
+        Appwrite.Query.equal("mot_de_passe", password),
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      showAdminLoginMessage("Identifiants invalides ou agent inactif.", "error");
+      return;
+    }
+
+    const agent = res.documents[0];
+    const roleStr = (agent.role || "").toLowerCase();
+
+    if (!roleStr.includes("admin")) {
+      showAdminLoginMessage("Accès refusé : rôle 'admin' requis.", "error");
+      return;
+    }
+
+    showAdminLoginMessage("Connexion administrateur réussie.", "success");
+    appliquerEtatConnexionAdmin(agent);
+  } catch (err) {
+    console.error("[ADMIN] Erreur connexion admin :", err);
+    showAdminLoginMessage("Erreur lors de la connexion (voir console).", "error");
+  }
+}
+
+function adminLogout() {
+  appliquerEtatConnexionAdmin(null);
+}
+
+// =====================================
+//  SWITCH MODE (Saisie / Gestion)
+// =====================================
+
+function switchAdminMode(mode) {
+  adminCurrentMode = mode;
+
+  const btnSaisie  = $("btnAdminModeSaisie");
+  const btnGestion = $("btnAdminModeGestion");
+  const zoneSaisie = $("admin-zone-saisie");
+  const zoneGestion= $("admin-zone-gestion");
+
+  if (btnSaisie)  btnSaisie.classList.toggle("active", mode === "saisie");
+  if (btnGestion) btnGestion.classList.toggle("active", mode === "gestion");
+
+  if (zoneSaisie)  zoneSaisie.style.display  = mode === "saisie"  ? "block" : "none";
+  if (zoneGestion) zoneGestion.style.display = mode === "gestion" ? "block" : "none";
+}
+
+// =====================================
+//  1. IMPORT CSV BILLETS
+// =====================================
+
+async function importerCSVDansBillets(file) {
+  const status = $("importStatus");
+  if (!file) {
+    if (status) status.textContent = "Veuillez choisir un fichier CSV.";
+    return;
+  }
+
+  const typeImport = getImportType(); // "entree" ou "interne"
   console.log("[ADMIN] Import type =", typeImport);
 
   const reader = new FileReader();
@@ -64,7 +185,7 @@ async function importerCSVDansBillets(file) {
     const lignes = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
     if (lignes.length <= 1) {
-      alert("Le fichier CSV semble vide.");
+      if (status) status.textContent = "Le fichier CSV semble vide.";
       return;
     }
 
@@ -76,8 +197,8 @@ async function importerCSVDansBillets(file) {
     if (typeImport === "entree") {
       // ======== BILLETS D'ENTRÉE ========
       const idxNumero = header.indexOf("numero_billet");
-      const idxType = header.indexOf("type_acces");
-      const idxPrix = header.indexOf("prix");
+      const idxType   = header.indexOf("type_acces");
+      const idxPrix   = header.indexOf("prix");
       const idxTarifUni = header.indexOf("tarif_universite");
       const idxStatut = header.indexOf("statut");
 
@@ -129,12 +250,12 @@ async function importerCSVDansBillets(file) {
       }
 
       alert(`Import billets d'entrée terminé : ${count} billets créés.`);
+
     } else {
       // ======== BILLETS INTERNES (JEUX) ========
       const idxNumero = header.indexOf("numero_billet");
       const idxTypeBillet = header.indexOf("type_billet");
       const idxPrix = header.indexOf("prix");
-      const idxStatut = header.indexOf("statut");
 
       if (idxNumero === -1 || idxTypeBillet === -1) {
         alert(
@@ -155,16 +276,12 @@ async function importerCSVDansBillets(file) {
 
         const prix =
           idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
-        const statut =
-          idxStatut !== -1 && cols[idxStatut]
-            ? cols[idxStatut].trim()
-            : "Non utilisé";
 
         const doc = {
           numero_billet: numero,
           type_billet: typeBillet,
           prix: prix,
-          statut: statut
+          statut: "Non utilisé" // par défaut pour éviter les erreurs de colonne requise
         };
 
         try {
@@ -184,552 +301,285 @@ async function importerCSVDansBillets(file) {
     }
 
     console.log("[ADMIN] Import CSV terminé. Billets créés :", count);
-    const status = $("importStatus");
-    if (status) {
-      status.textContent = `Import terminé. Billets créés : ${count}`;
-    }
+    if (status) status.textContent = `Import terminé. Billets créés : ${count}`;
   };
 
   reader.readAsText(file, "UTF-8");
 }
 
 // =====================================
-//  Helpers dates / périodes
-// =====================================
-
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function getPeriodRange(value) {
-  const now = new Date();
-  const end = now.toISOString();
-  let start = null;
-
-  if (value === "7d") {
-    const d = startOfToday();
-    d.setDate(d.getDate() - 6);
-    start = d.toISOString();
-  } else if (value === "30d") {
-    const d = startOfToday();
-    d.setDate(d.getDate() - 29);
-    start = d.toISOString();
-  } else if (value === "thisMonth") {
-    const d = new Date(now.getFullYear(), now.getMonth(), 1);
-    start = d.toISOString();
-  } else if (value === "thisYear") {
-    const d = new Date(now.getFullYear(), 0, 1);
-    start = d.toISOString();
-  } else if (value === "all") {
-    start = null; // pas de filtre
-  }
-
-  return { start, end };
-}
-
-function getISOWeekInfo(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-  const monthName = d.toLocaleString("fr-FR", { month: "long" });
-  return { week: weekNo, year: d.getUTCFullYear(), monthName };
-}
-
-function getPeriodKeyLabel(dateObj, group) {
-  if (!(dateObj instanceof Date) || isNaN(dateObj)) {
-    return { key: "inconnu", label: "Inconnu" };
-  }
-
-  if (group === "jour") {
-    const key = dateObj.toISOString().slice(0, 10); // YYYY-MM-DD
-    const label = dateObj.toLocaleDateString("fr-FR", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short"
-    });
-    return { key, label };
-  }
-
-  if (group === "mois") {
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth(); // 0-11
-    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
-    const label = dateObj.toLocaleDateString("fr-FR", {
-      month: "long",
-      year: "numeric"
-    });
-    return { key, label };
-  }
-
-  // par défaut : semaine
-  const info = getISOWeekInfo(dateObj);
-  const key = `${info.year}-W${String(info.week).padStart(2, "0")}`;
-  const label = `Semaine ${info.week} – ${info.monthName} ${info.year}`;
-  return { key, label };
-}
-
-// =====================================
-//  2. STATS à partir de "validations" + ventes_resto
+//  2. STATS à partir de "validations"
 // =====================================
 
 async function chargerStatsValidations() {
   const msg = $("stats-message");
-  const periodSelect = $("stats-period");
-  const groupSelect = $("stats-group");
-
   if (msg) {
-    msg.textContent = "Chargement des statistiques...";
-    msg.className = "status";
+    msg.textContent = "Chargement des stats...";
+    msg.className = "message message-info";
   }
 
-  const period = periodSelect ? periodSelect.value : "7j";
-  const groupMode = groupSelect ? groupSelect.value : "semaine";
-
-  const dateMin = getDateMinFromPeriod(period);
-
   try {
-    // --------- 1. Récup validations (billets) ----------
-    const filters = [];
-    if (dateMin) {
-      filters.push(
-        Appwrite.Query.greaterThanEqual(
-          "date_validation",
-          dateMin.toISOString()
-        )
-      );
-    }
-    filters.push(Appwrite.Query.limit(10000));
-
     const res = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
-      filters
+      [Appwrite.Query.limit(10000)]
     );
-    const validations = res.documents || [];
 
-    // --------- 2. Récup ventes resto éventuelles ----------
-    let ventesResto = [];
-    try {
-      const filtersR = [];
-      if (dateMin) {
-        filtersR.push(
-          Appwrite.Query.greaterThanEqual(
-            "date_vente",
-            dateMin.toISOString()
-          )
-        );
-      }
-      filtersR.push(Appwrite.Query.limit(10000));
+    const docs = res.documents || [];
+    console.log("[ADMIN] Validations récupérées :", docs.length);
 
-      const restoRes = await adminDB.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_VENTES_RESTO_COLLECTION_ID,
-        filtersR
-      );
-      ventesResto = restoRes.documents || [];
-    } catch (errResto) {
-      console.warn("[ADMIN] Impossible de charger ventes_resto :", errResto);
-    }
+    const totalValidations = docs.length;
 
-    // --------- 3. Agrégations globales ----------
-    let totalValidations = 0;
-    let recetteTotaleBillets = 0;
-    let recetteTarifNormal = 0;
-    let recetteTarifEtudiant = 0;
-    let recetteResto = 0;
+    let recetteTotale = 0;
+    let recetteNormal = 0;
+    let recetteEtudiant = 0;
 
-    const parType = {};   // { type: { count, montant } }
-    const parPeriode = {}; // { key: { label, count, montant } }
+    const parType = {}; // { type_acces: { count, montant } }
 
-    validations.forEach((d) => {
+    docs.forEach((d) => {
       const montant = parseInt(d.montant_paye || 0, 10) || 0;
-      totalValidations += 1;
-      recetteTotaleBillets += montant;
+      recetteTotale += montant;
 
-      if (d.tarif_applique === "etudiant") {
-        recetteTarifEtudiant += montant;
-      } else {
-        recetteTarifNormal += montant;
+      if (d.tarif_applique === "normal") {
+        recetteNormal += montant;
+      } else if (d.tarif_applique === "etudiant") {
+        recetteEtudiant += montant;
       }
 
-      const type = d.type_acces || d.type_billet || "Non renseigné";
-      if (!parType[type]) parType[type] = { count: 0, montant: 0 };
+      const type = d.type_acces || "Non renseigné";
+      if (!parType[type]) {
+        parType[type] = { count: 0, montant: 0 };
+      }
       parType[type].count += 1;
       parType[type].montant += montant;
-
-      const grp = buildGroupKey(d.date_validation, groupMode);
-      if (!parPeriode[grp.key]) {
-        parPeriode[grp.key] = {
-          label: grp.label,
-          sortKey: grp.sortKey,
-          count: 0,
-          montant: 0
-        };
-      }
-      parPeriode[grp.key].count += 1;
-      parPeriode[grp.key].montant += montant;
     });
 
-    ventesResto.forEach((v) => {
-      recetteResto += parseInt(v.montant_total || 0, 10) || 0;
-    });
+    const elCount  = $("stat-validations-count");
+    const elTotal  = $("stat-revenue-total");
+    const elNormal = $("stat-revenue-normal");
+    const elEtu    = $("stat-revenue-etudiant");
 
-    // --------- 4. Mise à jour des tuiles ----------
-    $("stat-validations-count").textContent = String(totalValidations);
-    $("stat-revenue-total").textContent = formatGNF(recetteTotaleBillets);
-    $("stat-revenue-normal").textContent = formatGNF(recetteTarifNormal);
-    $("stat-revenue-etudiant").textContent = formatGNF(recetteTarifEtudiant);
-    $("stat-revenue-resto").textContent = formatGNF(recetteResto);
+    if (elCount)  elCount.textContent  = totalValidations.toString();
+    if (elTotal)  elTotal.textContent  = formatGNF(recetteTotale);
+    if (elNormal) elNormal.textContent = formatGNF(recetteNormal);
+    if (elEtu)    elEtu.textContent    = formatGNF(recetteEtudiant);
 
-    // --------- 5. Tableau Évolution des entrées ----------
-    const evolBody = $("stats-evol-body");
-    if (evolBody) {
-      evolBody.innerHTML = "";
-      const items = Object.values(parPeriode).sort((a, b) =>
-        a.sortKey.localeCompare(b.sortKey)
-      );
-      if (items.length === 0) {
-        evolBody.innerHTML =
-          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
-      } else {
-        items.forEach((it) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${it.label}</td>
-            <td>${it.count}</td>
-            <td>${formatGNF(it.montant)}</td>
-          `;
-          evolBody.appendChild(tr);
-        });
-      }
-    }
+    const tbody = $("stats-type-body");
+    if (tbody) {
+      tbody.innerHTML = "";
 
-    // --------- 6. Tableau Top types d'accès / billets ----------
-    const typeBody = $("stats-type-body");
-    if (typeBody) {
-      typeBody.innerHTML = "";
-      const types = Object.entries(parType).sort(
-        (a, b) => b[1].montant - a[1].montant
-      );
+      const types = Object.keys(parType);
       if (types.length === 0) {
-        typeBody.innerHTML =
-          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
+        const row = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.textContent = "Aucune validation pour le moment.";
+        row.appendChild(td);
+        tbody.appendChild(row);
       } else {
-        types.forEach(([type, info]) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${type}</td>
-            <td>${info.count}</td>
-            <td>${formatGNF(info.montant)}</td>
-          `;
-          typeBody.appendChild(tr);
-        });
-      }
-    }
+        types.forEach((type) => {
+          const row = document.createElement("tr");
 
-    // --------- 7. Tableau Top jours / semaines ----------
-    const topBody = $("stats-topdays-body");
-    if (topBody) {
-      topBody.innerHTML = "";
-      const items = Object.values(parPeriode)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
+          const tdType = document.createElement("td");
+          tdType.textContent = type;
 
-      if (items.length === 0) {
-        topBody.innerHTML =
-          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
-      } else {
-        items.forEach((it) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${it.label}</td>
-            <td>${it.count}</td>
-            <td>${formatGNF(it.montant)}</td>
-          `;
-          topBody.appendChild(tr);
+          const tdCount = document.createElement("td");
+          tdCount.textContent = parType[type].count.toString();
+
+          const tdMontant = document.createElement("td");
+          tdMontant.textContent = formatGNF(parType[type].montant);
+
+          row.appendChild(tdType);
+          row.appendChild(tdCount);
+          row.appendChild(tdMontant);
+
+          tbody.appendChild(row);
         });
       }
     }
 
     if (msg) {
-      msg.textContent = "Statistiques mises à jour.";
-      msg.className = "status";
+      msg.textContent = "Stats mises à jour.";
+      msg.className = "message message-success";
     }
   } catch (err) {
     console.error("[ADMIN] Erreur chargement stats validations :", err);
     if (msg) {
-      msg.textContent =
-        "Erreur lors du chargement des stats (voir console).";
-      msg.className = "status";
+      msg.textContent = "Erreur lors du chargement des stats (voir console).";
+      msg.className = "message message-error";
     }
   }
 }
-function getDateMinFromPeriod(period) {
-  const now = new Date();
-  const d = new Date(now);
-
-  switch (period) {
-    case "7j":
-      d.setDate(now.getDate() - 7);
-      return d;
-    case "30j":
-      d.setDate(now.getDate() - 30);
-      return d;
-    case "thisMonth":
-      return new Date(now.getFullYear(), now.getMonth(), 1);
-    case "thisYear":
-      return new Date(now.getFullYear(), 0, 1);
-    case "all":
-    default:
-      return null; // pas de filtre date
-  }
-}
-
-// clé + label lisible pour regroupement
-function buildGroupKey(dateStr, mode) {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return { key: "inconnu", label: "Date inconnue", sortKey: "9999" };
-
-  const year = d.getFullYear();
-  const month = d.toLocaleString("fr-FR", { month: "long" });
-  const day = d.toLocaleDateString("fr-FR");
-
-  if (mode === "jour") {
-    return {
-      key: day,
-      label: day,
-      sortKey: d.toISOString()
-    };
-  }
-
-  if (mode === "mois") {
-    const key = `${year}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    return {
-      key,
-      label: `${month} ${year}`,
-      sortKey: key
-    };
-  }
-
-  // mode "semaine" par défaut
-  const tmp = new Date(d);
-  tmp.setHours(0, 0, 0, 0);
-  // ISO week
-  const dayNum = (tmp.getDay() + 6) % 7; // 0=lundi
-  tmp.setDate(tmp.getDate() - dayNum + 3);
-  const firstThursday = new Date(tmp.getFullYear(), 0, 4);
-  const diff = tmp - firstThursday;
-  const week = 1 + Math.round(diff / (7 * 24 * 3600 * 1000));
-
-  return {
-    key: `${year}-W${String(week).padStart(2, "0")}`,
-    label: `Semaine ${week} – ${month} ${year}`,
-    sortKey: `${year}-${String(week).padStart(2, "0")}`
-  };
-}
-
 
 // =====================================
-//  3. Export CSV des validations (période filtrée)
+//  3. Nettoyage des BILLETS (pas validations)
 // =====================================
 
-async function chargerStatsValidations() {
-  const msg = $("stats-message");
-  const periodSelect = $("stats-period");
-  const groupSelect = $("stats-group");
-
-  if (msg) {
-    msg.textContent = "Chargement des statistiques...";
-    msg.className = "status";
-  }
-
-  const period = periodSelect ? periodSelect.value : "7j";
-  const groupMode = groupSelect ? groupSelect.value : "semaine";
-
-  const dateMin = getDateMinFromPeriod(period);
+async function effacerTousLesBillets() {
+  const ok = confirm(
+    "CONFIRMATION : effacer TOUS les billets d'entrée ET les billets internes ?\n(Les validations NE seront PAS effacées.)"
+  );
+  if (!ok) return;
 
   try {
-    // --------- 1. Récup validations (billets) ----------
-    const filters = [];
-    if (dateMin) {
-      filters.push(
-        Appwrite.Query.greaterThanEqual(
-          "date_validation",
-          dateMin.toISOString()
-        )
-      );
-    }
-    filters.push(Appwrite.Query.limit(10000));
-
-    const res = await adminDB.listDocuments(
+    // billets d'entrée
+    const billetsRes = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
-      APPWRITE_VALIDATIONS_TABLE_ID,
-      filters
+      APPWRITE_BILLETS_TABLE_ID,
+      [Appwrite.Query.limit(10000)]
     );
-    const validations = res.documents || [];
+    const billets = billetsRes.documents || [];
 
-    // --------- 2. Récup ventes resto éventuelles ----------
-    let ventesResto = [];
-    try {
-      const filtersR = [];
-      if (dateMin) {
-        filtersR.push(
-          Appwrite.Query.greaterThanEqual(
-            "date_vente",
-            dateMin.toISOString()
-          )
+    for (const b of billets) {
+      try {
+        await adminDB.deleteDocument(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_BILLETS_TABLE_ID,
+          b.$id
         );
-      }
-      filtersR.push(Appwrite.Query.limit(10000));
-
-      const restoRes = await adminDB.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_VENTES_RESTO_COLLECTION_ID,
-        filtersR
-      );
-      ventesResto = restoRes.documents || [];
-    } catch (errResto) {
-      console.warn("[ADMIN] Impossible de charger ventes_resto :", errResto);
-    }
-
-    // --------- 3. Agrégations globales ----------
-    let totalValidations = 0;
-    let recetteTotaleBillets = 0;
-    let recetteTarifNormal = 0;
-    let recetteTarifEtudiant = 0;
-    let recetteResto = 0;
-
-    const parType = {};   // { type: { count, montant } }
-    const parPeriode = {}; // { key: { label, count, montant } }
-
-    validations.forEach((d) => {
-      const montant = parseInt(d.montant_paye || 0, 10) || 0;
-      totalValidations += 1;
-      recetteTotaleBillets += montant;
-
-      if (d.tarif_applique === "etudiant") {
-        recetteTarifEtudiant += montant;
-      } else {
-        recetteTarifNormal += montant;
-      }
-
-      const type = d.type_acces || d.type_billet || "Non renseigné";
-      if (!parType[type]) parType[type] = { count: 0, montant: 0 };
-      parType[type].count += 1;
-      parType[type].montant += montant;
-
-      const grp = buildGroupKey(d.date_validation, groupMode);
-      if (!parPeriode[grp.key]) {
-        parPeriode[grp.key] = {
-          label: grp.label,
-          sortKey: grp.sortKey,
-          count: 0,
-          montant: 0
-        };
-      }
-      parPeriode[grp.key].count += 1;
-      parPeriode[grp.key].montant += montant;
-    });
-
-    ventesResto.forEach((v) => {
-      recetteResto += parseInt(v.montant_total || 0, 10) || 0;
-    });
-
-    // --------- 4. Mise à jour des tuiles ----------
-    $("stat-validations-count").textContent = String(totalValidations);
-    $("stat-revenue-total").textContent = formatGNF(recetteTotaleBillets);
-    $("stat-revenue-normal").textContent = formatGNF(recetteTarifNormal);
-    $("stat-revenue-etudiant").textContent = formatGNF(recetteTarifEtudiant);
-    $("stat-revenue-resto").textContent = formatGNF(recetteResto);
-
-    // --------- 5. Tableau Évolution des entrées ----------
-    const evolBody = $("stats-evol-body");
-    if (evolBody) {
-      evolBody.innerHTML = "";
-      const items = Object.values(parPeriode).sort((a, b) =>
-        a.sortKey.localeCompare(b.sortKey)
-      );
-      if (items.length === 0) {
-        evolBody.innerHTML =
-          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
-      } else {
-        items.forEach((it) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${it.label}</td>
-            <td>${it.count}</td>
-            <td>${formatGNF(it.montant)}</td>
-          `;
-          evolBody.appendChild(tr);
-        });
+      } catch (err) {
+        console.error("[ADMIN] Erreur suppression billet", b.$id, err);
       }
     }
 
-    // --------- 6. Tableau Top types d'accès / billets ----------
-    const typeBody = $("stats-type-body");
-    if (typeBody) {
-      typeBody.innerHTML = "";
-      const types = Object.entries(parType).sort(
-        (a, b) => b[1].montant - a[1].montant
-      );
-      if (types.length === 0) {
-        typeBody.innerHTML =
-          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
-      } else {
-        types.forEach(([type, info]) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${type}</td>
-            <td>${info.count}</td>
-            <td>${formatGNF(info.montant)}</td>
-          `;
-          typeBody.appendChild(tr);
-        });
+    // billets internes
+    const biRes = await adminDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_INTERNE_TABLE_ID,
+      [Appwrite.Query.limit(10000)]
+    );
+    const billetsInt = biRes.documents || [];
+
+    for (const bi of billetsInt) {
+      try {
+        await adminDB.deleteDocument(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_BILLETS_INTERNE_TABLE_ID,
+          bi.$id
+        );
+      } catch (err) {
+        console.error("[ADMIN] Erreur suppression billet interne", bi.$id, err);
       }
     }
 
-    // --------- 7. Tableau Top jours / semaines ----------
-    const topBody = $("stats-topdays-body");
-    if (topBody) {
-      topBody.innerHTML = "";
-      const items = Object.values(parPeriode)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-
-      if (items.length === 0) {
-        topBody.innerHTML =
-          '<tr><td colspan="3">Aucune validation pour cette période.</td></tr>';
-      } else {
-        items.forEach((it) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${it.label}</td>
-            <td>${it.count}</td>
-            <td>${formatGNF(it.montant)}</td>
-          `;
-          topBody.appendChild(tr);
-        });
-      }
-    }
-
-    if (msg) {
-      msg.textContent = "Statistiques mises à jour.";
-      msg.className = "status";
-    }
+    alert(
+      "Tous les billets (entrée + internes) ont été supprimés.\nLes validations sont conservées."
+    );
+    console.log(
+      "[ADMIN] Nettoyage billets terminé. Entrée:",
+      billets.length,
+      "Internes:",
+      billetsInt.length
+    );
   } catch (err) {
-    console.error("[ADMIN] Erreur chargement stats validations :", err);
+    console.error("[ADMIN] Erreur lors du nettoyage des billets :", err);
+    alert("Erreur lors du nettoyage (voir console).");
+  }
+}
+
+// =====================================
+//  4. SAISIE : étudiants & agents
+// =====================================
+
+async function creerEtudiantDepuisAdmin() {
+  const numero = $("admin-etu-numero")?.value.trim();
+  const nom    = $("admin-etu-nom")?.value.trim();
+  const prenom = $("admin-etu-prenom")?.value.trim();
+  const univ   = $("admin-etu-universite")?.value.trim();
+  const email  = $("admin-etu-email")?.value.trim();
+  const tel    = $("admin-etu-telephone")?.value.trim();
+  const actif  = $("admin-etu-actif")?.checked ?? true;
+  const msg    = $("admin-etu-message");
+
+  if (!numero || !nom || !prenom || !univ) {
+    if (msg) msg.textContent = "Veuillez remplir au minimum numéro, nom, prénom et université.";
+    return;
+  }
+
+  try {
+    const nowIso = new Date().toISOString();
+    await adminDB.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_ETUDIANTS_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        numero_etudiant: numero,
+        nom: nom,
+        prenom: prenom,
+        universite: univ,
+        "e-mail": email || "",
+        telephone: tel || "",
+        actif: !!actif,
+        date_creation: nowIso
+      }
+    );
+
     if (msg) {
-      msg.textContent =
-        "Erreur lors du chargement des stats (voir console).";
-      msg.className = "status";
+      msg.textContent = "Étudiant enregistré avec succès.";
+      msg.style.color = "#16a34a";
+    }
+
+    $("admin-etu-numero").value = "";
+    $("admin-etu-nom").value = "";
+    $("admin-etu-prenom").value = "";
+    $("admin-etu-universite").value = "";
+    $("admin-etu-email").value = "";
+    $("admin-etu-telephone").value = "";
+    $("admin-etu-actif").checked = true;
+  } catch (err) {
+    console.error("[ADMIN] Erreur création étudiant :", err);
+    if (msg) {
+      msg.textContent = "Erreur lors de l'enregistrement de l'étudiant (voir console).";
+      msg.style.color = "#b91c1c";
     }
   }
 }
 
+async function creerAgentDepuisAdmin() {
+  const login = $("admin-agent-login")?.value.trim();
+  const pwd   = $("admin-agent-password")?.value.trim();
+  const nom   = $("admin-agent-nom")?.value.trim();
+  const role  = $("admin-agent-role")?.value.trim();
+  const actif = $("admin-agent-actif")?.checked ?? true;
+  const msg   = $("admin-agent-message");
+
+  if (!login || !pwd || !role) {
+    if (msg) msg.textContent = "Veuillez remplir au minimum login, mot de passe et rôle.";
+    return;
+  }
+
+  try {
+    await adminDB.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_AGENTS_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        login: login,
+        mot_de_passe: pwd,
+        nom: nom || "",
+        role: role,
+        actif: !!actif
+      }
+    );
+
+    if (msg) {
+      msg.textContent = "Agent créé avec succès.";
+      msg.style.color = "#16a34a";
+    }
+
+    $("admin-agent-login").value = "";
+    $("admin-agent-password").value = "";
+    $("admin-agent-nom").value = "";
+    $("admin-agent-role").value = "";
+    $("admin-agent-actif").checked = true;
+  } catch (err) {
+    console.error("[ADMIN] Erreur création agent :", err);
+    if (msg) {
+      msg.textContent = "Erreur lors de la création de l'agent (voir console).";
+      msg.style.color = "#b91c1c";
+    }
+  }
+}
 
 // =====================================
 //  5. Initialisation des événements
@@ -738,16 +588,52 @@ async function chargerStatsValidations() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[ADMIN] DOMContentLoaded");
 
-  const csvInput = $("csvFile");
-  const importBtn = $("btnImportCsv");
+  // Connexion admin
+  const btnAdminLogin  = $("btnAdminLogin");
+  const btnAdminLogout = $("btnAdminLogout");
 
-  if (importBtn && csvInput) {
-    importBtn.addEventListener("click", (e) => {
+  if (btnAdminLogin) {
+    btnAdminLogin.addEventListener("click", (e) => {
+      e.preventDefault();
+      adminLogin();
+    });
+  }
+
+  if (btnAdminLogout) {
+    btnAdminLogout.addEventListener("click", (e) => {
+      e.preventDefault();
+      adminLogout();
+    });
+  }
+
+  // Changement de mode (saisie / gestion)
+  const btnSaisie  = $("btnAdminModeSaisie");
+  const btnGestion = $("btnAdminModeGestion");
+
+  if (btnSaisie) {
+    btnSaisie.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAdminMode("saisie");
+    });
+  }
+  if (btnGestion) {
+    btnGestion.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAdminMode("gestion");
+    });
+  }
+
+  // Import CSV
+  const btnImportCsv = $("btnImportCsv");
+  const csvInput = $("csvFile");
+  if (btnImportCsv && csvInput) {
+    btnImportCsv.addEventListener("click", (e) => {
       e.preventDefault();
       importerCSVDansBillets(csvInput.files[0]);
     });
   }
 
+  // Stats
   const refreshStatsBtn = $("refreshStatsBtn");
   if (refreshStatsBtn) {
     refreshStatsBtn.addEventListener("click", (e) => {
@@ -756,6 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Maintenance
   const clearDataBtn = $("clearDataBtn");
   if (clearDataBtn) {
     clearDataBtn.addEventListener("click", (e) => {
@@ -764,14 +651,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const exportBtn = $("exportValidationsBtn");
-  if (exportBtn) {
-    exportBtn.addEventListener("click", (e) => {
+  // Saisie étudiants / agents
+  const btnCreateEtudiant = $("btnCreateEtudiant");
+  const btnCreateAgent    = $("btnCreateAgent");
+
+  if (btnCreateEtudiant) {
+    btnCreateEtudiant.addEventListener("click", (e) => {
       e.preventDefault();
-      exporterValidationsCourantes();
+      creerEtudiantDepuisAdmin();
     });
   }
 
-  // chargement initial des stats
-  chargerStatsValidations();
+  if (btnCreateAgent) {
+    btnCreateAgent.addEventListener("click", (e) => {
+      e.preventDefault();
+      creerAgentDepuisAdmin();
+    });
+  }
+
+  // Au chargement : pas d'admin connecté
+  appliquerEtatConnexionAdmin(null);
 });
