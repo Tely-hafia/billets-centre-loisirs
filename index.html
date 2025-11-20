@@ -28,17 +28,17 @@
       Saisissez votre code agent et votre mot de passe pour accéder au poste.
     </p>
 
-    <div style="margin-bottom:0.5rem;">
-      <label for="agentLogin">Code agent :</label><br />
+    <div class="form-row">
+      <label for="agentLogin">Code agent :</label>
       <input type="text" id="agentLogin" placeholder="ex : agent" />
     </div>
 
-    <div style="margin-bottom:0.8rem;">
-      <label for="agentPassword">Mot de passe :</label><br />
+    <div class="form-row">
+      <label for="agentPassword">Mot de passe :</label>
       <input type="password" id="agentPassword" placeholder="Mot de passe" />
     </div>
 
-    <button id="btnLogin" type="button">Se connecter</button>
+    <button id="btnLogin" type="button" class="btn-primary">Se connecter</button>
 
     <p id="login-message" class="status"></p>
   </section>
@@ -57,13 +57,13 @@
       </p>
 
       <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
-        <button id="btnModeBillets" type="button">
+        <button id="btnModeBillets" type="button" class="btn-secondary">
           Contrôle billets
         </button>
-        <button id="btnModeResto" type="button" style="background:#f97316;">
+        <button id="btnModeResto" type="button" class="btn-primary">
           Restauration / Chicha
         </button>
-        <button id="btnLogout" type="button" style="margin-left:auto; background:#ef4444;">
+        <button id="btnLogout" type="button" class="btn-danger" style="margin-left:auto;">
           Se déconnecter
         </button>
       </div>
@@ -99,31 +99,31 @@
       <!-- Choix du tarif (uniquement pour les billets d'entrée) -->
       <div id="tarif-zone" style="margin-bottom:0.6rem; margin-top:0.8rem;">
         <label>Tarif appliqué :</label><br />
-        <label style="margin-right:1rem;">
+        <label class="radio-inline">
           <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
-          Normal
+          <span>Normal</span>
         </label>
-        <label>
+        <label class="radio-inline">
           <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
-          Étudiant
+          <span>Étudiant</span>
         </label>
       </div>
 
-      <!-- Numéro étudiant (uniquement pour les billets d'entrée) -->
-      <div id="etu-zone" style="margin-bottom:0.6rem;">
-        <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
-        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end;">
-          <input
-            type="text"
-            id="etuNumber"
-            placeholder="Ex : UNIV-UG-1234"
-            style="flex:1; min-width:180px;"
-          />
-          <button type="button" id="btnCheckEtudiant" class="btn-secondary" style="padding:0.6rem 1.4rem;">
-            Vérifier l'étudiant
-          </button>
-        </div>
-        <div id="etu-fiche" class="message" style="display:none; margin-top:0.5rem;"></div>
+      <!-- Bloc numéro étudiant (uniquement si tarif étudiant) -->
+      <div id="etu-zone" style="margin-bottom:0.6rem; display:none;">
+        <label for="etuNumber">Numéro étudiant :</label><br />
+        <input
+          type="text"
+          id="etuNumber"
+          placeholder="Ex : UNIV-HA-1234"
+          style="max-width:260px;"
+        />
+
+        <button type="button" id="btnCheckStudent" class="btn-secondary" style="margin-top:0.5rem;">
+          Vérifier l'étudiant
+        </button>
+
+        <div id="etu-info" class="result" style="display:none; margin-top:0.5rem;"></div>
       </div>
 
       <!-- Numéro de billet -->
@@ -137,7 +137,7 @@
       </div>
 
       <!-- Bouton validation -->
-      <button id="btnCheckTicket" type="button">
+      <button id="btnCheckTicket" type="button" class="btn-primary">
         Valider le billet ▶▶
       </button>
 
@@ -152,23 +152,23 @@
         Enregistre ici les ventes du bar, restaurant ou chicha.
       </p>
 
-      <div style="margin-bottom:0.6rem;">
-        <label for="restoProduit">Produit :</label><br>
-        <select id="restoProduit" style="min-width:260px; padding:0.45rem 0.6rem; border-radius:999px; border:1px solid var(--border-soft);">
+      <div class="form-row">
+        <label for="restoProduit">Produit :</label>
+        <select id="restoProduit">
           <option value="">Chargement du menu...</option>
         </select>
       </div>
 
-      <div style="margin-bottom:0.6rem;">
-        <label for="restoQuantite">Quantité :</label><br>
-        <input type="number" id="restoQuantite" min="1" value="1" style="max-width:120px;">
+      <div class="form-row" style="max-width:160px;">
+        <label for="restoQuantite">Quantité :</label>
+        <input type="number" id="restoQuantite" min="1" value="1">
       </div>
 
       <p id="restoMontant" style="font-weight:600; margin-top:0.4rem;">
         Montant : 0 GNF
       </p>
 
-      <button id="btnRestoVente" type="button" style="margin-top:0.6rem;">
+      <button id="btnRestoVente" type="button" class="btn-primary" style="margin-top:0.6rem;">
         Enregistrer la vente
       </button>
 
@@ -183,10 +183,10 @@
   <p>© Centre de loisirs – Poste agent</p>
 </footer>
 
-<!-- SDK Appwrite (v13 comme côté admin) -->
+<!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-<!-- Script agent -->
-<script src="js/agent-appwrite.js?v=3"></script>
+<!-- Script agent (version forcée pour recharger) -->
+<script src="js/agent-appwrite.js?v=4"></script>
 
 </body>
 </html>
