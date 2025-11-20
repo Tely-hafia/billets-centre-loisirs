@@ -16,6 +16,9 @@ const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
 const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
 const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
 
+// Limite de validations étudiant par jour (tu peux changer ce chiffre)
+const MAX_VALIDATIONS_ETUDIANT_PAR_JOUR = 1;
+
 // ===============================
 //  CLIENT APPWRITE
 // ===============================
@@ -47,7 +50,7 @@ function showResult(text, type) {
   zone.style.display = "block";
   zone.textContent = text;
   zone.className = "result";
-  if (type === "success" || type === "ok") zone.classList.add("ok");
+  if (type === "success") zone.classList.add("ok");
   else if (type === "error") zone.classList.add("error");
   else if (type === "warn") zone.classList.add("warn");
 }
@@ -70,17 +73,6 @@ function showLoginMessage(text, type) {
     "#6b7280";
 }
 
-function showResto(text, type) {
-  const zone = $("restoResult");
-  if (!zone) return;
-  zone.style.display = "block";
-  zone.textContent = text;
-  zone.className = "result";
-  if (type === "success" || type === "ok") zone.classList.add("ok");
-  else if (type === "error") zone.classList.add("error");
-  else if (type === "warn") zone.classList.add("warn");
-}
-
 function setTicketCount(n) {
   const el = $("ticketCount");
   if (el) el.textContent = String(n);
@@ -92,8 +84,16 @@ function getTarifChoisi() {
   return "normal";
 }
 
+// Limites de date (début / fin de journée en ISO)
+function getTodayBoundsIso() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 // ===============================
-//  ETAT GLOBAL
+//  ÉTAT GLOBAL
 // ===============================
 
 let currentAgent = null;              // pas de session persistante
@@ -101,25 +101,32 @@ let restoProduitsCache = [];
 let currentMode = "billets";          // "billets" ou "resto"
 let currentBilletsSubMode = "ENTREE"; // "ENTREE" ou "JEU"
 let restoLoaded = false;
-let restoPanier = [];                 // panier resto : {code_produit, libelle, prix_unitaire, quantite}
+let currentEtudiantVerifie = null;    // doc étudiant vérifié pour ce numéro
 
 // ===============================
-//  UI MODES
+//  UI MODES / VISIBILITÉ
 // ===============================
 
 function updateTarifEtudiantVisibility() {
-  const etuInput = $("etuNumber");
-  const tarifNormal = $("tarif-normal");
-
-  const etuBlock = etuInput ? etuInput.closest("div") : null;
-  const tarifBlock = tarifNormal ? tarifNormal.closest("div") : null;
+  const etuZone = $("etu-zone");
+  const tarifZone = $("tarif-zone");
 
   if (currentBilletsSubMode === "ENTREE") {
-    if (etuBlock) etuBlock.style.display = "block";
-    if (tarifBlock) tarifBlock.style.display = "block";
+    if (etuZone) etuZone.style.display = "block";
+    if (tarifZone) tarifZone.style.display = "block";
   } else {
-    if (etuBlock) etuBlock.style.display = "none";
-    if (tarifBlock) tarifBlock.style.display = "none";
+    if (etuZone) etuZone.style.display = "none";
+    if (tarifZone) tarifZone.style.display = "none";
+  }
+}
+
+function resetEtudiantVerifie() {
+  currentEtudiantVerifie = null;
+  const fiche = $("etu-fiche");
+  if (fiche) {
+    fiche.style.display = "none";
+    fiche.textContent = "";
+    fiche.className = "message";
   }
 }
 
@@ -168,15 +175,16 @@ function switchBilletsSubMode(mode) {
     }
   }
 
-  // cacher / afficher tarif + numéro étudiant
+  // Tarif étudiant & numéro étudiant visibles seulement en mode ENTREE
   updateTarifEtudiantVisibility();
-
-  // mettre à jour le compteur de billets non utilisés
+  // Réinitialiser la vérification étudiant
+  resetEtudiantVerifie();
+  // Recharger le nombre de billets dispo dans le bon sous-mode
   chargerNombreBillets();
 }
 
 // ===============================
-//  CONNEXION / ETAT AGENT
+//  CONNEXION / ÉTAT AGENT
 // ===============================
 
 function appliquerEtatConnexion(agent) {
@@ -207,6 +215,7 @@ function appliquerEtatConnexion(agent) {
       roleStr.includes("bar") ||
       roleStr.includes("chicha");
 
+    // Si rien indiqué, accès aux deux
     if (!canBillets && !canResto) {
       canBillets = true;
       canResto = true;
@@ -243,6 +252,7 @@ function appliquerEtatConnexion(agent) {
 
     setTicketCount(0);
     clearResult();
+    resetEtudiantVerifie();
   }
 }
 
@@ -290,7 +300,7 @@ function deconnexionAgent() {
 }
 
 // ===============================
-//  BILLETS : COMPTE ET VALIDATION
+//  BILLETS : COMPTE
 // ===============================
 
 async function chargerNombreBillets() {
@@ -321,6 +331,84 @@ async function chargerNombreBillets() {
     console.error("[AGENT] Erreur chargement billets :", err);
   }
 }
+
+// ===============================
+//  VÉRIFICATION ÉTUDIANT
+// ===============================
+
+async function verifierEtudiant() {
+  const numeroEtu = $("etuNumber")?.value.trim();
+  const fiche = $("etu-fiche");
+
+  if (!numeroEtu) {
+    resetEtudiantVerifie();
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-error";
+      fiche.textContent = "Veuillez saisir un numéro étudiant.";
+    }
+    return;
+  }
+
+  if (!currentAgent) {
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-error";
+      fiche.textContent = "Veuillez d'abord vous connecter.";
+    }
+    return;
+  }
+
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_ETUDIANTS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_etudiant", numeroEtu),
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      currentEtudiantVerifie = null;
+      if (fiche) {
+        fiche.style.display = "block";
+        fiche.className = "message message-error";
+        fiche.textContent =
+          "Numéro étudiant introuvable ou inactif. Tarif étudiant refusé.";
+      }
+      return;
+    }
+
+    const etu = res.documents[0];
+    currentEtudiantVerifie = etu;
+
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-success";
+      fiche.innerHTML = `
+        <strong>${etu.prenom || ""} ${etu.nom || ""}</strong><br>
+        Université : ${etu.universite || "-"}<br>
+        N° étudiant : ${etu.numero_etudiant || numeroEtu}<br>
+        Statut : ✅ Actif
+      `;
+    }
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification étudiant :", err);
+    currentEtudiantVerifie = null;
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-error";
+      fiche.textContent =
+        "Erreur lors de la vérification de l'étudiant (voir console).";
+    }
+  }
+}
+
+// ===============================
+//  VÉRIFICATION / VALIDATION BILLETS
+// ===============================
 
 async function verifierBillet() {
   clearResult();
@@ -365,7 +453,7 @@ async function verifierBillet() {
         return;
       }
 
-      // Tarif étudiant → vérifier étudiant
+      // Tarif étudiant → contrôles renforcés
       if (tarifChoisi === "etudiant") {
         if (!numeroEtu) {
           showResult(
@@ -375,27 +463,47 @@ async function verifierBillet() {
           return;
         }
 
+        // Vérifier que l'étudiant a été validé via le bouton dédié
+        if (
+          !currentEtudiantVerifie ||
+          currentEtudiantVerifie.numero_etudiant !== numeroEtu
+        ) {
+          showResult(
+            "Veuillez d'abord vérifier l'étudiant avec le bouton 'Vérifier l'étudiant'.",
+            "error"
+          );
+          return;
+        }
+
+        // Option : limite de X validations par jour pour ce numéro
+        const { start, end } = getTodayBoundsIso();
         try {
-          const etuRes = await db.listDocuments(
+          const valRes = await db.listDocuments(
             APPWRITE_DATABASE_ID,
-            APPWRITE_ETUDIANTS_TABLE_ID,
+            APPWRITE_VALIDATIONS_TABLE_ID,
             [
               Appwrite.Query.equal("numero_etudiant", numeroEtu),
-              Appwrite.Query.limit(1)
+              Appwrite.Query.greaterThanEqual("date_validation", start),
+              Appwrite.Query.lessThan("date_validation", end),
+              Appwrite.Query.limit(MAX_VALIDATIONS_ETUDIANT_PAR_JOUR + 1)
             ]
           );
 
-          if (!etuRes.documents || etuRes.documents.length === 0) {
+          const nbUtilisations = typeof valRes.total === "number"
+            ? valRes.total
+            : (valRes.documents ? valRes.documents.length : 0);
+
+          if (nbUtilisations >= MAX_VALIDATIONS_ETUDIANT_PAR_JOUR) {
             showResult(
-              "Numéro étudiant introuvable. L'étudiant doit être enregistré par l'administrateur.",
+              `Tarif étudiant déjà utilisé aujourd'hui pour ce numéro (${numeroEtu}).`,
               "error"
             );
             return;
           }
-        } catch (errCheck) {
-          console.error("[AGENT] Erreur vérification étudiant :", errCheck);
+        } catch (errQuota) {
+          console.error("[AGENT] Erreur vérification quota étudiant :", errQuota);
           showResult(
-            "Erreur lors de la vérification du numéro étudiant (voir console).",
+            "Erreur lors du contrôle du quota étudiant (voir console).",
             "error"
           );
           return;
@@ -561,13 +669,12 @@ async function verifierBillet() {
 }
 
 // ===============================
-//  RESTO / CHICHA (mode panier)
+//  RESTO / CHICHA
 // ===============================
 
 async function chargerProduitsResto() {
-  const selectCategorie = $("restoCategorie");
-  const selectProduit = $("restoProduit");
-  if (!selectProduit) return;
+  const select = $("restoProduit");
+  if (!select) return;
 
   try {
     const res = await db.listDocuments(
@@ -575,140 +682,76 @@ async function chargerProduitsResto() {
       APPWRITE_MENU_RESTO_COLLECTION_ID,
       [
         Appwrite.Query.equal("actif", true),
-        Appwrite.Query.limit(200)
+        Appwrite.Query.limit(100)
       ]
     );
 
     restoProduitsCache = res.documents || [];
 
-    // remplir les catégories
-    if (selectCategorie) {
-      const categories = Array.from(
-        new Set(
-          restoProduitsCache.map((p) => p.categorie || "Autres")
-        )
-      ).sort();
+    select.innerHTML = '<option value="">Choisir un produit...</option>';
 
-      selectCategorie.innerHTML = '<option value="">Toutes les catégories</option>';
-      categories.forEach((cat) => {
-        const opt = document.createElement("option");
-        opt.value = cat;
-        opt.textContent = cat;
-        selectCategorie.appendChild(opt);
-      });
-    }
+    restoProduitsCache.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.code_produit;
+      opt.textContent = `${p.libelle} – ${formatMontantGNF(p.prix_unitaire)}`;
+      select.appendChild(opt);
+    });
 
-    majOptionsProduitsResto();
+    majAffichageMontantResto();
   } catch (err) {
     console.error("[AGENT] Erreur chargement menu resto :", err);
-    if (selectProduit) {
-      selectProduit.innerHTML =
-        '<option value="">Erreur de chargement du menu</option>';
-    }
+    select.innerHTML =
+      '<option value="">Erreur de chargement du menu</option>';
   }
-}
-
-function majOptionsProduitsResto() {
-  const selectCategorie = $("restoCategorie");
-  const selectProduit = $("restoProduit");
-  if (!selectProduit) return;
-
-  const cat = selectCategorie ? selectCategorie.value : "";
-  const produitsFiltres = restoProduitsCache.filter((p) =>
-    cat ? (p.categorie || "Autres") === cat : true
-  );
-
-  selectProduit.innerHTML = '<option value="">Sélectionner un produit...</option>';
-
-  produitsFiltres.forEach((p) => {
-    const opt = document.createElement("option");
-    opt.value = p.code_produit;
-    opt.textContent = `${p.libelle} – ${formatMontantGNF(p.prix_unitaire)}`;
-    opt.dataset.prix = p.prix_unitaire;
-    selectProduit.appendChild(opt);
-  });
-
-  majAffichageMontantResto();
 }
 
 function majAffichageMontantResto() {
-  const selectProduit = $("restoProduit");
+  const select = $("restoProduit");
   const qteInput = $("restoQuantite");
-  const montantEl = $("restoMontantLigne"); // optionnel : seulement si tu ajoutes cet élément dans le HTML
-  if (!selectProduit || !qteInput || !montantEl) return;
+  const montantEl = $("restoMontant");
+  if (!select || !qteInput || !montantEl) return;
 
-  const opt = selectProduit.selectedOptions[0];
-  if (!opt) {
-    montantEl.textContent = "Montant ligne : 0 GNF";
+  const produit = restoProduitsCache.find(
+    (p) => p.code_produit === select.value
+  );
+
+  const qte = parseInt(qteInput.value || "1", 10);
+  if (!produit || !qte || qte <= 0) {
+    montantEl.textContent = "Montant : 0 GNF";
     return;
   }
 
-  const prix = Number(opt.dataset.prix || 0);
-  const qte = parseInt(qteInput.value || "1", 10) || 1;
-  const total = prix * qte;
-
-  montantEl.textContent = "Montant ligne : " + formatMontantGNF(total);
+  const total = (Number(produit.prix_unitaire) || 0) * qte;
+  montantEl.textContent = "Montant : " + formatMontantGNF(total);
 }
 
-function majAffichagePanierResto() {
-  const tbody = $("restoPanierBody");
-  const totalEl = $("restoPanierTotal");
-  if (!tbody || !totalEl) return;
+async function enregistrerVenteResto() {
+  const resultZone = $("restoResult");
+  const select = $("restoProduit");
+  const qteInput = $("restoQuantite");
 
-  tbody.innerHTML = "";
+  if (!resultZone || !select || !qteInput) return;
 
-  if (restoPanier.length === 0) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 5;
-    td.style.textAlign = "center";
-    td.style.color = "var(--text-muted)";
-    td.textContent = "Aucun produit dans le panier pour le moment.";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-    totalEl.textContent = "0 GNF";
+  resultZone.style.display = "block";
+
+  if (!currentAgent) {
+    resultZone.textContent = "Veuillez vous connecter avant d'enregistrer une vente.";
+    resultZone.className = "result error";
     return;
   }
 
-  let total = 0;
-
-  restoPanier.forEach((item) => {
-    const ligneTotal = (Number(item.prix_unitaire) || 0) * item.quantite;
-    total += ligneTotal;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${item.libelle}</td>
-      <td>${item.quantite}</td>
-      <td>${formatMontantGNF(item.prix_unitaire)}</td>
-      <td>${formatMontantGNF(ligneTotal)}</td>
-      <td>
-        <button type="button" class="btn-danger btn-remove-ligne" data-code="${item.code_produit}" style="padding:0.3rem 0.6rem; font-size:0.8rem;">
-          ✕
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  totalEl.textContent = formatMontantGNF(total);
-}
-
-function ajouterLigneResto() {
-  const selectProduit = $("restoProduit");
-  const qteInput = $("restoQuantite");
-
-  if (!selectProduit || !qteInput) return;
-
-  const code = selectProduit.value;
+  const code = select.value;
   const qte = parseInt(qteInput.value || "1", 10);
 
   if (!code) {
-    showResto("Choisissez un produit.", "warn");
+    resultZone.textContent = "Choisissez un produit.";
+    resultZone.className = "result warn";
     return;
   }
+
   if (!qte || qte <= 0) {
-    showResto("La quantité doit être au moins 1.", "warn");
+    resultZone.textContent = "La quantité doit être au moins 1.";
+    resultZone.className = "result warn";
     return;
   }
 
@@ -717,85 +760,43 @@ function ajouterLigneResto() {
   );
 
   if (!produit) {
-    showResto("Produit introuvable.", "error");
+    resultZone.textContent = "Produit introuvable.";
+    resultZone.className = "result error";
     return;
   }
 
-  const prix = Number(produit.prix_unitaire) || 0;
-
-  // Si le produit existe déjà dans le panier, on cumule
-  const existing = restoPanier.find((l) => l.code_produit === code);
-  if (existing) {
-    existing.quantite += qte;
-  } else {
-    restoPanier.push({
-      code_produit: code,
-      libelle: produit.libelle,
-      prix_unitaire: prix,
-      quantite: qte
-    });
-  }
-
-  majAffichagePanierResto();
-  showResto("Produit ajouté au panier.", "ok");
-}
-
-function supprimerLigneResto(code) {
-  restoPanier = restoPanier.filter((l) => l.code_produit !== code);
-  majAffichagePanierResto();
-}
-
-async function validerPanierResto() {
-  if (!currentAgent) {
-    showResto("Veuillez vous connecter avant d'enregistrer une vente.", "error");
-    return;
-  }
-
-  if (restoPanier.length === 0) {
-    showResto("Ajoutez au moins un produit au panier.", "warn");
-    return;
-  }
-
-  const numeroVente =
-    "V-" + Date.now().toString(36).toUpperCase().slice(-6);
-  const nowIso = new Date().toISOString();
+  const montant = (Number(produit.prix_unitaire) || 0) * qte;
+  const numeroTicket =
+    "R-" + Date.now().toString(36).toUpperCase().slice(-6);
 
   try {
-    let totalGlobal = 0;
-
-    for (const item of restoPanier) {
-      const montant = (Number(item.prix_unitaire) || 0) * item.quantite;
-      totalGlobal += montant;
-
-      await db.createDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_VENTES_RESTO_COLLECTION_ID,
-        Appwrite.ID.unique(),
-        {
-          numero_vente: numeroVente,
-          date_vente: nowIso,
-          code_produit: item.code_produit,
-          quantite: item.quantite,
-          montant_total: montant,
-          agent_id: currentAgent.$id || "",
-          poste_id: currentAgent.role || "RESTO"
-        }
-      );
-    }
-
-    showResto(
-      `Vente enregistrée – Ticket ${numeroVente}, montant ${formatMontantGNF(totalGlobal)}.`,
-      "ok"
+    await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VENTES_RESTO_COLLECTION_ID,
+      Appwrite.ID.unique(),
+      {
+        numero_ticket: numeroTicket,
+        date_vente: new Date().toISOString(),
+        code_produit: code,
+        quantite: qte,
+        montant_total: montant,
+        agent_id: currentAgent.$id,
+        poste_id: currentAgent.role || "RESTO",
+        mode: "cash"
+      }
     );
 
-    // Reset panier
-    restoPanier = [];
-    majAffichagePanierResto();
-    const qteInput = $("restoQuantite");
-    if (qteInput) qteInput.value = "1";
+    resultZone.textContent =
+      `Vente enregistrée – Ticket ${numeroTicket}, montant ${formatMontantGNF(montant)}.`;
+    resultZone.className = "result ok";
+
+    qteInput.value = "1";
+    majAffichageMontantResto();
   } catch (err) {
     console.error("[AGENT] Erreur enregistrement vente resto :", err);
-    showResto("Erreur lors de l'enregistrement de la vente (voir console).", "error");
+    resultZone.textContent =
+      "Erreur lors de l'enregistrement de la vente (voir console).";
+    resultZone.className = "result error";
   }
 }
 
@@ -861,8 +862,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Bouton "Valider le billet ▶▶"
-  const btnValidate = $("validateBtn") || $("btnCheckTicket");
+  // Validation billet
+  const btnValidate = $("btnCheckTicket");
   if (btnValidate) {
     btnValidate.addEventListener("click", (e) => {
       e.preventDefault();
@@ -870,48 +871,51 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // RESTO events
-  const selectCategorie = $("restoCategorie");
-  const restoProduit = $("restoProduit");
-  const restoQuantite = $("restoQuantite");
-  const btnRestoAdd = $("btnRestoAdd");
-  const btnRestoValider = $("btnRestoValider");
-  const panierBody = $("restoPanierBody");
-
-  if (selectCategorie) {
-    selectCategorie.addEventListener("change", () => {
-      majOptionsProduitsResto();
+  // Vérification étudiant
+  const btnCheckEtudiant = $("btnCheckEtudiant");
+  if (btnCheckEtudiant) {
+    btnCheckEtudiant.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifierEtudiant();
     });
   }
+
+  const etuInput = $("etuNumber");
+  if (etuInput) {
+    etuInput.addEventListener("input", () => {
+      // Dès que le numéro change, on invalide la vérification précédente
+      resetEtudiantVerifie();
+    });
+  }
+
+  // Changement de tarif (normal / étudiant) → reset de la vérification étu
+  const tarifNormalRadio = $("tarif-normal");
+  const tarifEtuRadio = $("tarif-etudiant");
+  const onTarifChange = () => {
+    resetEtudiantVerifie();
+  };
+  if (tarifNormalRadio) {
+    tarifNormalRadio.addEventListener("change", onTarifChange);
+  }
+  if (tarifEtuRadio) {
+    tarifEtuRadio.addEventListener("change", onTarifChange);
+  }
+
+  // RESTO events
+  const restoProduit = $("restoProduit");
+  const restoQuantite = $("restoQuantite");
+  const btnRestoValider = $("btnRestoVente") || $("btnRestoValider");
 
   if (restoProduit) {
     restoProduit.addEventListener("change", majAffichageMontantResto);
   }
-
   if (restoQuantite) {
     restoQuantite.addEventListener("input", majAffichageMontantResto);
   }
-
-  if (btnRestoAdd) {
-    btnRestoAdd.addEventListener("click", (e) => {
-      e.preventDefault();
-      ajouterLigneResto();
-    });
-  }
-
   if (btnRestoValider) {
     btnRestoValider.addEventListener("click", (e) => {
       e.preventDefault();
-      validerPanierResto();
-    });
-  }
-
-  if (panierBody) {
-    panierBody.addEventListener("click", (e) => {
-      const btn = e.target.closest(".btn-remove-ligne");
-      if (!btn) return;
-      const code = btn.getAttribute("data-code");
-      supprimerLigneResto(code);
+      enregistrerVenteResto();
     });
   }
 });
