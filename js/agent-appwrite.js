@@ -988,16 +988,17 @@ document.addEventListener("DOMContentLoaded", () => {
     radioEtu.addEventListener("change", updateTarifEtudiantVisibility);
   }
 
-    // RESTO events
+  // RESTO events
   const restoCategorie = $("restoCategorie");
   const restoProduit   = $("restoProduit");
   const restoQuantite  = $("restoQuantite");
-  const btnRestoAdd    = $("btnRestoAdd");
+  const btnRestoAjouter= $("btnRestoAjouter");
   const btnRestoValider= $("btnRestoValider");
+  const btnRestoVider  = $("btnRestoVider");
 
   if (restoCategorie) {
     restoCategorie.addEventListener("change", () => {
-      remplirSelectProduits();
+      remplirListeProduitsResto();
     });
   }
   if (restoProduit) {
@@ -1006,8 +1007,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (restoQuantite) {
     restoQuantite.addEventListener("input", majAffichageMontantResto);
   }
-  if (btnRestoAdd) {
-    btnRestoAdd.addEventListener("click", (e) => {
+  if (btnRestoAjouter) {
+    btnRestoAjouter.addEventListener("click", (e) => {
       e.preventDefault();
       ajouterProduitAuPanier();
     });
@@ -1015,7 +1016,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnRestoValider) {
     btnRestoValider.addEventListener("click", (e) => {
       e.preventDefault();
-      enregistrerVenteResto();
+      validerPanierResto();
+    });
+  }
+  if (btnRestoVider) {
+    btnRestoVider.addEventListener("click", (e) => {
+      e.preventDefault();
+      viderPanierResto();
     });
   }
 
