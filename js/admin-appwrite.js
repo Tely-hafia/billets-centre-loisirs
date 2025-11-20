@@ -490,16 +490,29 @@ function showAdminEtuMessage(text, type) {
   else msg.classList.add("message-info");
 }
 
-function showAdminAgentMessage(text, type) {
-  const msg = $("admin-agent-message");
-  if (!msg) return;
+function showAdminEtuMessage(text, type) {
+  const msg = document.getElementById("admin-etu-message");
+
+  // Si la zone de message n'existe pas dans le HTML,
+  // on affiche au moins une alerte pour que l'admin voie le numéro.
+  if (!msg) {
+    alert(text);
+    return;
+  }
+
   msg.style.display = "block";
   msg.textContent   = text;
   msg.className     = "message";
-  if (type === "success") msg.classList.add("message-success");
-  else if (type === "error") msg.classList.add("message-error");
-  else msg.classList.add("message-info");
+
+  if (type === "success") {
+    msg.classList.add("message-success");
+  } else if (type === "error") {
+    msg.classList.add("message-error");
+  } else {
+    msg.classList.add("message-info");
+  }
 }
+
 
 // --- Génère un numéro étudiant de la forme UNIV-XX-1234 ---
 
