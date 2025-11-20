@@ -109,21 +109,14 @@
         </label>
       </div>
 
-      <!-- Numéro étudiant (uniquement pour les billets d'entrée) -->
+      <!-- Numéro étudiant (uniquement si tarif étudiant) -->
       <div id="etu-zone" style="margin-bottom:0.6rem;">
         <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
-        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end;">
-          <input
-            type="text"
-            id="etuNumber"
-            placeholder="Ex : UNIV-UG-1234"
-            style="flex:1; min-width:180px;"
-          />
-          <button type="button" id="btnCheckEtudiant" class="btn-secondary" style="padding:0.6rem 1.4rem;">
-            Vérifier l'étudiant
-          </button>
-        </div>
-        <div id="etu-fiche" class="message" style="display:none; margin-top:0.5rem;"></div>
+        <input
+          type="text"
+          id="etuNumber"
+          placeholder="Ex : UNIV-HA-4821"
+        />
       </div>
 
       <!-- Numéro de billet -->
