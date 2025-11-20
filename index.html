@@ -145,6 +145,7 @@
     </section>
 
     <!-- MODE 2 : Restauration / Chicha -->
+        <!-- MODE 2 : Restauration / Chicha -->
     <section class="card" id="mode-resto" style="display:none;">
       <h2>Restauration / Chicha</h2>
 
@@ -152,28 +153,74 @@
         Enregistre ici les ventes du bar, restaurant ou chicha.
       </p>
 
-      <div class="form-row">
-        <label for="restoProduit">Produit :</label>
-        <select id="restoProduit">
-          <option value="">Chargement du menu...</option>
+      <!-- Choix catégorie -->
+      <div style="margin-bottom:0.6rem;">
+        <label for="restoCategorie">Catégorie :</label><br>
+        <select id="restoCategorie"
+                style="min-width:220px; padding:0.45rem 0.6rem; border-radius:999px; border:1px solid var(--border-soft);">
+          <option value="">Toutes les catégories</option>
         </select>
       </div>
 
-      <div class="form-row" style="max-width:160px;">
-        <label for="restoQuantite">Quantité :</label>
-        <input type="number" id="restoQuantite" min="1" value="1">
+      <!-- Choix produit -->
+      <div style="margin-bottom:0.6rem;">
+        <label for="restoProduit">Produit :</label><br>
+        <select id="restoProduit"
+                style="min-width:260px; padding:0.45rem 0.6rem; border-radius:999px; border:1px solid var(--border-soft);">
+          <option value="">Choisir un produit...</option>
+        </select>
+      </div>
+
+      <!-- Quantité de la ligne en cours -->
+      <div style="margin-bottom:0.6rem;">
+        <label for="restoQuantite">Quantité :</label><br>
+        <input type="number" id="restoQuantite" min="1" value="1" style="max-width:120px;">
       </div>
 
       <p id="restoMontant" style="font-weight:600; margin-top:0.4rem;">
-        Montant : 0 GNF
+        Montant ligne : 0 GNF
       </p>
 
-      <button id="btnRestoVente" type="button" class="btn-primary" style="margin-top:0.6rem;">
-        Enregistrer la vente
+      <button id="btnRestoAdd" type="button" style="margin-top:0.4rem;">
+        Ajouter au panier
+      </button>
+
+      <hr style="margin:1.5rem 0; border-color:rgba(148,163,184,0.3);" />
+
+      <h3 style="margin-bottom:0.6rem;">Panier en cours</h3>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Qté</th>
+              <th>PU</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="restoPanierBody">
+            <tr>
+              <td colspan="5" style="text-align:center; color:#64748b; padding:1rem;">
+                Aucun article dans le panier.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-weight:700; font-size:1.1rem; text-align:right; margin-top:0.4rem;">
+        Total à encaisser : <span id="restoTotalPanier">0 GNF</span>
+      </p>
+
+      <button id="btnRestoValider" type="button" style="margin-top:0.8rem;">
+        Valider la vente ▶▶
       </button>
 
       <div id="restoResult" class="result" style="margin-top:0.8rem; display:none;"></div>
     </section>
+
 
   </div>
 
