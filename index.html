@@ -109,20 +109,21 @@
         </label>
       </div>
 
-      <!-- Numéro étudiant (uniquement si tarif étudiant) -->
-      <div id="etu-zone" style="margin-bottom:0.6rem; display:none;">
+      <!-- Numéro étudiant (uniquement pour les billets d'entrée) -->
+      <div id="etu-zone" style="margin-bottom:0.6rem;">
         <label for="etuNumber">Numéro étudiant (si tarif étudiant) :</label><br />
-        <input
-          type="text"
-          id="etuNumber"
-          placeholder="Ex : UNIV-HA-4821"
-        />
-
-        <button id="btnCheckStudent" type="button" style="margin-top:0.5rem;">
-          Vérifier l'étudiant
-        </button>
-
-        <div id="etu-info" class="result" style="margin-top:0.4rem; display:none;"></div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end;">
+          <input
+            type="text"
+            id="etuNumber"
+            placeholder="Ex : UNIV-UG-1234"
+            style="flex:1; min-width:180px;"
+          />
+          <button type="button" id="btnCheckEtudiant" class="btn-secondary" style="padding:0.6rem 1.4rem;">
+            Vérifier l'étudiant
+          </button>
+        </div>
+        <div id="etu-fiche" class="message" style="display:none; margin-top:0.5rem;"></div>
       </div>
 
       <!-- Numéro de billet -->
@@ -185,7 +186,7 @@
 <!-- SDK Appwrite (v13 comme côté admin) -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=4"></script>
+<script src="js/agent-appwrite.js?v=3"></script>
 
 </body>
 </html>
