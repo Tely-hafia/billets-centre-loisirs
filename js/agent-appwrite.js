@@ -605,15 +605,15 @@ async function verifierBilletJeu(numeroBillet) {
 }
 
 // ===============================
-//  RESTO / CHICHA
+//  RESTO / CHICHA  (PANIER)
 // ===============================
 
-// Chargement du menu depuis Appwrite
+// Chargement des produits depuis la collection "menu_resto"
 async function chargerProduitsResto() {
-  const selectCat = $("restoCategorie");
-  const selectProd = $("restoProduit");
+  const categorieSelect = $("restoCategorie");
+  const produitSelect   = $("restoProduit");
 
-  if (!selectProd) return;
+  if (!categorieSelect || !produitSelect) return;
 
   try {
     const res = await db.listDocuments(
@@ -627,170 +627,100 @@ async function chargerProduitsResto() {
 
     restoProduitsCache = res.documents || [];
 
-    // Remplir la liste des catégories
-    if (selectCat) {
-      const cats = Array.from(
-        new Set(
-          restoProduitsCache
-            .map((p) => p.categorie)
-            .filter((c) => !!c)
-        )
-      ).sort();
+    // Construire la liste des catégories
+    const categories = Array.from(
+      new Set(
+        restoProduitsCache.map((p) => (p.categorie || "Autre").trim())
+      )
+    ).sort();
 
-      selectCat.innerHTML = '<option value="">Toutes les catégories</option>';
-      cats.forEach((c) => {
-        const opt = document.createElement("option");
-        opt.value = c;
-        opt.textContent = c;
-        selectCat.appendChild(opt);
-      });
-    }
+    categorieSelect.innerHTML = '<option value="">Toutes les catégories...</option>';
+    categories.forEach((cat) => {
+      const opt = document.createElement("option");
+      opt.value = cat;
+      opt.textContent = cat;
+      categorieSelect.appendChild(opt);
+    });
 
-    remplirSelectProduits();
-
+    remplirListeProduitsResto();
   } catch (err) {
     console.error("[AGENT] Erreur chargement menu resto :", err);
-    if (selectProd) {
-      selectProd.innerHTML =
-        '<option value="">Erreur de chargement du menu</option>';
+    const select = $("restoProduit");
+    if (select) {
+      select.innerHTML = '<option value="">Erreur de chargement du menu</option>';
     }
   }
 }
 
-// Remplit la liste des produits selon la catégorie choisie
-function remplirSelectProduits() {
-  const selectCat = $("restoCategorie");
-  const selectProd = $("restoProduit");
-  if (!selectProd) return;
+// Remplir le select des produits selon la catégorie
+function remplirListeProduitsResto() {
+  const categorieSelect = $("restoCategorie");
+  const produitSelect   = $("restoProduit");
 
-  const cat = selectCat ? selectCat.value : "";
+  if (!produitSelect) return;
+
+  const cat = categorieSelect ? categorieSelect.value : "";
 
   const produitsFiltres = restoProduitsCache.filter((p) => {
-    if (!cat) return true;
-    return (p.categorie || "") === cat;
+    const c = (p.categorie || "Autre").trim();
+    return !cat || c === cat;
   });
 
-  selectProd.innerHTML = '<option value="">Choisir un produit...</option>';
+  produitSelect.innerHTML = '<option value="">Choisir un produit...</option>';
 
   produitsFiltres.forEach((p) => {
     const opt = document.createElement("option");
     opt.value = p.code_produit;
     opt.textContent = `${p.libelle} – ${formatMontantGNF(p.prix_unitaire)}`;
     opt.dataset.prix = p.prix_unitaire;
-    selectProd.appendChild(opt);
   });
 
   majAffichageMontantResto();
 }
 
-// Montant de la ligne en cours (produit + qté)
+// Montant de la ligne en cours (produit + quantité)
 function majAffichageMontantResto() {
-  const selectProd = $("restoProduit");
-  const qteInput = $("restoQuantite");
-  const montantEl = $("restoMontant");
-  if (!selectProd || !qteInput || !montantEl) return;
+  const produitSelect = $("restoProduit");
+  const qteInput      = $("restoQuantite");
+  const montantEl     = $("restoMontant");
 
-  const code = selectProd.value;
-  const produit = restoProduitsCache.find((p) => p.code_produit === code);
+  if (!produitSelect || !qteInput || !montantEl) return;
+
+  const opt = produitSelect.selectedOptions[0];
   const qte = parseInt(qteInput.value || "1", 10);
 
-  if (!produit || !qte || qte <= 0) {
+  if (!opt || !opt.dataset.prix || !qte || qte <= 0) {
     montantEl.textContent = "Montant ligne : 0 GNF";
     return;
   }
 
-  const total = (Number(produit.prix_unitaire) || 0) * qte;
+  const prix = Number(opt.dataset.prix || 0);
+  const total = prix * qte;
+
   montantEl.textContent = "Montant ligne : " + formatMontantGNF(total);
 }
 
-// Rafraîchit l'affichage du panier
-function majAffichagePanier() {
-  const tbody = $("restoPanierBody");
-  const totalSpan = $("restoTotalPanier");
-
-  if (!tbody || !totalSpan) return;
-
-  tbody.innerHTML = "";
-
-  if (restoPanier.length === 0) {
-    const row = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 5;
-    td.style.textAlign = "center";
-    td.style.color = "#64748b";
-    td.textContent = "Aucun article dans le panier.";
-    row.appendChild(td);
-    tbody.appendChild(row);
-    totalSpan.textContent = "0 GNF";
-    return;
-  }
-
-  let total = 0;
-
-  restoPanier.forEach((item, idx) => {
-    const row = document.createElement("tr");
-
-    const tdLib = document.createElement("td");
-    tdLib.textContent = item.libelle;
-
-    const tdQte = document.createElement("td");
-    tdQte.textContent = item.quantite.toString();
-
-    const tdPU = document.createElement("td");
-    tdPU.textContent = formatMontantGNF(item.prix_unitaire);
-
-    const ligneTotal = item.quantite * item.prix_unitaire;
-    total += ligneTotal;
-    const tdTot = document.createElement("td");
-    tdTot.textContent = formatMontantGNF(ligneTotal);
-
-    const tdDel = document.createElement("td");
-    const btnDel = document.createElement("button");
-    btnDel.type = "button";
-    btnDel.textContent = "✕";
-    btnDel.style.padding = "0.3rem 0.6rem";
-    btnDel.onclick = () => {
-      restoPanier.splice(idx, 1);
-      majAffichagePanier();
-    };
-    tdDel.appendChild(btnDel);
-
-    row.appendChild(tdLib);
-    row.appendChild(tdQte);
-    row.appendChild(tdPU);
-    row.appendChild(tdTot);
-    row.appendChild(tdDel);
-
-    tbody.appendChild(row);
-  });
-
-  totalSpan.textContent = formatMontantGNF(total);
-}
-
-// Ajoute la ligne en cours au panier
+// Ajouter la ligne courante au panier
 function ajouterProduitAuPanier() {
-  const selectProd = $("restoProduit");
-  const qteInput = $("restoQuantite");
-  const resultZone = $("restoResult");
+  const produitSelect = $("restoProduit");
+  const qteInput      = $("restoQuantite");
+  const resultZone    = $("restoResult");
 
-  if (!selectProd || !qteInput || !resultZone) return;
+  if (!produitSelect || !qteInput || !resultZone) return;
 
-  resultZone.style.display = "none";
+  const code = produitSelect.value;
+  const qte  = parseInt(qteInput.value || "1", 10);
 
-  const code = selectProd.value;
-  const qte = parseInt(qteInput.value || "1", 10);
+  resultZone.style.display = "block";
 
   if (!code) {
     resultZone.textContent = "Choisissez un produit.";
     resultZone.className = "result warn";
-    resultZone.style.display = "block";
     return;
   }
-
   if (!qte || qte <= 0) {
     resultZone.textContent = "La quantité doit être au moins 1.";
     resultZone.className = "result warn";
-    resultZone.style.display = "block";
     return;
   }
 
@@ -798,56 +728,142 @@ function ajouterProduitAuPanier() {
   if (!produit) {
     resultZone.textContent = "Produit introuvable.";
     resultZone.className = "result error";
-    resultZone.style.display = "block";
     return;
   }
 
-  const exist = restoPanier.find((l) => l.code_produit === code);
+  const prix = Number(produit.prix_unitaire || 0);
+  const total = prix * qte;
+
+  // Si le produit existe déjà dans le panier -> on cumule
+  const exist = restoPanier.find((l) => l.code === code);
   if (exist) {
     exist.quantite += qte;
+    exist.total += total;
   } else {
     restoPanier.push({
-      code_produit: produit.code_produit,
+      code: code,
       libelle: produit.libelle,
-      prix_unitaire: Number(produit.prix_unitaire) || 0,
-      quantite: qte
+      prix: prix,
+      quantite: qte,
+      total: total
     });
   }
 
+  // Reset quantité à 1
   qteInput.value = "1";
   majAffichageMontantResto();
-  majAffichagePanier();
+  rafraichirPanierUI();
+
+  resultZone.textContent = "Produit ajouté au panier.";
+  resultZone.className = "result ok";
 }
 
-// Enregistre toutes les lignes du panier dans ventes_resto
-async function enregistrerVenteResto() {
+// Rafraîchit l'affichage du tableau panier
+function rafraichirPanierUI() {
+  const zone       = $("restoPanierZone");
+  const tbody      = $("restoPanierBody");
+  const totalSpan  = $("restoPanierTotal");
+  const btnValider = $("btnRestoValider");
+
+  if (!zone || !tbody || !totalSpan) return;
+
+  tbody.innerHTML = "";
+
+  if (restoPanier.length === 0) {
+    zone.style.display = "none";
+    totalSpan.textContent = "0 GNF";
+    if (btnValider) btnValider.disabled = true;
+    return;
+  }
+
+  zone.style.display = "block";
+  if (btnValider) btnValider.disabled = false;
+
+  let totalPanier = 0;
+
+  restoPanier.forEach((item, index) => {
+    totalPanier += item.total;
+
+    const tr = document.createElement("tr");
+
+    const tdLib = document.createElement("td");
+    tdLib.textContent = item.libelle;
+
+    const tdQte = document.createElement("td");
+    tdQte.textContent = item.quantite.toString();
+
+    const tdPrix = document.createElement("td");
+    tdPrix.textContent = formatMontantGNF(item.prix);
+
+    const tdTotal = document.createElement("td");
+    tdTotal.textContent = formatMontantGNF(item.total);
+
+    const tdDel = document.createElement("td");
+    const btnDel = document.createElement("button");
+    btnDel.textContent = "×";
+    btnDel.style.padding = "0.3rem 0.6rem";
+    btnDel.style.fontSize = "0.9rem";
+    btnDel.addEventListener("click", () => supprimerLignePanier(index));
+    tdDel.appendChild(btnDel);
+
+    tr.appendChild(tdLib);
+    tr.appendChild(tdQte);
+    tr.appendChild(tdPrix);
+    tr.appendChild(tdTotal);
+    tr.appendChild(tdDel);
+
+    tbody.appendChild(tr);
+  });
+
+  totalSpan.textContent = formatMontantGNF(totalPanier);
+}
+
+// Supprimer une ligne précise
+function supprimerLignePanier(index) {
+  restoPanier.splice(index, 1);
+  rafraichirPanierUI();
+}
+
+// Vider totalement le panier
+function viderPanierResto() {
+  restoPanier = [];
+  rafraichirPanierUI();
+  const res = $("restoResult");
+  if (res) {
+    res.style.display = "block";
+    res.textContent = "Panier vidé.";
+    res.className = "result warn";
+  }
+}
+
+// Valider le panier -> écrit dans "ventes_resto"
+async function validerPanierResto() {
   const resultZone = $("restoResult");
   if (!resultZone) return;
 
   resultZone.style.display = "block";
 
   if (!currentAgent) {
-    resultZone.textContent = "Veuillez vous connecter avant d'enregistrer une vente.";
+    resultZone.textContent =
+      "Veuillez vous connecter avant d'enregistrer une vente.";
     resultZone.className = "result error";
     return;
   }
 
   if (restoPanier.length === 0) {
-    resultZone.textContent = "Le panier est vide. Ajoutez au moins un produit.";
+    resultZone.textContent = "Le panier est vide.";
     resultZone.className = "result warn";
     return;
   }
 
   const numeroVente =
-    "VR-" + Date.now().toString(36).toUpperCase().slice(-6);
+    "V-" + Date.now().toString(36).toUpperCase().slice(-6);
   const nowIso = new Date().toISOString();
+  let totalGlobal = 0;
 
   try {
-    let total = 0;
-
     for (const item of restoPanier) {
-      const montant = item.quantite * item.prix_unitaire;
-      total += montant;
+      totalGlobal += item.total;
 
       await db.createDocument(
         APPWRITE_DATABASE_ID,
@@ -856,23 +872,23 @@ async function enregistrerVenteResto() {
         {
           numero_vente: numeroVente,
           date_vente: nowIso,
-          code_produit: item.code_produit,
+          code_produit: item.code,
           quantite: item.quantite,
-          montant_total: montant,
+          montant_total: item.total,
           agent_id: currentAgent.$id,
-          poste_id: currentAgent.role || "RESTO",
+          poste_id: currentAgent.role || "resto_chicha",
           mode: "cash"
         }
       );
     }
 
     resultZone.textContent =
-      `Vente enregistrée – N° ${numeroVente}, total ${formatMontantGNF(total)}.`;
+      `Vente enregistrée – N° ${numeroVente}, montant ${formatMontantGNF(totalGlobal)}.`;
     resultZone.className = "result ok";
 
     // Reset panier
     restoPanier = [];
-    majAffichagePanier();
+    rafraichirPanierUI();
 
   } catch (err) {
     console.error("[AGENT] Erreur enregistrement vente resto :", err);
