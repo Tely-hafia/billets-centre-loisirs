@@ -1042,4 +1042,4 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       window.print(); // imprime la page avec le reçu visible
     });
-  }
+  
