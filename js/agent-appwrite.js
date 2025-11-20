@@ -661,7 +661,6 @@ async function chargerProduitsResto() {
     }
   }
 }
-
   // RESTO - Nouveaux écouteurs
   const btnRestoValider = $("#btnRestoValider");
   const btnRestoVider = $("#btnRestoVider");
