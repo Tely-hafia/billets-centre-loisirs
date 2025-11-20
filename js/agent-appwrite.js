@@ -16,6 +16,9 @@ const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
 const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
 const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
 
+// Limite de validations étudiant par jour (tu peux changer ce chiffre)
+const MAX_VALIDATIONS_ETUDIANT_PAR_JOUR = 1;
+
 // ===============================
 //  CLIENT APPWRITE
 // ===============================
@@ -47,7 +50,7 @@ function showResult(text, type) {
   zone.style.display = "block";
   zone.textContent = text;
   zone.className = "result";
-  if (type === "success" || type === "ok") zone.classList.add("ok");
+  if (type === "success") zone.classList.add("ok");
   else if (type === "error") zone.classList.add("error");
   else if (type === "warn") zone.classList.add("warn");
 }
@@ -66,7 +69,7 @@ function showLoginMessage(text, type) {
   zone.textContent = text || "";
   zone.style.color =
     type === "success" ? "#16a34a" :
-    type === "error"   ? "#b91c1c" :
+    type === "error" ? "#b91c1c" :
     "#6b7280";
 }
 
@@ -81,127 +84,61 @@ function getTarifChoisi() {
   return "normal";
 }
 
+// Limites de date (début / fin de journée en ISO)
+function getTodayBoundsIso() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 // ===============================
-//  ETAT GLOBAL
+//  ÉTAT GLOBAL
 // ===============================
 
-let currentAgent = null;
+let currentAgent = null;              // pas de session persistante
 let restoProduitsCache = [];
 let currentMode = "billets";          // "billets" ou "resto"
 let currentBilletsSubMode = "ENTREE"; // "ENTREE" ou "JEU"
 let restoLoaded = false;
-let lastVerifiedStudent = null;
+let currentEtudiantVerifie = null;    // doc étudiant vérifié pour ce numéro
 
 // ===============================
-//  UI : AFFICHAGE TARIF / ETU
+//  UI MODES / VISIBILITÉ
 // ===============================
-
-function clearStudentInfo() {
-  lastVerifiedStudent = null;
-  const info = $("etu-info");
-  if (info) {
-    info.style.display = "none";
-    info.textContent = "";
-    info.className = "result";
-  }
-}
 
 function updateTarifEtudiantVisibility() {
+  const etuZone = $("etu-zone");
   const tarifZone = $("tarif-zone");
-  const etuZone   = $("etu-zone");
-  const radioEtu  = $("tarif-etudiant");
 
-  // Mode JEUX internes → on cache tarif et étudiant
-  if (currentBilletsSubMode === "JEU") {
+  if (currentBilletsSubMode === "ENTREE") {
+    if (etuZone) etuZone.style.display = "block";
+    if (tarifZone) tarifZone.style.display = "block";
+  } else {
+    if (etuZone) etuZone.style.display = "none";
     if (tarifZone) tarifZone.style.display = "none";
-    if (etuZone)   etuZone.style.display   = "none";
-    clearStudentInfo();
-    if ($("etuNumber")) $("etuNumber").value = "";
-    return;
-  }
-
-  // Mode ENTREE → on affiche la zone tarif
-  if (tarifZone) tarifZone.style.display = "block";
-
-  // Bloc "Numéro étudiant" visible seulement si tarif étudiant coché
-  if (etuZone) {
-    if (radioEtu && radioEtu.checked) {
-      etuZone.style.display = "block";
-    } else {
-      etuZone.style.display = "none";
-      clearStudentInfo();
-      if ($("etuNumber")) $("etuNumber").value = "";
-    }
   }
 }
 
-// Vérification et affichage de la fiche étudiant
-async function verifierEtudiant() {
-  clearStudentInfo();
-  const numeroEtu = $("etuNumber")?.value.trim();
-  const info = $("etu-info");
-
-  if (!numeroEtu) {
-    if (info) {
-      info.style.display = "block";
-      info.textContent = "Veuillez saisir un numéro étudiant.";
-      info.classList.add("warn");
-    }
-    return;
-  }
-
-  try {
-    const res = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_ETUDIANTS_TABLE_ID,
-      [
-        Appwrite.Query.equal("numero_etudiant", numeroEtu),
-        Appwrite.Query.limit(1)
-      ]
-    );
-
-    if (!res.documents || res.documents.length === 0) {
-      if (info) {
-        info.style.display = "block";
-        info.textContent = "Étudiant introuvable. Vérifiez le numéro ou contactez l'admin.";
-        info.classList.add("error");
-      }
-      lastVerifiedStudent = null;
-      return;
-    }
-
-    const etu = res.documents[0];
-    lastVerifiedStudent = etu;
-
-    if (info) {
-      info.style.display = "block";
-      info.classList.add("ok");
-      info.textContent =
-        `OK : ${etu.prenom || ""} ${etu.nom || ""} – ${etu.universite || ""}`;
-    }
-  } catch (err) {
-    console.error("[AGENT] Erreur lors de la vérification étudiant :", err);
-    if (info) {
-      info.style.display = "block";
-      info.textContent = "Erreur lors de la vérification de l'étudiant (voir console).";
-      info.classList.add("error");
-    }
+function resetEtudiantVerifie() {
+  currentEtudiantVerifie = null;
+  const fiche = $("etu-fiche");
+  if (fiche) {
+    fiche.style.display = "none";
+    fiche.textContent = "";
+    fiche.className = "message";
   }
 }
-
-// ===============================
-//  UI MODES
-// ===============================
 
 function switchMode(mode) {
   currentMode = mode;
 
   const modeBillets = $("mode-billets");
-  const modeResto   = $("mode-resto");
-  const modeLabel   = $("mode-label");
+  const modeResto = $("mode-resto");
+  const modeLabel = $("mode-label");
 
   if (modeBillets) modeBillets.style.display = mode === "billets" ? "block" : "none";
-  if (modeResto)   modeResto.style.display   = mode === "resto"   ? "block" : "none";
+  if (modeResto) modeResto.style.display = mode === "resto" ? "block" : "none";
 
   if (modeLabel) {
     modeLabel.textContent =
@@ -215,11 +152,11 @@ function switchMode(mode) {
 }
 
 function switchBilletsSubMode(mode) {
-  currentBilletsSubMode = mode;
+  currentBilletsSubMode = mode; // "ENTREE" ou "JEU"
 
   const btnEntree = $("btnBilletsEntree");
-  const btnJeux   = $("btnBilletsJeux");
-  const hint      = $("billetsSubHint");
+  const btnJeux = $("btnBilletsJeux");
+  const hint = $("billetsSubHint");
 
   if (btnEntree) {
     btnEntree.classList.toggle("active-submode", mode === "ENTREE");
@@ -238,52 +175,57 @@ function switchBilletsSubMode(mode) {
     }
   }
 
+  // Tarif étudiant & numéro étudiant visibles seulement en mode ENTREE
   updateTarifEtudiantVisibility();
+  // Réinitialiser la vérification étudiant
+  resetEtudiantVerifie();
+  // Recharger le nombre de billets dispo dans le bon sous-mode
   chargerNombreBillets();
 }
 
 // ===============================
-//  CONNEXION / ETAT AGENT
+//  CONNEXION / ÉTAT AGENT
 // ===============================
 
 function appliquerEtatConnexion(agent) {
   currentAgent = agent;
 
   const loginCard = $("card-login");
-  const appZone   = $("app-zone");
+  const appZone = $("app-zone");
 
-  const nameEl        = $("agent-connected-name");
-  const roleEl        = $("agent-connected-role");
-  const btnModeBillets= $("btnModeBillets");
-  const btnModeResto  = $("btnModeResto");
+  const nameEl = $("agent-connected-name");
+  const roleEl = $("agent-connected-role");
+  const btnModeBillets = $("btnModeBillets");
+  const btnModeResto = $("btnModeResto");
 
   if (agent) {
     const roleStr = (agent.role || "").toLowerCase();
 
     let canBillets =
-      roleStr.includes("billet")  ||
-      roleStr.includes("entree")  ||
-      roleStr.includes("entrée")  ||
+      roleStr.includes("billet") ||
+      roleStr.includes("entree") ||
+      roleStr.includes("entrée") ||
       roleStr.includes("gardien") ||
-      roleStr.includes("jeux")    ||
+      roleStr.includes("jeux") ||
       roleStr.includes("interne");
 
     let canResto =
-      roleStr.includes("resto")       ||
-      roleStr.includes("restaurant")  ||
-      roleStr.includes("bar")         ||
+      roleStr.includes("resto") ||
+      roleStr.includes("restaurant") ||
+      roleStr.includes("bar") ||
       roleStr.includes("chicha");
 
+    // Si rien indiqué, accès aux deux
     if (!canBillets && !canResto) {
       canBillets = true;
-      canResto   = true;
+      canResto = true;
     }
 
     if (loginCard) loginCard.style.display = "none";
-    if (appZone)   appZone.style.display   = "block";
+    if (appZone) appZone.style.display = "block";
 
     if (nameEl) nameEl.textContent = agent.login || "";
-    if (roleEl) roleEl.textContent = agent.role  || "";
+    if (roleEl) roleEl.textContent = agent.role || "";
 
     if (btnModeBillets) {
       btnModeBillets.style.display = canBillets ? "inline-flex" : "none";
@@ -303,22 +245,19 @@ function appliquerEtatConnexion(agent) {
     }
   } else {
     if (loginCard) loginCard.style.display = "block";
-    if (appZone)   appZone.style.display   = "none";
+    if (appZone) appZone.style.display = "none";
 
     if (btnModeBillets) btnModeBillets.style.display = "inline-flex";
-    if (btnModeResto)   btnModeResto.style.display   = "inline-flex";
-
-    if (nameEl) nameEl.textContent = "";
-    if (roleEl) roleEl.textContent = "";
+    if (btnModeResto) btnModeResto.style.display = "inline-flex";
 
     setTicketCount(0);
     clearResult();
-    clearStudentInfo();
+    resetEtudiantVerifie();
   }
 }
 
 async function connecterAgent() {
-  const login    = $("agentLogin")?.value.trim();
+  const login = $("agentLogin")?.value.trim();
   const password = $("agentPassword")?.value.trim();
 
   if (!login || !password) {
@@ -361,7 +300,7 @@ function deconnexionAgent() {
 }
 
 // ===============================
-//  BILLETS : COMPTE ET VALIDATION
+//  BILLETS : COMPTE
 // ===============================
 
 async function chargerNombreBillets() {
@@ -393,6 +332,84 @@ async function chargerNombreBillets() {
   }
 }
 
+// ===============================
+//  VÉRIFICATION ÉTUDIANT
+// ===============================
+
+async function verifierEtudiant() {
+  const numeroEtu = $("etuNumber")?.value.trim();
+  const fiche = $("etu-fiche");
+
+  if (!numeroEtu) {
+    resetEtudiantVerifie();
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-error";
+      fiche.textContent = "Veuillez saisir un numéro étudiant.";
+    }
+    return;
+  }
+
+  if (!currentAgent) {
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-error";
+      fiche.textContent = "Veuillez d'abord vous connecter.";
+    }
+    return;
+  }
+
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_ETUDIANTS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_etudiant", numeroEtu),
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      currentEtudiantVerifie = null;
+      if (fiche) {
+        fiche.style.display = "block";
+        fiche.className = "message message-error";
+        fiche.textContent =
+          "Numéro étudiant introuvable ou inactif. Tarif étudiant refusé.";
+      }
+      return;
+    }
+
+    const etu = res.documents[0];
+    currentEtudiantVerifie = etu;
+
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-success";
+      fiche.innerHTML = `
+        <strong>${etu.prenom || ""} ${etu.nom || ""}</strong><br>
+        Université : ${etu.universite || "-"}<br>
+        N° étudiant : ${etu.numero_etudiant || numeroEtu}<br>
+        Statut : ✅ Actif
+      `;
+    }
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification étudiant :", err);
+    currentEtudiantVerifie = null;
+    if (fiche) {
+      fiche.style.display = "block";
+      fiche.className = "message message-error";
+      fiche.textContent =
+        "Erreur lors de la vérification de l'étudiant (voir console).";
+    }
+  }
+}
+
+// ===============================
+//  VÉRIFICATION / VALIDATION BILLETS
+// ===============================
+
 async function verifierBillet() {
   clearResult();
 
@@ -402,8 +419,8 @@ async function verifierBillet() {
   }
 
   const numeroBillet = $("ticketNumber")?.value.trim();
-  const numeroEtu    = $("etuNumber")?.value.trim();
-  const tarifChoisi  = getTarifChoisi();
+  const numeroEtu = $("etuNumber")?.value.trim();
+  const tarifChoisi = getTarifChoisi();
 
   if (!numeroBillet) {
     showResult("Veuillez saisir un numéro de billet.", "error");
@@ -436,7 +453,7 @@ async function verifierBillet() {
         return;
       }
 
-      // Tarif étudiant → vérifier étudiant
+      // Tarif étudiant → contrôles renforcés
       if (tarifChoisi === "etudiant") {
         if (!numeroEtu) {
           showResult(
@@ -446,27 +463,47 @@ async function verifierBillet() {
           return;
         }
 
+        // Vérifier que l'étudiant a été validé via le bouton dédié
+        if (
+          !currentEtudiantVerifie ||
+          currentEtudiantVerifie.numero_etudiant !== numeroEtu
+        ) {
+          showResult(
+            "Veuillez d'abord vérifier l'étudiant avec le bouton 'Vérifier l'étudiant'.",
+            "error"
+          );
+          return;
+        }
+
+        // Option : limite de X validations par jour pour ce numéro
+        const { start, end } = getTodayBoundsIso();
         try {
-          const etuRes = await db.listDocuments(
+          const valRes = await db.listDocuments(
             APPWRITE_DATABASE_ID,
-            APPWRITE_ETUDIANTS_TABLE_ID,
+            APPWRITE_VALIDATIONS_TABLE_ID,
             [
               Appwrite.Query.equal("numero_etudiant", numeroEtu),
-              Appwrite.Query.limit(1)
+              Appwrite.Query.greaterThanEqual("date_validation", start),
+              Appwrite.Query.lessThan("date_validation", end),
+              Appwrite.Query.limit(MAX_VALIDATIONS_ETUDIANT_PAR_JOUR + 1)
             ]
           );
 
-          if (!etuRes.documents || etuRes.documents.length === 0) {
+          const nbUtilisations = typeof valRes.total === "number"
+            ? valRes.total
+            : (valRes.documents ? valRes.documents.length : 0);
+
+          if (nbUtilisations >= MAX_VALIDATIONS_ETUDIANT_PAR_JOUR) {
             showResult(
-              "Numéro étudiant introuvable. L'étudiant doit être enregistré par l'administrateur.",
+              `Tarif étudiant déjà utilisé aujourd'hui pour ce numéro (${numeroEtu}).`,
               "error"
             );
             return;
           }
-        } catch (errCheck) {
-          console.error("[AGENT] Erreur vérification étudiant :", errCheck);
+        } catch (errQuota) {
+          console.error("[AGENT] Erreur vérification quota étudiant :", errQuota);
           showResult(
-            "Erreur lors de la vérification du numéro étudiant (voir console).",
+            "Erreur lors du contrôle du quota étudiant (voir console).",
             "error"
           );
           return;
@@ -490,8 +527,6 @@ async function verifierBillet() {
 
       const ticketInput = $("ticketNumber");
       if (ticketInput) ticketInput.value = "";
-      if ($("etuNumber")) $("etuNumber").value = "";
-      clearStudentInfo();
 
       chargerNombreBillets();
     } catch (err) {
@@ -504,9 +539,9 @@ async function verifierBillet() {
     try {
       const nowIso = new Date().toISOString();
 
-      const montantNormal  = parseInt(billet.prix || 0, 10) || 0;
-      const montantEtudiant= parseInt(billet.tarif_universite || 0, 10) || 0;
-      const montantPaye    =
+      const montantNormal = parseInt(billet.prix || 0, 10) || 0;
+      const montantEtudiant = parseInt(billet.tarif_universite || 0, 10) || 0;
+      const montantPaye =
         tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
 
       const validationDoc = {
@@ -544,6 +579,7 @@ async function verifierBillet() {
   // ========= MODE JEU (billets internes) =========
   if (currentBilletsSubMode === "JEU") {
     try {
+      // 1. Chercher billet interne
       const res = await db.listDocuments(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_INTERNE_TABLE_ID,
@@ -560,6 +596,7 @@ async function verifierBillet() {
 
       const billet = res.documents[0];
 
+      // 2. Vérifier s'il est déjà utilisé (dans validations)
       const valRes = await db.listDocuments(
         APPWRITE_DATABASE_ID,
         APPWRITE_VALIDATIONS_TABLE_ID,
@@ -579,7 +616,7 @@ async function verifierBillet() {
       }
 
       const montant = parseInt(billet.prix || 0, 10) || 0;
-      const nowIso  = new Date().toISOString();
+      const nowIso = new Date().toISOString();
 
       await db.createDocument(
         APPWRITE_DATABASE_ID,
@@ -602,6 +639,7 @@ async function verifierBillet() {
         }
       );
 
+      // Met à jour le billet interne : statut = Validé
       await db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_INTERNE_TABLE_ID,
@@ -643,7 +681,8 @@ async function chargerProduitsResto() {
       APPWRITE_DATABASE_ID,
       APPWRITE_MENU_RESTO_COLLECTION_ID,
       [
-        Appwrite.Query.limit(100)      // ⚠️ pas de filtre actif=true
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(100)
       ]
     );
 
@@ -667,8 +706,8 @@ async function chargerProduitsResto() {
 }
 
 function majAffichageMontantResto() {
-  const select    = $("restoProduit");
-  const qteInput  = $("restoQuantite");
+  const select = $("restoProduit");
+  const qteInput = $("restoQuantite");
   const montantEl = $("restoMontant");
   if (!select || !qteInput || !montantEl) return;
 
@@ -688,8 +727,8 @@ function majAffichageMontantResto() {
 
 async function enregistrerVenteResto() {
   const resultZone = $("restoResult");
-  const select     = $("restoProduit");
-  const qteInput   = $("restoQuantite");
+  const select = $("restoProduit");
+  const qteInput = $("restoQuantite");
 
   if (!resultZone || !select || !qteInput) return;
 
@@ -697,22 +736,22 @@ async function enregistrerVenteResto() {
 
   if (!currentAgent) {
     resultZone.textContent = "Veuillez vous connecter avant d'enregistrer une vente.";
-    resultZone.className   = "result error";
+    resultZone.className = "result error";
     return;
   }
 
   const code = select.value;
-  const qte  = parseInt(qteInput.value || "1", 10);
+  const qte = parseInt(qteInput.value || "1", 10);
 
   if (!code) {
     resultZone.textContent = "Choisissez un produit.";
-    resultZone.className   = "result warn";
+    resultZone.className = "result warn";
     return;
   }
 
   if (!qte || qte <= 0) {
     resultZone.textContent = "La quantité doit être au moins 1.";
-    resultZone.className   = "result warn";
+    resultZone.className = "result warn";
     return;
   }
 
@@ -722,7 +761,7 @@ async function enregistrerVenteResto() {
 
   if (!produit) {
     resultZone.textContent = "Produit introuvable.";
-    resultZone.className   = "result error";
+    resultZone.className = "result error";
     return;
   }
 
@@ -772,9 +811,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateTarifEtudiantVisibility();
 
   // Connexion / déconnexion
-  const btnLogin  = $("btnLogin");
-  const btnLogout = $("btnLogout");
-
+  const btnLogin = $("btnLogin");
   if (btnLogin) {
     btnLogin.addEventListener("click", (e) => {
       e.preventDefault();
@@ -782,6 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const btnLogout = $("btnLogout");
   if (btnLogout) {
     btnLogout.addEventListener("click", (e) => {
       e.preventDefault();
@@ -791,7 +829,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Modes principaux
   const btnModeBillets = $("btnModeBillets");
-  const btnModeResto   = $("btnModeResto");
+  const btnModeResto = $("btnModeResto");
 
   if (btnModeBillets) {
     btnModeBillets.addEventListener("click", (e) => {
@@ -809,7 +847,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Sous-onglets Billets
   const btnBilletsEntree = $("btnBilletsEntree");
-  const btnBilletsJeux   = $("btnBilletsJeux");
+  const btnBilletsJeux = $("btnBilletsJeux");
 
   if (btnBilletsEntree) {
     btnBilletsEntree.addEventListener("click", (e) => {
@@ -824,7 +862,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Bouton validation billet
+  // Validation billet
   const btnValidate = $("btnCheckTicket");
   if (btnValidate) {
     btnValidate.addEventListener("click", (e) => {
@@ -834,33 +872,39 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Vérification étudiant
-  const btnCheckStudent = $("btnCheckStudent");
-  if (btnCheckStudent) {
-    btnCheckStudent.addEventListener("click", (e) => {
+  const btnCheckEtudiant = $("btnCheckEtudiant");
+  if (btnCheckEtudiant) {
+    btnCheckEtudiant.addEventListener("click", (e) => {
       e.preventDefault();
       verifierEtudiant();
     });
   }
 
-  // Tarifs
-  const radioTarifNormal   = $("tarif-normal");
-  const radioTarifEtudiant = $("tarif-etudiant");
-
-  if (radioTarifNormal) {
-    radioTarifNormal.addEventListener("change", () => {
-      updateTarifEtudiantVisibility();
-    });
-  }
-  if (radioTarifEtudiant) {
-    radioTarifEtudiant.addEventListener("change", () => {
-      updateTarifEtudiantVisibility();
+  const etuInput = $("etuNumber");
+  if (etuInput) {
+    etuInput.addEventListener("input", () => {
+      // Dès que le numéro change, on invalide la vérification précédente
+      resetEtudiantVerifie();
     });
   }
 
-  // RESTO
-  const restoProduit   = $("restoProduit");
-  const restoQuantite  = $("restoQuantite");
-  const btnRestoValider= $("btnRestoVente");
+  // Changement de tarif (normal / étudiant) → reset de la vérification étu
+  const tarifNormalRadio = $("tarif-normal");
+  const tarifEtuRadio = $("tarif-etudiant");
+  const onTarifChange = () => {
+    resetEtudiantVerifie();
+  };
+  if (tarifNormalRadio) {
+    tarifNormalRadio.addEventListener("change", onTarifChange);
+  }
+  if (tarifEtuRadio) {
+    tarifEtuRadio.addEventListener("change", onTarifChange);
+  }
+
+  // RESTO events
+  const restoProduit = $("restoProduit");
+  const restoQuantite = $("restoQuantite");
+  const btnRestoValider = $("btnRestoVente") || $("btnRestoValider");
 
   if (restoProduit) {
     restoProduit.addEventListener("change", majAffichageMontantResto);
