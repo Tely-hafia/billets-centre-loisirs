@@ -480,9 +480,25 @@ async function effacerTousLesBillets() {
 // =====================================
 //  4. SAISIE : étudiants & agents
 // =====================================
+// Génère un numéro étudiant de la forme UNIV-XX-1234
+function genererNumeroEtudiant(universite) {
+  // On récupère seulement les lettres de l'université
+  const letters = (universite || "")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase();
+
+  // Deux premières lettres, ou "ET" si on ne trouve rien
+  const codeEcole = (letters.slice(0, 2) || "ET");
+
+  // 4 chiffres aléatoires
+  const randomDigits = Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0");
+
+  return `UNIV-${codeEcole}-${randomDigits}`;
+}
 
 async function creerEtudiantDepuisAdmin() {
-  const numero = $("admin-etu-numero")?.value.trim();
   const nom    = $("admin-etu-nom")?.value.trim();
   const prenom = $("admin-etu-prenom")?.value.trim();
   const univ   = $("admin-etu-universite")?.value.trim();
@@ -491,10 +507,17 @@ async function creerEtudiantDepuisAdmin() {
   const actif  = $("admin-etu-actif")?.checked ?? true;
   const msg    = $("admin-etu-message");
 
-  if (!numero || !nom || !prenom || !univ) {
-    if (msg) msg.textContent = "Veuillez remplir au minimum numéro, nom, prénom et université.";
+  // Champs obligatoires
+  if (!nom || !prenom || !univ) {
+    if (msg) {
+      msg.textContent = "Veuillez remplir au minimum université, nom et prénom.";
+      msg.style.color = "#b91c1c";
+    }
     return;
   }
+
+  // Numéro étudiant généré automatiquement
+  const numero = genererNumeroEtudiant(univ);
 
   try {
     const nowIso = new Date().toISOString();
@@ -515,25 +538,28 @@ async function creerEtudiantDepuisAdmin() {
     );
 
     if (msg) {
-      msg.textContent = "Étudiant enregistré avec succès.";
+      msg.textContent =
+        `Étudiant enregistré avec succès. Numéro généré : ${numero}`;
       msg.style.color = "#16a34a";
     }
 
-    $("admin-etu-numero").value = "";
+    // Reset des champs (sauf le message)
+    $("admin-etu-universite").value = "";
     $("admin-etu-nom").value = "";
     $("admin-etu-prenom").value = "";
-    $("admin-etu-universite").value = "";
     $("admin-etu-email").value = "";
     $("admin-etu-telephone").value = "";
     $("admin-etu-actif").checked = true;
   } catch (err) {
     console.error("[ADMIN] Erreur création étudiant :", err);
     if (msg) {
-      msg.textContent = "Erreur lors de l'enregistrement de l'étudiant (voir console).";
+      msg.textContent =
+        "Erreur lors de l'enregistrement de l'étudiant (voir console).";
       msg.style.color = "#b91c1c";
     }
   }
 }
+
 
 async function creerAgentDepuisAdmin() {
   const login = $("admin-agent-login")?.value.trim();
