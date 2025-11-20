@@ -8,11 +8,11 @@ const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
-const APPWRITE_BILLETS_TABLE_ID = "billets";                // billets d'entrée
+const APPWRITE_BILLETS_TABLE_ID = "billets";                 // billets d'entrée
 const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux internes
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";        // historique validations
-const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";            // étudiants
-const APPWRITE_AGENTS_TABLE_ID = "agents";                  // agents
+const APPWRITE_VALIDATIONS_TABLE_ID = "validations";         // historique validations
+const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";             // étudiants
+const APPWRITE_AGENTS_TABLE_ID = "agents";                   // agents
 
 // =====================================
 //  Initialisation du client Appwrite
@@ -20,7 +20,7 @@ const APPWRITE_AGENTS_TABLE_ID = "agents";                  // agents
 
 if (typeof Appwrite === "undefined") {
   console.error(
-    "[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src=\"https://cdn.jsdelivr.net/npm/appwrite@13.0.0\"></script>"
+    '[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>'
   );
 }
 
@@ -70,13 +70,13 @@ function appliquerEtatConnexionAdmin(admin) {
   currentAdmin = admin;
 
   const loginCard = $("admin-login-card");
-  const appZone  = $("admin-app-zone");
-  const nameEl  = $("admin-connected-name");
-  const roleEl  = $("admin-connected-role");
+  const appZone   = $("admin-app-zone");
+  const nameEl    = $("admin-connected-name");
+  const roleEl    = $("admin-connected-role");
 
   if (admin) {
     if (loginCard) loginCard.style.display = "none";
-    if (appZone) appZone.style.display = "block";
+    if (appZone)   appZone.style.display   = "block";
 
     if (nameEl) nameEl.textContent = admin.nom || admin.login || "";
     if (roleEl) roleEl.textContent = admin.role || "";
@@ -84,11 +84,11 @@ function appliquerEtatConnexionAdmin(admin) {
     // Mode par défaut : saisie
     switchAdminMode("saisie");
 
-    // Charger les stats (optionnel)
+    // Charger les stats
     chargerStatsValidations();
   } else {
     if (loginCard) loginCard.style.display = "block";
-    if (appZone) appZone.style.display = "none";
+    if (appZone)   appZone.style.display   = "none";
 
     if (nameEl) nameEl.textContent = "";
     if (roleEl) roleEl.textContent = "";
@@ -98,7 +98,7 @@ function appliquerEtatConnexionAdmin(admin) {
 }
 
 async function adminLogin() {
-  const login = $("adminLogin")?.value.trim();
+  const login    = $("adminLogin")?.value.trim();
   const password = $("adminPassword")?.value.trim();
 
   if (!login || !password) {
@@ -125,7 +125,7 @@ async function adminLogin() {
       return;
     }
 
-    const agent = res.documents[0];
+    const agent   = res.documents[0];
     const roleStr = (agent.role || "").toLowerCase();
 
     if (!roleStr.includes("admin")) {
@@ -152,10 +152,10 @@ function adminLogout() {
 function switchAdminMode(mode) {
   adminCurrentMode = mode;
 
-  const btnSaisie  = $("btnAdminModeSaisie");
-  const btnGestion = $("btnAdminModeGestion");
-  const zoneSaisie = $("admin-zone-saisie");
-  const zoneGestion= $("admin-zone-gestion");
+  const btnSaisie   = $("btnAdminModeSaisie");
+  const btnGestion  = $("btnAdminModeGestion");
+  const zoneSaisie  = $("admin-zone-saisie");
+  const zoneGestion = $("admin-zone-gestion");
 
   if (btnSaisie)  btnSaisie.classList.toggle("active", mode === "saisie");
   if (btnGestion) btnGestion.classList.toggle("active", mode === "gestion");
@@ -181,7 +181,7 @@ async function importerCSVDansBillets(file) {
   const reader = new FileReader();
 
   reader.onload = async (e) => {
-    const text = e.target.result;
+    const text   = e.target.result;
     const lignes = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
     if (lignes.length <= 1) {
@@ -196,11 +196,11 @@ async function importerCSVDansBillets(file) {
 
     if (typeImport === "entree") {
       // ======== BILLETS D'ENTRÉE ========
-      const idxNumero = header.indexOf("numero_billet");
-      const idxType   = header.indexOf("type_acces");
-      const idxPrix   = header.indexOf("prix");
+      const idxNumero   = header.indexOf("numero_billet");
+      const idxType     = header.indexOf("type_acces");
+      const idxPrix     = header.indexOf("prix");
       const idxTarifUni = header.indexOf("tarif_universite");
-      const idxStatut = header.indexOf("statut");
+      const idxStatut   = header.indexOf("statut");
 
       if (idxNumero === -1 || idxType === -1) {
         alert(
@@ -213,7 +213,7 @@ async function importerCSVDansBillets(file) {
         const cols = lignes[i].split(";");
         if (!cols[idxNumero]) continue;
 
-        const numero = cols[idxNumero].trim();
+        const numero   = cols[idxNumero].trim();
         const typeAcces = cols[idxType] ? cols[idxType].trim() : "";
         if (!numero || !typeAcces) continue;
 
@@ -253,9 +253,9 @@ async function importerCSVDansBillets(file) {
 
     } else {
       // ======== BILLETS INTERNES (JEUX) ========
-      const idxNumero = header.indexOf("numero_billet");
-      const idxTypeBillet = header.indexOf("type_billet");
-      const idxPrix = header.indexOf("prix");
+      const idxNumero    = header.indexOf("numero_billet");
+      const idxTypeBillet= header.indexOf("type_billet");
+      const idxPrix      = header.indexOf("prix");
 
       if (idxNumero === -1 || idxTypeBillet === -1) {
         alert(
@@ -268,10 +268,8 @@ async function importerCSVDansBillets(file) {
         const cols = lignes[i].split(";");
         if (!cols[idxNumero]) continue;
 
-        const numero = cols[idxNumero].trim();
-        const typeBillet = cols[idxTypeBillet]
-          ? cols[idxTypeBillet].trim()
-          : "";
+        const numero    = cols[idxNumero].trim();
+        const typeBillet= cols[idxTypeBillet] ? cols[idxTypeBillet].trim() : "";
         if (!numero || !typeBillet) continue;
 
         const prix =
@@ -281,7 +279,7 @@ async function importerCSVDansBillets(file) {
           numero_billet: numero,
           type_billet: typeBillet,
           prix: prix,
-          statut: "Non utilisé" // par défaut pour éviter les erreurs de colonne requise
+          statut: "Non utilisé"
         };
 
         try {
@@ -330,8 +328,8 @@ async function chargerStatsValidations() {
 
     const totalValidations = docs.length;
 
-    let recetteTotale = 0;
-    let recetteNormal = 0;
+    let recetteTotale   = 0;
+    let recetteNormal   = 0;
     let recetteEtudiant = 0;
 
     const parType = {}; // { type_acces: { count, montant } }
@@ -350,7 +348,7 @@ async function chargerStatsValidations() {
       if (!parType[type]) {
         parType[type] = { count: 0, montant: 0 };
       }
-      parType[type].count += 1;
+      parType[type].count   += 1;
       parType[type].montant += montant;
     });
 
@@ -371,28 +369,26 @@ async function chargerStatsValidations() {
       const types = Object.keys(parType);
       if (types.length === 0) {
         const row = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 3;
-        td.textContent = "Aucune validation pour le moment.";
+        const td  = document.createElement("td");
+        td.colSpan    = 3;
+        td.textContent= "Aucune validation pour le moment.";
         row.appendChild(td);
         tbody.appendChild(row);
       } else {
         types.forEach((type) => {
           const row = document.createElement("tr");
 
-          const tdType = document.createElement("td");
-          tdType.textContent = type;
-
-          const tdCount = document.createElement("td");
-          tdCount.textContent = parType[type].count.toString();
-
+          const tdType    = document.createElement("td");
+          const tdCount   = document.createElement("td");
           const tdMontant = document.createElement("td");
+
+          tdType.textContent    = type;
+          tdCount.textContent   = parType[type].count.toString();
           tdMontant.textContent = formatGNF(parType[type].montant);
 
           row.appendChild(tdType);
           row.appendChild(tdCount);
           row.appendChild(tdMontant);
-
           tbody.appendChild(row);
         });
       }
@@ -480,97 +476,139 @@ async function effacerTousLesBillets() {
 // =====================================
 //  4. SAISIE : étudiants & agents
 // =====================================
-// Génère un numéro étudiant de la forme UNIV-XX-1234
+
+// --- Helpers messages pour les formulaires de saisie ---
+
+function showAdminEtuMessage(text, type) {
+  const msg = $("admin-etu-message");
+  if (!msg) return;
+  msg.style.display = "block";
+  msg.textContent   = text;
+  msg.className     = "message";
+  if (type === "success") msg.classList.add("message-success");
+  else if (type === "error") msg.classList.add("message-error");
+  else msg.classList.add("message-info");
+}
+
+function showAdminAgentMessage(text, type) {
+  const msg = $("admin-agent-message");
+  if (!msg) return;
+  msg.style.display = "block";
+  msg.textContent   = text;
+  msg.className     = "message";
+  if (type === "success") msg.classList.add("message-success");
+  else if (type === "error") msg.classList.add("message-error");
+  else msg.classList.add("message-info");
+}
+
+// --- Génère un numéro étudiant de la forme UNIV-XX-1234 ---
+
 function genererNumeroEtudiant(universite) {
-  // On récupère seulement les lettres de l'université
-  const letters = (universite || "")
-    .replace(/[^A-Za-z]/g, "")
-    .toUpperCase();
+  const clean = (universite || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")  // enlève les accents
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");          // garde seulement les lettres
 
-  // Deux premières lettres, ou "ET" si on ne trouve rien
-  const codeEcole = (letters.slice(0, 2) || "ET");
+  const codeEcole = clean.slice(0, 2) || "XX";
 
-  // 4 chiffres aléatoires
-  const randomDigits = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0");
+  // 4 chiffres aléatoires entre 1000 et 9999
+  const randomDigits = Math.floor(1000 + Math.random() * 9000);
 
   return `UNIV-${codeEcole}-${randomDigits}`;
 }
 
 async function creerEtudiantDepuisAdmin() {
-  const nom    = $("admin-etu-nom")?.value.trim();
-  const prenom = $("admin-etu-prenom")?.value.trim();
-  const univ   = $("admin-etu-universite")?.value.trim();
-  const email  = $("admin-etu-email")?.value.trim();
-  const tel    = $("admin-etu-telephone")?.value.trim();
-  const actif  = $("admin-etu-actif")?.checked ?? true;
-  const msg    = $("admin-etu-message");
+  const univEl = $("admin-etu-universite");
+  const nomEl  = $("admin-etu-nom");
+  const preEl  = $("admin-etu-prenom");
+  const mailEl = $("admin-etu-email");
+  const telEl  = $("admin-etu-telephone");
+  const actEl  = $("admin-etu-actif");
+
+  if (!univEl || !nomEl || !preEl) {
+    console.error("[ADMIN] Formulaire étudiant mal configuré dans le HTML.");
+    alert("Problème de configuration du formulaire étudiant (voir console).");
+    return;
+  }
+
+  const universite = univEl.value.trim();
+  const nom        = nomEl.value.trim();
+  const prenom     = preEl.value.trim();
+  const email      = (mailEl?.value || "").trim();
+  const telephone  = (telEl?.value || "").trim();
+  const actif      = !!(actEl && actEl.checked);
 
   // Champs obligatoires
-  if (!nom || !prenom || !univ) {
-    if (msg) {
-      msg.textContent = "Veuillez remplir au minimum université, nom et prénom.";
-      msg.style.color = "#b91c1c";
-    }
+  if (!universite || !nom || !prenom) {
+    showAdminEtuMessage(
+      "Veuillez remplir au minimum université, nom et prénom.",
+      "error"
+    );
     return;
   }
 
   // Numéro étudiant généré automatiquement
-  const numero = genererNumeroEtudiant(univ);
+  const numero = genererNumeroEtudiant(universite);
 
   try {
     const nowIso = new Date().toISOString();
+
     await adminDB.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_ETUDIANTS_TABLE_ID,
       Appwrite.ID.unique(),
       {
         numero_etudiant: numero,
-        nom: nom,
-        prenom: prenom,
-        universite: univ,
-        "e-mail": email || "",
-        telephone: tel || "",
-        actif: !!actif,
+        nom,
+        prenom,
+        universite,
+        "e-mail": email || null,
+        telephone: telephone || null,
+        actif,
         date_creation: nowIso
       }
     );
 
-    if (msg) {
-      msg.textContent =
-        `Étudiant enregistré avec succès. Numéro généré : ${numero}`;
-      msg.style.color = "#16a34a";
-    }
+    showAdminEtuMessage(
+      `Étudiant enregistré avec succès. Numéro généré : ${numero}`,
+      "success"
+    );
 
-    // Reset des champs (sauf le message)
-    $("admin-etu-universite").value = "";
-    $("admin-etu-nom").value = "";
-    $("admin-etu-prenom").value = "";
-    $("admin-etu-email").value = "";
-    $("admin-etu-telephone").value = "";
-    $("admin-etu-actif").checked = true;
+    // Reset des champs
+    univEl.value = "";
+    nomEl.value  = "";
+    preEl.value  = "";
+    if (mailEl) mailEl.value = "";
+    if (telEl)  telEl.value  = "";
+    if (actEl)  actEl.checked = true;
   } catch (err) {
     console.error("[ADMIN] Erreur création étudiant :", err);
-    if (msg) {
-      msg.textContent =
-        "Erreur lors de l'enregistrement de l'étudiant (voir console).";
-      msg.style.color = "#b91c1c";
-    }
+    showAdminEtuMessage(
+      "Erreur lors de l'enregistrement de l'étudiant (voir console).",
+      "error"
+    );
   }
 }
 
-
 async function creerAgentDepuisAdmin() {
-  const login = $("admin-agent-login")?.value.trim();
-  const pwd   = $("admin-agent-password")?.value.trim();
-  const nom   = $("admin-agent-nom")?.value.trim();
-  const role  = $("admin-agent-role")?.value.trim();
-  const actif = $("admin-agent-actif")?.checked ?? true;
-  const msg   = $("admin-agent-message");
+  const loginEl = $("admin-agent-login");
+  const pwdEl   = $("admin-agent-password");
+  const nomEl   = $("admin-agent-nom");
+  const roleEl  = $("admin-agent-role");
+  const actEl   = $("admin-agent-actif");
+
+  const login = loginEl?.value.trim();
+  const pwd   = pwdEl?.value.trim();
+  const nom   = nomEl?.value.trim() || "";
+  const role  = roleEl?.value.trim();
+  const actif = !!(actEl && actEl.checked);
 
   if (!login || !pwd || !role) {
-    if (msg) msg.textContent = "Veuillez remplir au minimum login, mot de passe et rôle.";
+    showAdminAgentMessage(
+      "Veuillez remplir au minimum login, mot de passe et rôle.",
+      "error"
+    );
     return;
   }
 
@@ -580,30 +618,27 @@ async function creerAgentDepuisAdmin() {
       APPWRITE_AGENTS_TABLE_ID,
       Appwrite.ID.unique(),
       {
-        login: login,
+        login,
         mot_de_passe: pwd,
-        nom: nom || "",
-        role: role,
-        actif: !!actif
+        nom,
+        role,
+        actif
       }
     );
 
-    if (msg) {
-      msg.textContent = "Agent créé avec succès.";
-      msg.style.color = "#16a34a";
-    }
+    showAdminAgentMessage("Agent créé avec succès.", "success");
 
-    $("admin-agent-login").value = "";
-    $("admin-agent-password").value = "";
-    $("admin-agent-nom").value = "";
-    $("admin-agent-role").value = "";
-    $("admin-agent-actif").checked = true;
+    if (loginEl) loginEl.value = "";
+    if (pwdEl)   pwdEl.value   = "";
+    if (nomEl)   nomEl.value   = "";
+    if (roleEl)  roleEl.value  = "";
+    if (actEl)   actEl.checked = true;
   } catch (err) {
     console.error("[ADMIN] Erreur création agent :", err);
-    if (msg) {
-      msg.textContent = "Erreur lors de la création de l'agent (voir console).";
-      msg.style.color = "#b91c1c";
-    }
+    showAdminAgentMessage(
+      "Erreur lors de la création de l'agent (voir console).",
+      "error"
+    );
   }
 }
 
@@ -651,7 +686,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Import CSV
   const btnImportCsv = $("btnImportCsv");
-  const csvInput = $("csvFile");
+  const csvInput     = $("csvFile");
   if (btnImportCsv && csvInput) {
     btnImportCsv.addEventListener("click", (e) => {
       e.preventDefault();
