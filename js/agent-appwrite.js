@@ -590,6 +590,19 @@ function creerOngletsCategories() {
   });
 }
 
+// Afficher tous les produits
+function afficherTousLesProduits() {
+  afficherProduits(restoProduitsCache);
+}
+
+// Filtrer les produits par catégorie
+function filtrerProduitsParCategorie(categorie) {
+  const produitsFiltres = restoProduitsCache.filter(p => 
+    (p.categorie || "Autre") === categorie
+  );
+  afficherProduits(produitsFiltres);
+}
+
 // Afficher les produits dans la grille
 function afficherProduits(produits) {
   const productsGrid = $("#restoProductsGrid");
@@ -662,6 +675,359 @@ async function chargerProduitsResto() {
     }
   }
 }
+
+// Initialiser le dernier numéro de vente
+async function initialiserDernierNumeroVente() {
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VENTES_RESTO_COLLECTION_ID,
+      [
+        Appwrite.Query.orderDesc("$createdAt"),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (res.documents.length > 0) {
+      const lastNum = res.documents[0].numero_vente;
+      const match = lastNum.match(/V-(\d+)/);
+      if (match) {
+        lastVenteNumber = parseInt(match[1]);
+      }
+    }
+  } catch (err) {
+    console.warn("[RESTO] Impossible de récupérer le dernier numéro de vente :", err);
+    lastVenteNumber = 0;
+  }
+}
+
+// Générer nouveau numéro de vente
+function genererNumeroVente() {
+  lastVenteNumber++;
+  return `V-${lastVenteNumber.toString().padStart(3, '0')}`;
+}
+
+// Ajouter un produit au panier
+function ajouterProduitAuPanier(codeProduit) {
+  const produit = restoProduitsCache.find(p => p.code_produit === codeProduit);
+  if (!produit) return;
+
+  const existant = restoPanier.find(item => item.code_produit === codeProduit);
+
+  if (existant) {
+    existant.quantite += 1;
+  } else {
+    restoPanier.push({
+      code_produit: produit.code_produit,
+      libelle: produit.libelle,
+      prix_unitaire: Number(produit.prix_unitaire) || 0,
+      quantite: 1
+    });
+  }
+
+  actualiserPanier();
+  showTempMessage(`✅ ${produit.libelle} ajouté au panier`, "success");
+}
+
+// Afficher un message temporaire
+function showTempMessage(text, type) {
+  const msg = $("#restoResult");
+  if (!msg) return;
+
+  msg.style.display = "block";
+  msg.textContent = text;
+  msg.className = "result";
+  
+  if (type === "success") msg.classList.add("ok");
+  else if (type === "error") msg.classList.add("error");
+  else if (type === "warn") msg.classList.add("warn");
+
+  // Disparaît après 2 secondes
+  setTimeout(() => {
+    msg.style.display = "none";
+  }, 2000);
+}
+
+// Actualiser l'affichage du panier
+function actualiserPanier() {
+  const cartItems = $("#restoCartItems");
+  const cartCount = $("#restoCartCount");
+  const cartTotal = $("#restoCartTotal");
+  const validerBtn = $("#btnRestoValider");
+
+  if (!cartItems) return;
+
+  // Mettre à jour le compteur et le total
+  const totalArticles = restoPanier.reduce((sum, item) => sum + item.quantite, 0);
+  const totalMontant = restoPanier.reduce((sum, item) => sum + (item.prix_unitaire * item.quantite), 0);
+
+  if (cartCount) cartCount.textContent = `${totalArticles} article(s)`;
+  if (cartTotal) cartTotal.textContent = formatMontantGNF(totalMontant);
+  if (validerBtn) validerBtn.disabled = totalArticles === 0;
+
+  // Afficher les articles du panier
+  if (restoPanier.length === 0) {
+    cartItems.innerHTML = '<div class="resto-cart-empty">Panier vide</div>';
+    return;
+  }
+
+  cartItems.innerHTML = restoPanier.map((item, index) => `
+    <div class="resto-cart-item">
+      <div class="resto-cart-item-info">
+        <div class="resto-cart-item-name">${item.libelle}</div>
+        <div class="resto-cart-item-price">${formatMontantGNF(item.prix_unitaire)}/unité</div>
+      </div>
+      <div class="resto-cart-item-controls">
+        <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, -1)">-</button>
+        <span class="resto-cart-item-quantity">${item.quantite}</span>
+        <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, 1)">+</button>
+        <button type="button" class="resto-cart-item-btn resto-cart-item-remove" onclick="supprimerDuPanier(${index})">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Modifier la quantité d'un article
+function modifierQuantitePanier(index, delta) {
+  if (index < 0 || index >= restoPanier.length) return;
+
+  const newQuantity = restoPanier[index].quantite + delta;
+
+  if (newQuantity <= 0) {
+    supprimerDuPanier(index);
+  } else {
+    restoPanier[index].quantite = newQuantity;
+    actualiserPanier();
+  }
+}
+
+// Supprimer un article du panier
+function supprimerDuPanier(index) {
+  if (index < 0 || index >= restoPanier.length) return;
+  
+  const produitNom = restoPanier[index].libelle;
+  restoPanier.splice(index, 1);
+  actualiserPanier();
+  showTempMessage(`🗑️ ${produitNom} retiré du panier`, "warn");
+}
+
+// Vider tout le panier
+function viderPanier() {
+  if (restoPanier.length === 0) return;
+  
+  if (confirm("Vider tout le panier ?")) {
+    restoPanier = [];
+    actualiserPanier();
+    showTempMessage("🔄 Panier vidé", "warn");
+  }
+}
+
+// Enregistrer la vente
+async function enregistrerVenteResto() {
+  const msg = $("#restoResult");
+  const receipt = $("#restoReceipt");
+  const receiptNumber = $("#receiptNumber");
+  const receiptContent = $("#receiptContent");
+
+  if (!currentAgent) {
+    showTempMessage("❌ Veuillez vous connecter", "error");
+    return;
+  }
+
+  if (restoPanier.length === 0) {
+    showTempMessage("🛒 Le panier est vide", "warn");
+    return;
+  }
+
+  const numeroVente = genererNumeroVente();
+  const nowIso = new Date().toISOString();
+  const orderType = document.querySelector('input[name="orderType"]:checked')?.value || "sur_place";
+  const notes = $("#restoOrderNotes")?.value.trim() || "";
+
+  let totalGlobal = 0;
+
+  try {
+    // Enregistrer chaque ligne de vente
+    for (const item of restoPanier) {
+      const montant = item.prix_unitaire * item.quantite;
+      totalGlobal += montant;
+
+      await db.createDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_VENTES_RESTO_COLLECTION_ID,
+        Appwrite.ID.unique(),
+        {
+          numero_vente: numeroVente,
+          date_vente: nowIso,
+          code_produit: item.code_produit,
+          libelle: item.libelle,
+          quantite: item.quantite,
+          prix_unitaire: item.prix_unitaire,
+          montant_total: montant,
+          type_commande: orderType,
+          notes: notes,
+          agent_id: currentAgent.$id,
+          poste_id: currentAgent.role || "resto_chicha"
+        }
+      );
+    }
+
+    // Afficher le reçu
+    afficherReçu(numeroVente, totalGlobal, orderType, notes);
+    
+    // Masquer le message temporaire
+    if (msg) msg.style.display = "none";
+
+  } catch (err) {
+    console.error("[RESTO] Erreur enregistrement vente :", err);
+    showTempMessage("❌ Erreur lors de l'enregistrement", "error");
+  }
+}
+
+// Afficher le reçu
+function afficherReçu(numeroVente, total, orderType, notes) {
+  const receipt = $("#restoReceipt");
+  const receiptNumber = $("#receiptNumber");
+  const receiptContent = $("#receiptContent");
+  const productsSide = $(".resto-products-side");
+
+  if (!receipt) return;
+
+  // Mettre à jour le numéro
+  if (receiptNumber) receiptNumber.textContent = numeroVente;
+
+  // Générer le contenu du reçu
+  let receiptHTML = `
+    <div style="margin-bottom: 1rem;">
+      <div><strong>Date:</strong> ${new Date().toLocaleString('fr-FR')}</div>
+      <div><strong>Type:</strong> ${orderType === 'sur_place' ? 'Sur place' : 'À emporter'}</div>
+      ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
+    </div>
+    <div style="border-bottom: 1px dashed #ccc; margin-bottom: 0.5rem;"></div>
+  `;
+
+  // Ajouter chaque article
+  restoPanier.forEach(item => {
+    const sousTotal = item.prix_unitaire * item.quantite;
+    receiptHTML += `
+      <div class="receipt-item">
+        <div>${item.quantite}x ${item.libelle}</div>
+        <div>${sousTotal.toLocaleString('fr-FR')} GNF</div>
+      </div>
+    `;
+  });
+
+  // Ajouter le total
+  receiptHTML += `
+    <div style="border-bottom: 1px dashed #ccc; margin: 0.5rem 0;"></div>
+    <div class="receipt-item receipt-total">
+      <div>TOTAL</div>
+      <div>${total.toLocaleString('fr-FR')} GNF</div>
+    </div>
+    <div style="text-align: center; margin-top: 1rem; font-style: italic;">
+      Merci pour votre commande !
+    </div>
+  `;
+
+  if (receiptContent) receiptContent.innerHTML = receiptHTML;
+
+  // Afficher le reçu et masquer les produits temporairement
+  receipt.style.display = "block";
+  if (productsSide) productsSide.style.display = "none";
+
+  // Vider le panier
+  restoPanier = [];
+  actualiserPanier();
+}
+
+// Nouvelle commande
+function nouvelleCommandeResto() {
+  const receipt = $("#restoReceipt");
+  const productsSide = $(".resto-products-side");
+  const notes = $("#restoOrderNotes");
+
+  // Réafficher les produits
+  if (productsSide) productsSide.style.display = "block";
+  if (receipt) receipt.style.display = "none";
+  
+  // Réinitialiser les notes
+  if (notes) notes.value = "";
+
+  showTempMessage("🆕 Nouvelle commande prête", "success");
+}
+
+// ===============================
+//  INIT
+// ===============================
+
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("[AGENT] DOMContentLoaded - VERSION CORRIGÉE");
+
+  appliquerEtatConnexion(null);
+  updateTarifEtudiantVisibility();
+
+  // Connexion / déconnexion
+  const btnLogin  = $("btnLogin");
+  const btnLogout = $("btnLogout");
+
+  if (btnLogin) {
+    btnLogin.addEventListener("click", (e) => {
+      e.preventDefault();
+      connecterAgent();
+    });
+  }
+
+  if (btnLogout) {
+    btnLogout.addEventListener("click", (e) => {
+      e.preventDefault();
+      deconnexionAgent();
+    });
+  }
+
+  // Modes principaux
+  const btnModeBillets = $("btnModeBillets");
+  const btnModeResto   = $("btnModeResto");
+
+  if (btnModeBillets) {
+    btnModeBillets.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchMode("billets");
+      chargerNombreBillets();
+    });
+  }
+  if (btnModeResto) {
+    btnModeResto.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchMode("resto");
+    });
+  }
+
+  // Sous-onglets Billets
+  const btnBilletsEntree = $("btnBilletsEntree");
+  const btnBilletsJeux   = $("btnBilletsJeux");
+
+  if (btnBilletsEntree) {
+    btnBilletsEntree.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchBilletsSubMode("ENTREE");
+    });
+  }
+  if (btnBilletsJeux) {
+    btnBilletsJeux.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchBilletsSubMode("JEU");
+    });
+  }
+
+  // Validation billet
+  const btnCheckTicket = $("btnCheckTicket");
+  if (btnCheckTicket) {
+    btnCheckTicket.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifierBillet();
+    });
+  }
+
   // RESTO - Nouveaux écouteurs
   const btnRestoValider = $("#btnRestoValider");
   const btnRestoVider = $("#btnRestoVider");
