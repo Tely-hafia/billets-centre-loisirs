@@ -976,3 +976,89 @@ footer {
   font-size: 1.1rem;
   margin-bottom: 0.5rem;
 }
+/* =========================
+   MODE IMPRESSION - REÇU RESTO
+   ========================= */
+@media print {
+  /* Fond blanc et marges minimales */
+  body {
+    background: #ffffff !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Cacher TOUT sauf le reçu */
+  header,
+  footer,
+  #card-login,
+  #mode-billets,
+  .resto-products-side,
+  .resto-cart-header,
+  .resto-cart-items,
+  .resto-order-options,
+  .resto-cart-actions,
+  #restoResult {
+    display: none !important;
+  }
+
+  /* On garde seulement le bloc de reçu */
+  #mode-resto {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .resto-cart-side {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .resto-receipt {
+    display: block !important;
+    width: 58mm;             /* largeur ticket thermique */
+    margin: 0;
+    padding: 4mm;
+    border: none;
+    box-shadow: none;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #000;
+    background: #fff;
+  }
+
+  .receipt-header h4 {
+    font-size: 12px;
+    text-align: center;
+    margin: 0 0 2mm 0;
+  }
+
+  .receipt-header #receiptNumber {
+    display: block;
+    text-align: center;
+    margin-bottom: 3mm;
+  }
+
+  .receipt-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 1mm 0;
+  }
+
+  .receipt-total {
+    font-weight: 700;
+    border-top: 1px dashed #000;
+    margin-top: 3mm;
+    padding-top: 2mm;
+  }
+
+  /* Ne pas imprimer les boutons (Nouvelle commande / Imprimer / etc.) */
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-print {
+    display: none !important;
+  }
+}
