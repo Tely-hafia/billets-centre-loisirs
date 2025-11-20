@@ -144,79 +144,96 @@
       <div id="result-message" class="result" style="display:none;"></div>
     </section>
 
-        <!-- MODE 2 : Restauration / Chicha -->
-    <section class="card" id="mode-resto" style="display:none;">
-      <h2>Restauration / Chicha</h2>
+        <!-- MODE 2 : Restauration / Chicha - NOUVELLE VERSION -->
+<section class="card" id="mode-resto" style="display:none;">
+  <h2>🍽️ Restauration / Chicha</h2>
 
-      <p style="margin-bottom:0.6rem;">
-        Enregistre ici les ventes du bar, restaurant ou chicha. Tu peux ajouter
-        plusieurs produits dans le panier avant de valider la vente.
-      </p>
-
-      <!-- Catégorie -->
-      <div class="form-row">
-        <label for="restoCategorie">Catégorie :</label>
-        <select id="restoCategorie">
-          <option value="">Toutes les catégories...</option>
-        </select>
+  <div class="resto-container">
+    <!-- Colonne gauche : Produits -->
+    <div class="resto-products-side">
+      <!-- Onglets Catégories -->
+      <div class="resto-categories-tabs" id="restoCategoriesTabs">
+        <!-- Rempli dynamiquement par JS -->
       </div>
 
-      <!-- Produit -->
-      <div class="form-row">
-        <label for="restoProduit">Produit :</label>
-        <select id="restoProduit">
-          <option value="">Choisir un produit...</option>
-        </select>
+      <!-- Grille des Produits -->
+      <div class="resto-products-grid" id="restoProductsGrid">
+        <!-- Rempli dynamiquement par JS -->
+        <div class="resto-loading">Chargement du menu...</div>
+      </div>
+    </div>
+
+    <!-- Colonne droite : Panier -->
+    <div class="resto-cart-side">
+      <div class="resto-cart-header">
+        <h3>🛒 Panier en cours</h3>
+        <div class="resto-cart-info">
+          <span id="restoCartCount">0 article(s)</span>
+          <span id="restoCartTotal">0 GNF</span>
+        </div>
       </div>
 
-      <!-- Quantité -->
-      <div class="form-row" style="max-width:180px;">
-        <label for="restoQuantite">Quantité :</label>
-        <input type="number" id="restoQuantite" min="1" value="1" />
+      <!-- Liste des articles du panier -->
+      <div class="resto-cart-items" id="restoCartItems">
+        <div class="resto-cart-empty">Panier vide</div>
       </div>
 
-      <!-- Montant de la ligne en cours -->
-      <p id="restoMontant" style="font-weight:600; margin-top:0.4rem;">
-        Montant ligne : 0 GNF
-      </p>
+      <!-- Options de commande -->
+      <div class="resto-order-options">
+        <div class="form-row">
+          <label>Type de commande :</label>
+          <div style="display:flex; gap:1rem;">
+            <label class="radio-inline">
+              <input type="radio" name="orderType" value="sur_place" checked />
+              <span>Sur place</span>
+            </label>
+            <label class="radio-inline">
+              <input type="radio" name="orderType" value="a_emporter" />
+              <span>À emporter</span>
+            </label>
+          </div>
+        </div>
 
-      <!-- Bouton : ajouter au panier -->
-      <button id="btnRestoAjouter" type="button" class="btn-secondary" style="margin-top:0.4rem;">
-        Ajouter au panier
-      </button>
-
-      <!-- Tableau du panier -->
-      <div id="restoPanierZone" class="table-wrapper" style="margin-top:1.5rem; display:none;">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Produit</th>
-              <th>Qté</th>
-              <th>Prix unitaire</th>
-              <th>Total</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="restoPanierBody"></tbody>
-        </table>
-        <p style="text-align:right; margin-top:0.5rem; font-weight:600;">
-          Total panier : <span id="restoPanierTotal">0 GNF</span>
-        </p>
+        <div class="form-row">
+          <label for="restoOrderNotes">Notes spéciales :</label>
+          <textarea 
+            id="restoOrderNotes" 
+            placeholder="Sans oignons, supplément sauce..." 
+            rows="2"
+            style="width:100%; padding:0.75rem; border:1px solid var(--border-soft); border-radius:var(--radius-md);"
+          ></textarea>
+        </div>
       </div>
 
-      <!-- Actions panier -->
-      <div style="display:flex; gap:0.75rem; margin-top:1rem; flex-wrap:wrap;">
+      <!-- Actions du panier -->
+      <div class="resto-cart-actions">
         <button id="btnRestoValider" type="button" class="btn-primary" disabled>
-          Valider la vente
+          ✅ Valider la commande
         </button>
-        <button id="btnRestoVider" type="button" class="btn-danger" style="background:#e5e7eb;color:#111827;box-shadow:none;">
-          Vider le panier
+        <button id="btnRestoVider" type="button" class="btn-danger">
+          🗑️ Vider le panier
         </button>
       </div>
 
-      <div id="restoResult" class="result" style="margin-top:0.8rem; display:none;"></div>
-    </section>
+      <!-- Reçu après validation -->
+      <div id="restoReceipt" class="resto-receipt" style="display:none;">
+        <div class="receipt-header">
+          <h4>📋 Reçu de commande</h4>
+          <strong id="receiptNumber">V-001</strong>
+        </div>
+        <div class="receipt-content" id="receiptContent">
+          <!-- Contenu du reçu -->
+        </div>
+        <button id="btnRestoNouvelleCommande" type="button" class="btn-secondary">
+          🆕 Nouvelle commande
+        </button>
+      </div>
+    </div>
+  </div>
 
+  <!-- Message résultat -->
+  <div id="restoResult" class="result" style="margin-top:1rem; display:none;"></div>
+</section>
 
   </div>
 
