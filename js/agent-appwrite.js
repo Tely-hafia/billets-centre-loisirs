@@ -1,4 +1,4 @@
-console.log("[AGENT] agent-appwrite.js chargé - VERSION RESTAURANT AMÉLIORÉE");
+console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETTE");
 
 // ===============================
 //  CONFIG APPWRITE
@@ -95,9 +95,6 @@ let currentMode = "billets";
 let currentBilletsSubMode = "ENTREE";
 let lastVenteNumber = 0;
 
-// dernier étudiant vérifié avec le bouton
-let lastVerifiedEtudiant = null;
-
 // ===============================
 //  UI MODES
 // ===============================
@@ -105,10 +102,20 @@ let lastVerifiedEtudiant = null;
 function updateTarifEtudiantVisibility() {
   const etuZone   = $("etu-zone");
   const tarifZone = $("tarif-zone");
+  const radioEtu  = $("tarif-etudiant");
 
+  // Zone tarif visible uniquement pour les billets d'entrée
   if (currentBilletsSubMode === "ENTREE") {
     if (tarifZone) tarifZone.style.display = "block";
-    if (etuZone)   etuZone.style.display   = "block";
+
+    // Bloc numéro étudiant visible seulement si "Étudiant" coché
+    if (etuZone) {
+      if (radioEtu && radioEtu.checked) {
+        etuZone.style.display = "block";
+      } else {
+        etuZone.style.display = "none";
+      }
+    }
   } else {
     if (tarifZone) tarifZone.style.display = "none";
     if (etuZone)   etuZone.style.display   = "none";
@@ -275,66 +282,6 @@ function deconnexionAgent() {
 }
 
 // ===============================
-//  VERIFICATION SIMPLE ETUDIANT
-// ===============================
-
-async function verifierEtudiant() {
-  const numeroEtu = $("etuNumber")?.value.trim();
-  const zoneInfo  = $("etu-info");
-
-  if (!zoneInfo) return;
-
-  zoneInfo.style.display = "block";
-  zoneInfo.className = "result";
-  zoneInfo.textContent = "";
-  lastVerifiedEtudiant = null;
-
-  if (!numeroEtu) {
-    zoneInfo.classList.add("error");
-    zoneInfo.textContent = "Veuillez saisir un numéro étudiant.";
-    return;
-  }
-
-  try {
-    const res = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_ETUDIANTS_TABLE_ID,
-      [
-        Appwrite.Query.equal("numero_etudiant", numeroEtu),
-        Appwrite.Query.equal("actif", true),
-        Appwrite.Query.limit(1)
-      ]
-    );
-
-    if (!res.documents || res.documents.length === 0) {
-      zoneInfo.classList.add("error");
-      zoneInfo.textContent =
-        "Numéro étudiant introuvable ou inactif. Vérifiez avec l'administration.";
-      return;
-    }
-
-    const etu = res.documents[0];
-    lastVerifiedEtudiant = {
-      numero: numeroEtu,
-      nom: etu.nom,
-      prenom: etu.prenom,
-      universite: etu.universite
-    };
-
-    zoneInfo.classList.add("ok");
-    zoneInfo.innerHTML =
-      `Étudiant trouvé : <strong>${etu.prenom} ${etu.nom}</strong> – ` +
-      `${etu.universite || "Université non renseignée"}<br>` +
-      `<small>Comparez avec la pièce d'identité avant de valider le billet.</small>`;
-  } catch (err) {
-    console.error("[AGENT] Erreur vérification étudiant :", err);
-    zoneInfo.classList.add("error");
-    zoneInfo.textContent =
-      "Erreur lors de la vérification du numéro étudiant (voir console).";
-  }
-}
-
-// ===============================
 //  BILLETS : COMPTE & VALIDATION
 // ===============================
 
@@ -410,7 +357,7 @@ async function verifierBillet() {
         return;
       }
 
-      // Tarif étudiant → l'étudiant DOIT avoir été vérifié juste avant
+      // Tarif étudiant → vérifier étudiant
       if (tarifChoisi === "etudiant") {
         if (!numeroEtu) {
           showResult(
@@ -420,12 +367,28 @@ async function verifierBillet() {
           return;
         }
 
-        if (
-          !lastVerifiedEtudiant ||
-          lastVerifiedEtudiant.numero !== numeroEtu
-        ) {
+        try {
+          const etuRes = await db.listDocuments(
+            APPWRITE_DATABASE_ID,
+            APPWRITE_ETUDIANTS_TABLE_ID,
+            [
+              Appwrite.Query.equal("numero_etudiant", numeroEtu),
+              Appwrite.Query.equal("actif", true),
+              Appwrite.Query.limit(1)
+            ]
+          );
+
+          if (!etuRes.documents || etuRes.documents.length === 0) {
+            showResult(
+              "Numéro étudiant introuvable ou inactif. L'étudiant doit être enregistré par l'administrateur.",
+              "error"
+            );
+            return;
+          }
+        } catch (errCheck) {
+          console.error("[AGENT] Erreur vérification étudiant :", errCheck);
           showResult(
-            "Veuillez d'abord cliquer sur « Vérifier l'étudiant » pour ce numéro, puis valider le billet.",
+            "Erreur lors de la vérification du numéro étudiant (voir console).",
             "error"
           );
           return;
@@ -449,17 +412,6 @@ async function verifierBillet() {
 
       const ticketInput = $("ticketNumber");
       if (ticketInput) ticketInput.value = "";
-
-      // Après validation on réinitialise la vérif étudiant
-      lastVerifiedEtudiant = null;
-      const etuInput = $("etuNumber");
-      const etuInfo  = $("etu-info");
-      if (etuInput) etuInput.value = "";
-      if (etuInfo) {
-        etuInfo.style.display = "none";
-        etuInfo.textContent = "";
-        etuInfo.className = "result";
-      }
 
       chargerNombreBillets();
     } catch (err) {
@@ -528,6 +480,7 @@ async function verifierBillet() {
 
       const billet = res.documents[0];
 
+      // Vérifier s'il existe déjà une validation INTERNE pour ce billet
       const valRes = await db.listDocuments(
         APPWRITE_DATABASE_ID,
         APPWRITE_VALIDATIONS_TABLE_ID,
@@ -599,6 +552,59 @@ async function verifierBillet() {
 }
 
 // ===============================
+//  VERIFICATION SIMPLE ETUDIANT
+// ===============================
+
+async function verifierEtudiant() {
+  const numeroEtu = $("etuNumber")?.value.trim();
+  const zoneInfo  = $("etu-info");
+
+  if (!zoneInfo) return;
+
+  zoneInfo.style.display = "block";
+  zoneInfo.className = "result";
+  zoneInfo.textContent = "";
+
+  if (!numeroEtu) {
+    zoneInfo.classList.add("error");
+    zoneInfo.textContent = "Veuillez saisir un numéro étudiant.";
+    return;
+  }
+
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_ETUDIANTS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_etudiant", numeroEtu),
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      zoneInfo.classList.add("error");
+      zoneInfo.textContent =
+        "Numéro étudiant introuvable ou inactif. Vérifiez avec l'administration.";
+      return;
+    }
+
+    const etu = res.documents[0];
+
+    zoneInfo.classList.add("ok");
+    zoneInfo.innerHTML =
+      `Étudiant trouvé : <strong>${etu.prenom} ${etu.nom}</strong> – ` +
+      `${etu.universite || "Université non renseignée"}<br>` +
+      `<small>Comparez avec la pièce d'identité avant de valider le billet.</small>`;
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification étudiant :", err);
+    zoneInfo.classList.add("error");
+    zoneInfo.textContent =
+      "Erreur lors de la vérification du numéro étudiant (voir console).";
+  }
+}
+
+// ===============================
 //  RESTO - VERSION SIMPLIFIÉE
 // ===============================
 
@@ -613,6 +619,7 @@ function creerOngletsCategories() {
 
   categoriesTabs.innerHTML = "";
 
+  // Bouton "Tous les plats"
   const allButton = document.createElement("button");
   allButton.type = "button";
   allButton.className = "resto-category-tab active";
@@ -626,6 +633,7 @@ function creerOngletsCategories() {
   };
   categoriesTabs.appendChild(allButton);
 
+  // Boutons par catégorie
   categories.forEach((categorie) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -902,6 +910,7 @@ async function enregistrerVenteResto() {
       const montant = item.prix_unitaire * item.quantite;
       totalGlobal += montant;
 
+      // On n'envoie QUE les colonnes existantes dans ventes_resto
       await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VENTES_RESTO_COLLECTION_ID,
@@ -1064,7 +1073,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // bouton "Vérifier l'étudiant"
   const btnCheckStudent = $("btnCheckStudent");
   if (btnCheckStudent) {
     btnCheckStudent.addEventListener("click", (e) => {
@@ -1073,17 +1081,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // si on modifie le numéro, on annule la vérification précédente
-  const etuInput = $("etuNumber");
-  if (etuInput) {
-    etuInput.addEventListener("input", () => {
-      lastVerifiedEtudiant = null;
-      const zoneInfo = $("etu-info");
-      if (zoneInfo) {
-        zoneInfo.style.display = "none";
-        zoneInfo.textContent = "";
-        zoneInfo.className = "result";
-      }
+  // Réagir au changement de tarif (Normal / Étudiant)
+  const radioNormal = $("tarif-normal");
+  const radioEtu    = $("tarif-etudiant");
+
+  if (radioNormal) {
+    radioNormal.addEventListener("change", () => {
+      updateTarifEtudiantVisibility();
+    });
+  }
+  if (radioEtu) {
+    radioEtu.addEventListener("change", () => {
+      updateTarifEtudiantVisibility();
     });
   }
 
@@ -1116,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnRestoImprimer) {
     btnRestoImprimer.addEventListener("click", (e) => {
       e.preventDefault();
-      window.print();
+      window.print(); // imprime la page avec le reçu visible
     });
   }
 });
