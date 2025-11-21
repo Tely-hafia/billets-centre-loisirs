@@ -74,79 +74,75 @@
     <!-- === MODE 1 : Saisie / Enregistrement === -->
     <div id="admin-zone-saisie">
 
-    <!-- =========================================
-     ENREGISTRER UN ÉTUDIANT (ADMIN)
-     ========================================= -->
-<section class="card" id="admin-etudiants">
-  <h2>Enregistrer un étudiant</h2>
+      <!-- Enregistrer un étudiant -->
+      <section class="card" id="admin-etudiants">
+        <h2>Enregistrer un étudiant</h2>
 
-  <p class="status">
-    Ajoute un étudiant dans la collection <strong>etudiants</strong> (pour le tarif étudiant).<br>
-    Le numéro étudiant est <strong>généré automatiquement</strong> au format :
-    <code>UNIV-XX-1234</code>.
-  </p>
+        <p class="status">
+          Ajoute un étudiant dans la collection <strong>etudiants</strong> (pour le tarif étudiant).<br>
+          Le numéro étudiant est <strong>généré automatiquement</strong> au format :
+          <code>UNIV-XX-1234</code>.
+        </p>
 
-  <div class="form-row">
-    <label for="admin-etu-universite">Université / École *</label>
-    <input
-      type="text"
-      id="admin-etu-universite"
-      placeholder="Ex : HAFIA, USTG, Kofi Annan..."
-      required
-    />
-  </div>
+        <div class="form-row">
+          <label for="admin-etu-universite">Université / École *</label>
+          <input
+            type="text"
+            id="admin-etu-universite"
+            placeholder="Ex : HAFIA, USTG, Kofi Annan..."
+            required
+          />
+        </div>
 
-  <div class="form-row">
-    <label for="admin-etu-nom">Nom *</label>
-    <input
-      type="text"
-      id="admin-etu-nom"
-      placeholder="Ex : BAH"
-      required
-    />
-  </div>
+        <div class="form-row">
+          <label for="admin-etu-nom">Nom *</label>
+          <input
+            type="text"
+            id="admin-etu-nom"
+            placeholder="Ex : BAH"
+            required
+          />
+        </div>
 
-  <div class="form-row">
-    <label for="admin-etu-prenom">Prénom *</label>
-    <input
-      type="text"
-      id="admin-etu-prenom"
-      placeholder="Ex : LAMA"
-      required
-    />
-  </div>
+        <div class="form-row">
+          <label for="admin-etu-prenom">Prénom *</label>
+          <input
+            type="text"
+            id="admin-etu-prenom"
+            placeholder="Ex : LAMA"
+            required
+          />
+        </div>
 
-  <div class="form-row">
-    <label for="admin-etu-email">E-mail</label>
-    <input
-      type="email"
-      id="admin-etu-email"
-      placeholder="exemple@domaine.com"
-    />
-  </div>
+        <div class="form-row">
+          <label for="admin-etu-email">E-mail</label>
+          <input
+            type="email"
+            id="admin-etu-email"
+            placeholder="exemple@domaine.com"
+          />
+        </div>
 
-  <div class="form-row">
-    <label for="admin-etu-telephone">Téléphone</label>
-    <input
-      type="text"
-      id="admin-etu-telephone"
-      placeholder="Numéro de téléphone"
-    />
-  </div>
+        <div class="form-row">
+          <label for="admin-etu-telephone">Téléphone</label>
+          <input
+            type="text"
+            id="admin-etu-telephone"
+            placeholder="Numéro de téléphone"
+          />
+        </div>
 
-  <div class="form-row" style="flex-direction:row; align-items:center; gap:0.5rem;">
-    <input type="checkbox" id="admin-etu-actif" checked />
-    <label for="admin-etu-actif" style="margin:0;">Étudiant actif</label>
-  </div>
+        <div class="form-row" style="flex-direction:row; align-items:center; gap:0.5rem;">
+          <input type="checkbox" id="admin-etu-actif" checked />
+          <label for="admin-etu-actif" style="margin:0;">Étudiant actif</label>
+        </div>
 
-  <button id="btnCreateEtudiant" type="button" class="btn-primary">
-    Enregistrer l’étudiant
-  </button>
+        <button id="btnCreateEtudiant" type="button" class="btn-primary">
+          Enregistrer l’étudiant
+        </button>
 
-  <p id="admin-etu-message" class="message" style="display:none;"></p>
-</section>
-
-
+        <p id="admin-etu-message" class="message" style="display:none;"></p>
+      </section>
 
       <!-- Création d'un agent -->
       <section class="card">
@@ -188,7 +184,7 @@
           Créer l'agent
         </button>
 
-        <p id="admin-agent-message" class="status"></p>
+        <p id="admin-agent-message" class="message" style="display:none;"></p>
       </section>
 
     </div> <!-- /admin-zone-saisie -->
@@ -231,18 +227,26 @@
         <p id="importStatus" class="status"></p>
       </section>
 
-      <!-- Statistiques -->
+      <!-- Statistiques BILLETS -->
       <section class="card">
-        <h2>📊 Statistiques des validations</h2>
+        <h2>📊 Statistiques Billets</h2>
 
-        <button id="refreshStatsBtn" class="btn-primary" type="button" style="margin-bottom:1rem;">
-          Actualiser les stats
-        </button>
+        <div class="form-row" style="align-items:center; gap:0.75rem;">
+          <button id="refreshStatsBtn" class="btn-primary" type="button">
+            Actualiser les stats
+          </button>
+
+          <label for="billets-range" style="margin:0; font-weight:600;">Période :</label>
+          <select id="billets-range">
+            <option value="jour">Aujourd'hui</option>
+            <option value="semaine">Semaine en cours</option>
+            <option value="mois">Mois en cours</option>
+          </select>
+        </div>
 
         <p class="status">
           Les montants sont calculés à partir de la collection <strong>validations</strong>
-          (billets d'entrée + billets internes). Pas encore de filtre par date : toutes les validations
-          actuellement présentes sont prises en compte.
+          (billets d'entrée + billets internes) pour la période sélectionnée.
         </p>
 
         <div class="stats-grid">
@@ -283,6 +287,58 @@
         <p id="stats-message" class="message"></p>
       </section>
 
+      <!-- Statistiques RESTAURATION -->
+      <section class="card">
+        <h2>🍽️ Statistiques Restauration</h2>
+
+        <div class="form-row" style="align-items:center; gap:0.75rem;">
+          <label for="resto-range" style="margin:0; font-weight:600;">Période :</label>
+          <select id="resto-range">
+            <option value="jour">Aujourd'hui</option>
+            <option value="semaine">Semaine en cours</option>
+            <option value="mois">Mois en cours</option>
+          </select>
+        </div>
+
+        <p class="status">
+          Données issues de la collection <strong>ventes_resto</strong> pour la période choisie.
+        </p>
+
+        <div class="stats-grid">
+          <div class="stat-item">
+            <h3>Tickets (commandes)</h3>
+            <p id="stat-resto-tickets">0</p>
+          </div>
+          <div class="stat-item">
+            <h3>Plats vendus</h3>
+            <p id="stat-resto-plats">0</p>
+          </div>
+          <div class="stat-item">
+            <h3>Recette restauration</h3>
+            <p id="stat-resto-total">0 GNF</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top:2rem;">Détail par produit</h3>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code produit</th>
+                <th>Libellé</th>
+                <th>Qté vendue</th>
+                <th>Recette (GNF)</th>
+              </tr>
+            </thead>
+            <tbody id="stats-resto-body">
+              <!-- rempli par JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <p id="stats-resto-message" class="message"></p>
+      </section>
+
       <!-- Maintenance -->
       <section class="card">
         <h2>🧹 Maintenance des données</h2>
@@ -311,7 +367,7 @@
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=3"></script>
+<script src="js/admin-appwrite.js?v=4"></script>
 
 </body>
 </html>
