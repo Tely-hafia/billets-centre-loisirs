@@ -1,4 +1,4 @@
-console.log("[ADMIN] admin-appwrite.js chargé - VERSION STATS BILLETS + RESTO");
+console.log("[ADMIN] admin-appwrite.js chargé");
 
 // =====================================
 //  Configuration Appwrite
@@ -14,10 +14,6 @@ const APPWRITE_VALIDATIONS_TABLE_ID = "validations";         // historique valid
 const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";             // étudiants
 const APPWRITE_AGENTS_TABLE_ID = "agents";                   // agents
 
-// NOUVEAU : collections restauration
-const APPWRITE_MENU_RESTO_COLLECTION_ID   = "menu_resto";
-const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
-
 // =====================================
 //  Initialisation du client Appwrite
 // =====================================
@@ -30,7 +26,6 @@ if (typeof Appwrite === "undefined") {
 
 const adminClient = new Appwrite.Client();
 adminClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-
 const adminDB = new Appwrite.Databases(adminClient);
 
 // Helpers DOM
@@ -55,9 +50,6 @@ function getImportType() {
 
 let currentAdmin = null;
 let adminCurrentMode = "saisie"; // "saisie" ou "gestion"
-
-// petit cache pour les libellés produits resto
-let restoProduitsMap = null; // { code_produit: libelle }
 
 // =====================================
 //  UI Connexion Admin
@@ -91,9 +83,8 @@ function appliquerEtatConnexionAdmin(admin) {
     // Mode par défaut : saisie
     switchAdminMode("saisie");
 
-    // Charger les stats (billets + resto) avec période sélectionnée
-    chargerStatsBillets();
-    chargerStatsResto();
+    // Charger les stats (par défaut sur "Aujourd'hui")
+    chargerStatsValidations();
   } else {
     if (loginCard) loginCard.style.display = "block";
     if (appZone)   appZone.style.display   = "none";
@@ -221,7 +212,7 @@ async function importerCSVDansBillets(file) {
         const cols = lignes[i].split(";");
         if (!cols[idxNumero]) continue;
 
-        const numero    = cols[idxNumero].trim();
+        const numero   = cols[idxNumero].trim();
         const typeAcces = cols[idxType] ? cols[idxType].trim() : "";
         if (!numero || !typeAcces) continue;
 
@@ -314,63 +305,104 @@ async function importerCSVDansBillets(file) {
 }
 
 // =====================================
-//  2. STATS BILLETS (avec filtre de période)
+//  2. STATS BILLETS (avec période)
 // =====================================
 
-// calcule début/fin pour "jour" / "semaine" / "mois"
-function getDateRangeFromFilter(filterValue) {
-  const now = new Date();
-  let start = new Date(now);
-  let end   = new Date(now);
+// Calcule la période en fonction du select + dates perso
+function getSelectedStatsPeriod() {
+  const select     = $("stats-periode");
+  const startInput = $("stats-date-start");
+  const endInput   = $("stats-date-end");
 
-  if (filterValue === "semaine") {
-    // lundi de la semaine en cours
-    const day = now.getDay(); // 0 (dimanche) → 6
-    const diff = (day + 6) % 7; // nb de jours à remonter pour arriver à lundi
-    start.setDate(now.getDate() - diff);
-  } else if (filterValue === "mois") {
-    // 1er jour du mois
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
-  } else {
-    // "jour" par défaut
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const mode = select ? select.value : "today";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let start = null;
+  let end   = null;
+
+  if (mode === "today") {
+    start = new Date(today);
+    end   = new Date(today);
+  } else if (mode === "this_week") {
+    // Lundi de la semaine en cours
+    const day = today.getDay(); // 0 = dimanche, 1 = lundi...
+    const diffToMonday = (day === 0 ? -6 : 1 - day); // ramène à lundi
+    start = new Date(today);
+    start.setDate(today.getDate() + diffToMonday);
+    end = new Date(today); // aujourd'hui
+  } else if (mode === "this_month") {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    end   = new Date(today.getFullYear(), today.getMonth() + 1, 0); // dernier jour du mois
+  } else if (mode === "all") {
+    // aucune limite → on renvoie null pour start / end
+    return { mode, start: null, end: null };
+  } else if (mode === "custom") {
+    const startVal = startInput?.value;
+    const endVal   = endInput?.value;
+
+    if (!startVal || !endVal) {
+      return { mode, start: null, end: null, invalid: true };
+    }
+
+    start = new Date(startVal + "T00:00:00");
+    end   = new Date(endVal   + "T23:59:59");
   }
 
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
+  // Normalisation
+  if (start) start.setHours(0, 0, 0, 0);
+  if (end)   end.setHours(23, 59, 59, 999);
 
-  return {
-    fromIso: start.toISOString(),
-    toIso: end.toISOString()
-  };
+  return { mode, start, end };
 }
 
-async function chargerStatsBillets() {
+async function chargerStatsValidations() {
   const msg = $("stats-message");
-  const filtreEl = $("billets-range");
-  const filtre = filtreEl ? filtreEl.value : "jour";
-  const { fromIso, toIso } = getDateRangeFromFilter(filtre);
-
   if (msg) {
-    msg.textContent = "Chargement des stats billets...";
+    msg.textContent = "Chargement des stats...";
     msg.className = "message message-info";
+  }
+
+  // Récupère la période choisie
+  const period = getSelectedStatsPeriod();
+  if (period?.mode === "custom" && period.invalid) {
+    if (msg) {
+      msg.textContent = "Veuillez sélectionner une date de début et de fin pour la période personnalisée.";
+      msg.className = "message message-error";
+    }
+    return;
   }
 
   try {
     const res = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
-      [
-        Appwrite.Query.greaterThanEqual("date_validation", fromIso),
-        Appwrite.Query.lessThan("date_validation", toIso),
-        Appwrite.Query.limit(10000)
-      ]
+      [Appwrite.Query.limit(10000)]
     );
 
     const docs = res.documents || [];
-    console.log("[ADMIN] Validations récupérées (filtre =", filtre, ") :", docs.length);
+    console.log("[ADMIN] Validations récupérées :", docs.length);
 
-    const totalValidations = docs.length;
+    // ---------- Filtre par période ----------
+    const filtered = docs.filter((d) => {
+      if (!period || (!period.start && !period.end)) return true;
+
+      // On prend date_validation si présent, sinon $createdAt
+      const rawDate = d.date_validation || d.$createdAt;
+      if (!rawDate) return false;
+
+      const dv = new Date(rawDate);
+      if (Number.isNaN(dv.getTime())) return false;
+
+      if (period.start && dv < period.start) return false;
+      if (period.end   && dv > period.end)   return false;
+      return true;
+    });
+
+    console.log("[ADMIN] Validations dans la période :", filtered.length);
+
+    const totalValidations = filtered.length;
 
     let recetteTotale   = 0;
     let recetteNormal   = 0;
@@ -378,7 +410,7 @@ async function chargerStatsBillets() {
 
     const parType = {}; // { type_acces: { count, montant } }
 
-    docs.forEach((d) => {
+    filtered.forEach((d) => {
       const montant = parseInt(d.montant_paye || 0, 10) || 0;
       recetteTotale += montant;
 
@@ -415,7 +447,7 @@ async function chargerStatsBillets() {
         const row = document.createElement("tr");
         const td  = document.createElement("td");
         td.colSpan    = 3;
-        td.textContent= "Aucune validation pour la période choisie.";
+        td.textContent= "Aucune validation pour la période sélectionnée.";
         row.appendChild(td);
         tbody.appendChild(row);
       } else {
@@ -445,158 +477,7 @@ async function chargerStatsBillets() {
   } catch (err) {
     console.error("[ADMIN] Erreur chargement stats validations :", err);
     if (msg) {
-      msg.textContent = "Erreur lors du chargement des stats billets (voir console).";
-      msg.className = "message message-error";
-    }
-  }
-}
-
-// =====================================
-//  2bis. STATS RESTAURATION
-// =====================================
-
-async function chargerMapProduitsResto() {
-  if (restoProduitsMap) return restoProduitsMap;
-
-  try {
-    const res = await adminDB.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_MENU_RESTO_COLLECTION_ID,
-      [Appwrite.Query.limit(500)]
-    );
-    const docs = res.documents || [];
-    const map = {};
-    docs.forEach((p) => {
-      map[p.code_produit] = p.libelle || p.code_produit;
-    });
-    restoProduitsMap = map;
-    return map;
-  } catch (err) {
-    console.warn("[ADMIN] Impossible de charger le menu resto pour les stats :", err);
-    restoProduitsMap = {};
-    return restoProduitsMap;
-  }
-}
-
-async function chargerStatsResto() {
-  const msg = $("stats-resto-message");
-  const filtreEl = $("resto-range");
-  const filtre = filtreEl ? filtreEl.value : "jour";
-  const { fromIso, toIso } = getDateRangeFromFilter(filtre);
-
-  if (msg) {
-    msg.textContent = "Chargement des stats restauration...";
-    msg.className = "message message-info";
-  }
-
-  try {
-    const res = await adminDB.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_VENTES_RESTO_COLLECTION_ID,
-      [
-        Appwrite.Query.greaterThanEqual("date_vente", fromIso),
-        Appwrite.Query.lessThan("date_vente", toIso),
-        Appwrite.Query.limit(10000)
-      ]
-    );
-
-    const ventes = res.documents || [];
-    console.log("[ADMIN] Ventes resto récupérées (filtre =", filtre, ") :", ventes.length);
-
-    if (ventes.length === 0) {
-      // reset affichage
-      const elTickets = $("stat-resto-tickets");
-      const elPlats   = $("stat-resto-plats");
-      const elTotal   = $("stat-resto-total");
-      if (elTickets) elTickets.textContent = "0";
-      if (elPlats)   elPlats.textContent   = "0";
-      if (elTotal)   elTotal.textContent   = "0 GNF";
-
-      const tbody = $("stats-resto-body");
-      if (tbody) {
-        tbody.innerHTML = "";
-        const row = document.createElement("tr");
-        const td  = document.createElement("td");
-        td.colSpan = 4;
-        td.textContent = "Aucune vente restauration pour la période choisie.";
-        row.appendChild(td);
-        tbody.appendChild(row);
-      }
-
-      if (msg) {
-        msg.textContent = "Aucune vente pour cette période.";
-        msg.className = "message message-info";
-      }
-      return;
-    }
-
-    // tickets = nombre de numéros de vente distincts
-    const numerosSet = new Set();
-    let totalPlats = 0;
-    let totalMontant = 0;
-
-    const parProduit = {}; // { code_produit: { qte, montant } }
-
-    ventes.forEach((v) => {
-      if (v.numero_vente) numerosSet.add(v.numero_vente);
-      const qte = parseInt(v.quantite || 0, 10) || 0;
-      const mt  = parseInt(v.montant_total || 0, 10) || 0;
-
-      totalPlats   += qte;
-      totalMontant += mt;
-
-      const code = v.code_produit || "Inconnu";
-      if (!parProduit[code]) {
-        parProduit[code] = { qte: 0, montant: 0 };
-      }
-      parProduit[code].qte     += qte;
-      parProduit[code].montant += mt;
-    });
-
-    const elTickets = $("stat-resto-tickets");
-    const elPlats   = $("stat-resto-plats");
-    const elTotal   = $("stat-resto-total");
-
-    if (elTickets) elTickets.textContent = numerosSet.size.toString();
-    if (elPlats)   elPlats.textContent   = totalPlats.toString();
-    if (elTotal)   elTotal.textContent   = formatGNF(totalMontant);
-
-    // Détail par produit
-    const tbody = $("stats-resto-body");
-    if (tbody) {
-      tbody.innerHTML = "";
-
-      const produitsMap = await chargerMapProduitsResto();
-
-      Object.keys(parProduit).forEach((code) => {
-        const row = document.createElement("tr");
-
-        const tdCode    = document.createElement("td");
-        const tdLibelle = document.createElement("td");
-        const tdQte     = document.createElement("td");
-        const tdMontant = document.createElement("td");
-
-        tdCode.textContent    = code;
-        tdLibelle.textContent = produitsMap[code] || code;
-        tdQte.textContent     = parProduit[code].qte.toString();
-        tdMontant.textContent = formatGNF(parProduit[code].montant);
-
-        row.appendChild(tdCode);
-        row.appendChild(tdLibelle);
-        row.appendChild(tdQte);
-        row.appendChild(tdMontant);
-        tbody.appendChild(row);
-      });
-    }
-
-    if (msg) {
-      msg.textContent = "Stats restauration mises à jour.";
-      msg.className = "message message-success";
-    }
-  } catch (err) {
-    console.error("[ADMIN] Erreur chargement stats restauration :", err);
-    if (msg) {
-      msg.textContent = "Erreur lors du chargement des stats restauration (voir console).";
+      msg.textContent = "Erreur lors du chargement des stats (voir console).";
       msg.className = "message message-error";
     }
   }
@@ -672,10 +553,10 @@ async function effacerTousLesBillets() {
 //  4. SAISIE : étudiants & agents
 // =====================================
 
-// --- Helpers messages pour les formulaires de saisie ---
+// --- Messages pour les formulaires de saisie ---
 
 function showAdminEtuMessage(text, type) {
-  const msg = document.getElementById("admin-etu-message");
+  const msg = $("admin-etu-message");
 
   if (!msg) {
     alert(text);
@@ -696,7 +577,7 @@ function showAdminEtuMessage(text, type) {
 }
 
 function showAdminAgentMessage(text, type) {
-  const msg = document.getElementById("admin-agent-message");
+  const msg = $("admin-agent-message");
   if (!msg) {
     alert(text);
     return;
@@ -704,7 +585,7 @@ function showAdminAgentMessage(text, type) {
 
   msg.style.display = "block";
   msg.textContent   = text;
-  msg.className     = "message";
+  msg.className     = "status";
 
   if (type === "success") {
     msg.classList.add("message-success");
@@ -753,6 +634,7 @@ async function creerEtudiantDepuisAdmin() {
   const telephone  = (telEl?.value || "").trim();
   const actif      = !!(actEl && actEl.checked);
 
+  // Champs obligatoires
   if (!universite || !nom || !prenom) {
     showAdminEtuMessage(
       "Veuillez remplir au minimum université, nom et prénom.",
@@ -761,6 +643,7 @@ async function creerEtudiantDepuisAdmin() {
     return;
   }
 
+  // Numéro étudiant généré automatiquement
   const numero = genererNumeroEtudiant(universite);
 
   try {
@@ -906,28 +789,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Stats billets + resto (même bouton)
+  // Stats billets
   const refreshStatsBtn = $("refreshStatsBtn");
   if (refreshStatsBtn) {
     refreshStatsBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      chargerStatsBillets();
-      chargerStatsResto();
+      chargerStatsValidations();
     });
   }
 
-  // Changement de période = recharge auto
-  const billetsRange = $("billets-range");
-  if (billetsRange) {
-    billetsRange.addEventListener("change", () => {
-      chargerStatsBillets();
-    });
-  }
+  // Affichage / masquage des dates personnalisées
+  const periodeSelect   = $("stats-periode");
+  const customDatesWrap = $("stats-custom-dates");
 
-  const restoRange = $("resto-range");
-  if (restoRange) {
-    restoRange.addEventListener("change", () => {
-      chargerStatsResto();
+  if (periodeSelect) {
+    periodeSelect.addEventListener("change", () => {
+      if (periodeSelect.value === "custom") {
+        if (customDatesWrap) customDatesWrap.style.display = "flex";
+      } else {
+        if (customDatesWrap) customDatesWrap.style.display = "none";
+      }
     });
   }
 
