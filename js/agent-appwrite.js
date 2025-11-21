@@ -1,4 +1,4 @@
-console.log("[AGENT] agent-appwrite.js chargé - VERSION RESTAURANT AMÉLIORÉE");
+console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETTE");
 
 // ===============================
 //  CONFIG APPWRITE
@@ -102,13 +102,23 @@ let lastVenteNumber = 0;
 function updateTarifEtudiantVisibility() {
   const etuZone   = $("etu-zone");
   const tarifZone = $("tarif-zone");
+  const radioEtu  = $("tarif-etudiant");
 
+  // Zone tarif visible uniquement pour les billets d'entrée
   if (currentBilletsSubMode === "ENTREE") {
-    if (etuZone)   etuZone.style.display   = "block";
     if (tarifZone) tarifZone.style.display = "block";
+
+    // Bloc numéro étudiant visible seulement si "Étudiant" coché
+    if (etuZone) {
+      if (radioEtu && radioEtu.checked) {
+        etuZone.style.display = "block";
+      } else {
+        etuZone.style.display = "none";
+      }
+    }
   } else {
-    if (etuZone)   etuZone.style.display   = "none";
     if (tarifZone) tarifZone.style.display = "none";
+    if (etuZone)   etuZone.style.display   = "none";
   }
 }
 
@@ -542,6 +552,59 @@ async function verifierBillet() {
 }
 
 // ===============================
+//  VERIFICATION SIMPLE ETUDIANT
+// ===============================
+
+async function verifierEtudiant() {
+  const numeroEtu = $("etuNumber")?.value.trim();
+  const zoneInfo  = $("etu-info");
+
+  if (!zoneInfo) return;
+
+  zoneInfo.style.display = "block";
+  zoneInfo.className = "result";
+  zoneInfo.textContent = "";
+
+  if (!numeroEtu) {
+    zoneInfo.classList.add("error");
+    zoneInfo.textContent = "Veuillez saisir un numéro étudiant.";
+    return;
+  }
+
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_ETUDIANTS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_etudiant", numeroEtu),
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      zoneInfo.classList.add("error");
+      zoneInfo.textContent =
+        "Numéro étudiant introuvable ou inactif. Vérifiez avec l'administration.";
+      return;
+    }
+
+    const etu = res.documents[0];
+
+    zoneInfo.classList.add("ok");
+    zoneInfo.innerHTML =
+      `Étudiant trouvé : <strong>${etu.prenom} ${etu.nom}</strong> – ` +
+      `${etu.universite || "Université non renseignée"}<br>` +
+      `<small>Comparez avec la pièce d'identité avant de valider le billet.</small>`;
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification étudiant :", err);
+    zoneInfo.classList.add("error");
+    zoneInfo.textContent =
+      "Erreur lors de la vérification du numéro étudiant (voir console).";
+  }
+}
+
+// ===============================
 //  RESTO - VERSION SIMPLIFIÉE
 // ===============================
 
@@ -847,7 +910,7 @@ async function enregistrerVenteResto() {
       const montant = item.prix_unitaire * item.quantite;
       totalGlobal += montant;
 
-      // ⚠️ On n'envoie QUE les colonnes existantes dans ventes_resto
+      // On n'envoie QUE les colonnes existantes dans ventes_resto
       await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VENTES_RESTO_COLLECTION_ID,
@@ -942,7 +1005,6 @@ function nouvelleCommandeResto() {
   showTempMessage("🆕 Nouvelle commande prête", "success");
 }
 
-
 // ===============================
 //  INIT
 // ===============================
@@ -1011,7 +1073,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-    const btnRestoValider = $("btnRestoValider");
+  const btnCheckStudent = $("btnCheckStudent");
+  if (btnCheckStudent) {
+    btnCheckStudent.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifierEtudiant();
+    });
+  }
+
+  // Réagir au changement de tarif (Normal / Étudiant)
+  const radioNormal = $("tarif-normal");
+  const radioEtu    = $("tarif-etudiant");
+
+  if (radioNormal) {
+    radioNormal.addEventListener("change", () => {
+      updateTarifEtudiantVisibility();
+    });
+  }
+  if (radioEtu) {
+    radioEtu.addEventListener("change", () => {
+      updateTarifEtudiantVisibility();
+    });
+  }
+
+  const btnRestoValider = $("btnRestoValider");
   const btnRestoVider = $("btnRestoVider");
   const btnRestoNouvelleCommande = $("btnRestoNouvelleCommande");
   const btnRestoImprimer = $("btnRestoImprimer");
