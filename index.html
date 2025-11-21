@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Centre de Loisirs Calypso - Accueil</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* Styles spécifiques page d'accueil */
+    .hero-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .hero-section::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
+      background-size: cover;
+      pointer-events: none;
+    }
+    
+    .hero-content {
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    
+    .hero-title {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .hero-subtitle {
+      font-size: 1.3rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+    
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+    
+    .feature-card {
+      background: var(--bg-card);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+      box-shadow: var(--shadow-soft);
+      transition: var(--transition-fast);
+      border: 1px solid var(--border-soft);
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-hover);
+    }
+    
+    .feature-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    
+    .feature-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+    
+    .access-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 2rem 0;
+    }
+    
+    .btn-large {
+      padding: 1.2rem 2.5rem;
+      font-size: 1.1rem;
+      min-width: 200px;
+    }
+    
+    .info-section {
+      background: linear-gradient(135deg, #f8fafc 0%, #e4edf5 100%);
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+    
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .stat-card {
+      background: white;
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Galerie */
+    .gallery-section {
+      padding: 4rem 0;
+    }
+    
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    
+    .gallery-item {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      position: relative;
+      height: 200px;
+      background: linear-gradient(135deg, var(--accent-soft), var(--border-soft));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    
+    .gallery-item::before {
+      content: "🖼️ Image";
+      font-size: 1.5rem;
+    }
+    
+    /* Formulaire de contact */
+    .contact-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4rem 2rem;
+      margin: 0 -1.5rem;
+    }
+    
+    .contact-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .contact-form {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: white;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 1rem;
+      transition: var(--transition-fast);
+    }
+    
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: white;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    
+    .btn-contact {
+      background: white;
+      color: #667eea;
+      border: none;
+    }
+    
+    .btn-contact:hover {
+      background: #f8fafc;
+      transform: translateY(-2px);
+    }
+    
+    /* Événements */
+    .events-section {
+      padding: 4rem 0;
+    }
+    
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+    
+    .event-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-soft);
+      border-left: 4px solid var(--accent-primary);
+    }
+    
+    .event-date {
+      background: var(--accent-primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 2.2rem;
+      }
+      
+      .access-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .btn-large {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo-badge">CL</div>
+      <div>
+        <h1>Centre de Loisirs Calypso</h1>
+        <p>Espace détente, restauration et divertissement</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section Hero -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Bienvenue au Calypso</h1>
+      <p class="hero-subtitle">
+        Votre espace de détente privilégié - Restauration, chicha, jeux et divertissements
+      </p>
+      
+      <div class="access-buttons">
+        <a href="agent.html" class="btn-primary btn-large">
+          🎫 Espace Agent
+        </a>
+        <a href="admin.html" class="btn-secondary btn-large">
+          ⚙️ Administration
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
+
+    <!-- Features Grid -->
+    <section>
+      <h2 style="text-align: center; margin-bottom: 1rem;">Nos Services</h2>
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 3rem;">
+        Découvrez tous les services proposés par notre centre de loisirs
+      </p>
+
+      <div class="features-grid">
+        <!-- Restauration -->
+        <div class="feature-card">
+          <span class="feature-icon">🍽️</span>
+          <h3 class="feature-title">Restauration</h3>
+          <p>Plats traditionnels, grillades, snacks et boissons. Service rapide et qualité garantie.</p>
+          <div style="margin-top: 1rem;">
+            <strong>Spécialités :</strong>
+            <ul style="text-align: left; margin-top: 0.5rem;">
+              <li>Attiéké poulet/poisson</li>
+              <li>Riz gras</li>
+              <li>Grillades variées</li>
+              <li>Cocktails maison</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Chicha -->
+        <div class="feature-card">
+          <span class="feature-icon">💨</span>
+          <h3 class="feature-title">Espace Chicha</h3>
+          <p>Atmosphère détendue avec nos chichas parfumées. Large choix de saveurs premium.</p>
+          <div style="margin-top: 1rem;">
+            <strong>Saveurs :</strong>
+            <ul style="text-align: left; margin-top: 0.5rem;">
+              <li>Pomme verte</li>
+              <li>Double pomme</li>
+              <li>Menthe fraîche</li>
+              <li>Fruits rouges</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Divertissement -->
+        <div class="feature-card">
+          <span class="feature-icon">🎮</span>
+          <h3 class="feature-title">Jeux & Divertissement</h3>
+          <p>Espace jeux avec activités variées pour tous les âges. Ambiance conviviale garantie.</p>
+          <div style="margin-top: 1rem;">
+            <strong>Activités :</strong>
+            <ul style="text-align: left; margin-top: 0.5rem;">
+              <li>Jeux de société</li>
+              <li>Billard</li>
+              <li>Fléchettes</li>
+              <li>Événements spéciaux</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Galerie Photos -->
+    <section class="gallery-section">
+      <h2 style="text-align: center; margin-bottom: 1rem;">Galerie Photos</h2>
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
+        Découvrez l'ambiance du Calypso
+      </p>
+
+      <div class="gallery-grid">
+        <div class="gallery-item" style="background: linear-gradient(135deg, #ff6b35, #ff8e53);">
+          <!-- Remplacez par une image réelle -->
+          <span style="color: white; font-weight: 600;">Espace Restauration</span>
+        </div>
+        <div class="gallery-item" style="background: linear-gradient(135deg, #4ecdc4, #67e6dc);">
+          <span style="color: white; font-weight: 600;">Salon Chicha</span>
+        </div>
+        <div class="gallery-item" style="background: linear-gradient(135deg, #45b7d1, #67d1e6);">
+          <span style="color: white; font-weight: 600;">Espace Jeux</span>
+        </div>
+        <div class="gallery-item" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+          <span style="color: white; font-weight: 600;">Terrasse</span>
+        </div>
+        <div class="gallery-item" style="background: linear-gradient(135deg, #ff4757, #ff3742);">
+          <span style="color: white; font-weight: 600;">Cocktails</span>
+        </div>
+        <div class="gallery-item" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+          <span style="color: white; font-weight: 600;">Événements</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Événements à venir -->
+    <section class="events-section">
+      <h2 style="text-align: center; margin-bottom: 1rem;">Événements à Venir</h2>
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
+        Ne manquez pas nos prochains événements spéciaux
+      </p>
+
+      <div class="events-grid">
+        <div class="event-card">
+          <div class="event-date">15 Déc - 20h00</div>
+          <h3 style="margin-bottom: 1rem;">Soirée Live Music</h3>
+          <p>Venez profiter d'une ambiance musicale exceptionnelle avec nos artistes locaux. Entrée libre.</p>
+        </div>
+        
+        <div class="event-card">
+          <div class="event-date">22 Déc - 19h00</div>
+          <h3 style="margin-bottom: 1rem;">Tournoi de Billard</h3>
+          <p>Inscription gratuite - Lots à gagner ! Ouvert à tous les niveaux. Inscription sur place.</p>
+        </div>
+        
+        <div class="event-card">
+          <div class="event-date">31 Déc - 21h00</div>
+          <h3 style="margin-bottom: 1rem;">Soirée Réveillon</h3>
+          <p>Menu spécial, ambiance festive et cocktail de bienvenue offert. Réservation recommandée.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Informations pratiques -->
+    <section class="info-section" style="margin: 4rem -1.5rem; border-radius: 0;">
+      <h2 style="margin-bottom: 1rem;">Informations Pratiques</h2>
+      <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+        Tout ce que vous devez savoir pour profiter au maximum de notre centre
+      </p>
+
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-number">7j/7</div>
+          <div class="stat-label">Jours d'ouverture</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-number">10h-02h</div>
+          <div class="stat-label">Horaires</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-number">100+</div>
+          <div class="stat-label">Places assises</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-number">WiFi</div>
+          <div class="stat-label">Gratuit</div>
+        </div>
+      </div>
+
+      <div style="max-width: 600px; margin: 3rem auto 0; text-align: left;">
+        <h3 style="margin-bottom: 1rem;">📍 Nous trouver</h3>
+        <p><strong>Adresse :</strong> Rue principale, Quartier Calypso</p>
+        <p><strong>Téléphone :</strong> +224 00 00 00 00</p>
+        <p><strong>Email :</strong> contact@calypsoloisirs.com</p>
+        
+        <div style="margin-top: 2rem;">
+          <h3 style="margin-bottom: 1rem;">🎯 Accès professionnel</h3>
+          <p>Personnel et administrateurs, utilisez les boutons ci-dessous pour accéder à vos interfaces dédiées :</p>
+          
+          <div class="access-buttons" style="justify-content: flex-start; margin: 1.5rem 0;">
+            <a href="agent.html" class="btn-primary" style="min-width: 180px;">
+              🎫 Poste Agent
+            </a>
+            <a href="admin.html" class="btn-secondary" style="min-width: 180px;">
+              ⚙️ Administration
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Formulaire de Contact -->
+    <section class="contact-section">
+      <div class="contact-container">
+        <h2 style="text-align: center; margin-bottom: 1rem; color: white;">Contactez-nous</h2>
+        <p style="text-align: center; margin-bottom: 2rem; opacity: 0.9;">
+          Une question ? Une réservation ? N'hésitez pas à nous écrire
+        </p>
+
+        <form class="contact-form">
+          <div class="form-group">
+            <label for="name">Nom complet</label>
+            <input type="text" id="name" placeholder="Votre nom" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="votre@email.com" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="phone">Téléphone</label>
+            <input type="tel" id="phone" placeholder="+224 00 00 00 00">
+          </div>
+          
+          <div class="form-group">
+            <label for="subject">Sujet</label>
+            <select id="subject" required>
+              <option value="">Choisir un sujet</option>
+              <option value="reservation">Réservation</option>
+              <option value="information">Demande d'information</option>
+              <option value="event">Événement privé</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" placeholder="Votre message..." required></textarea>
+          </div>
+          
+          <button type="submit" class="btn-primary btn-contact" style="width: 100%;">
+            📨 Envoyer le message
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>© 2024 Centre de Loisirs Calypso - Tous droits réservés</p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-light);">
+      Conçu pour votre confort et votre divertissement
+    </p>
+  </footer>
+
+  <script>
+    // Script simple pour le formulaire de contact
+    document.addEventListener('DOMContentLoaded', function() {
+      const contactForm = document.querySelector('.contact-form');
+      
+      if (contactForm) {
+        contactForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Récupération des données du formulaire
+          const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            subject: document.getElementById('subject').value,
+            message: document.getElementById('message').value
+          };
+          
+          // Simulation d'envoi
+          console.log('Message envoyé :', formData);
+          
+          // Message de confirmation
+          alert('Merci pour votre message ! Nous vous répondrons dans les plus brefs délais.');
+          
+          // Réinitialisation du formulaire
+          contactForm.reset();
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>
