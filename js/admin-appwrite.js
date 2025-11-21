@@ -1,4 +1,4 @@
-console.log("[ADMIN] admin-appwrite.js chargé - VERSION STATS BILLETS + RESTO");
+console.log("[ADMIN] admin-appwrite.js chargé");
 
 // =====================================
 //  Configuration Appwrite
@@ -13,8 +13,10 @@ const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux int
 const APPWRITE_VALIDATIONS_TABLE_ID = "validations";         // historique validations
 const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";             // étudiants
 const APPWRITE_AGENTS_TABLE_ID = "agents";                   // agents
-const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";      // menu resto (pour libellés)
-const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";  // ventes resto
+
+// resto
+const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
+const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
 
 // =====================================
 //  Initialisation du client Appwrite
@@ -31,14 +33,12 @@ adminClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 
 const adminDB = new Appwrite.Databases(adminClient);
 
-// =====================================
-//  Helpers DOM / format
-// =====================================
-
+// Helpers DOM
 function $(id) {
   return document.getElementById(id);
 }
 
+// Format monnaie
 function formatGNF(n) {
   const v = Number(n) || 0;
   return v.toLocaleString("fr-FR") + " GNF";
@@ -49,7 +49,17 @@ function getImportType() {
   return r ? r.value : "entree";
 }
 
-// Helpers messages
+// =====================================
+//  ÉTAT GLOBAL ADMIN
+// =====================================
+
+let currentAdmin = null;
+let adminCurrentMode = "saisie"; // "saisie" ou "gestion"
+
+// =====================================
+//  UI Connexion Admin
+// =====================================
+
 function showAdminLoginMessage(text, type) {
   const el = $("admin-login-message");
   if (!el) return;
@@ -59,58 +69,6 @@ function showAdminLoginMessage(text, type) {
     type === "error"   ? "#b91c1c" :
     "#6b7280";
 }
-
-function showAdminEtuMessage(text, type) {
-  const msg = $("admin-etu-message");
-  if (!msg) {
-    alert(text);
-    return;
-  }
-
-  msg.style.display = "block";
-  msg.textContent   = text;
-  msg.className     = "message";
-
-  if (type === "success") {
-    msg.classList.add("message-success");
-  } else if (type === "error") {
-    msg.classList.add("message-error");
-  } else {
-    msg.classList.add("message-info");
-  }
-}
-
-function showAdminAgentMessage(text, type) {
-  const msg = $("admin-agent-message");
-  if (!msg) {
-    alert(text);
-    return;
-  }
-
-  msg.style.display = "block";
-  msg.textContent   = text;
-  msg.className     = "message";
-
-  if (type === "success") {
-    msg.classList.add("message-success");
-  } else if (type === "error") {
-    msg.classList.add("message-error");
-  } else {
-    msg.classList.add("message-info");
-  }
-}
-
-// =====================================
-//  ÉTAT GLOBAL ADMIN
-// =====================================
-
-let currentAdmin = null;
-let adminCurrentMode = "saisie"; // "saisie" ou "gestion"
-let menuRestoCache = null;       // pour les libellés dans les stats resto
-
-// =====================================
-//  Connexion Admin
-// =====================================
 
 function appliquerEtatConnexionAdmin(admin) {
   currentAdmin = admin;
@@ -127,10 +85,11 @@ function appliquerEtatConnexionAdmin(admin) {
     if (nameEl) nameEl.textContent = admin.nom || admin.login || "";
     if (roleEl) roleEl.textContent = admin.role || "";
 
+    // Mode par défaut : saisie
     switchAdminMode("saisie");
 
-    // Charger les stats par défaut
-    chargerStatsValidations();
+    // Charger les stats par défaut (semaine en cours)
+    chargerStatsBillets();
     chargerStatsResto();
   } else {
     if (loginCard) loginCard.style.display = "block";
@@ -192,7 +151,7 @@ function adminLogout() {
 }
 
 // =====================================
-//  Modes (Saisie / Gestion)
+//  SWITCH MODE (Saisie / Gestion)
 // =====================================
 
 function switchAdminMode(mode) {
@@ -299,9 +258,9 @@ async function importerCSVDansBillets(file) {
 
     } else {
       // ======== BILLETS INTERNES (JEUX) ========
-      const idxNumero     = header.indexOf("numero_billet");
-      const idxTypeBillet = header.indexOf("type_billet");
-      const idxPrix       = header.indexOf("prix");
+      const idxNumero    = header.indexOf("numero_billet");
+      const idxTypeBillet= header.indexOf("type_billet");
+      const idxPrix      = header.indexOf("prix");
 
       if (idxNumero === -1 || idxTypeBillet === -1) {
         alert(
@@ -352,157 +311,89 @@ async function importerCSVDansBillets(file) {
 }
 
 // =====================================
-//  2. Helper période (billets + resto)
+//  2. STATS : gestion de la période
 // =====================================
 
-/**
- * Calcule la période en fonction du select + éventuellement des dates choisies.
- * Retourne { fromIso, toIso, errorText }
- */
-function computePeriodRange(periodValue, startDateStr, endDateStr) {
-  let from = null;
-  let to   = null;
+function getSelectedPeriod() {
+  const select = $("statsPeriod");
+  const mode = select ? select.value : "week";
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  switch (periodValue) {
-    case "today":
-      from = new Date(today);
-      to   = new Date(today);
-      to.setHours(23, 59, 59, 999);
-      break;
+  let start = new Date(today);
+  let end   = new Date(today);
+  end.setDate(end.getDate() + 1); // exclusif
 
-    case "yesterday": {
-      const y = new Date(today);
-      y.setDate(y.getDate() - 1);
-      from = new Date(y);
-      to   = new Date(y);
-      to.setHours(23, 59, 59, 999);
-      break;
+  if (mode === "week") {
+    const day = today.getDay();      // 0 = dimanche
+    const diff = (day + 6) % 7;      // lundi = 0
+    start = new Date(today);
+    start.setDate(today.getDate() - diff);
+    end = new Date(start);
+    end.setDate(start.getDate() + 7);
+  } else if (mode === "month") {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    end   = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  } else if (mode === "custom") {
+    const startInput = $("statsStartDate");
+    const endInput   = $("statsEndDate");
+
+    if (!startInput?.value || !endInput?.value) {
+      return { error: "custom-missing" };
     }
 
-    case "this_week": {
-      // semaine en cours (lundi -> dimanche)
-      const d = new Date(today);
-      const day = d.getDay(); // 0 = dimanche, 1 = lundi...
-      const diffMonday = (day + 6) % 7; // combien de jours à enlever pour arriver au lundi
-      d.setDate(d.getDate() - diffMonday);
-      from = new Date(d);
-      to   = new Date(from);
-      to.setDate(to.getDate() + 6);
-      to.setHours(23, 59, 59, 999);
-      break;
-    }
-
-    case "last_7_days": {
-      const d = new Date(today);
-      d.setDate(d.getDate() - 6);
-      from = d;
-      to   = new Date(today);
-      to.setHours(23, 59, 59, 999);
-      break;
-    }
-
-    case "this_month": {
-      const d = new Date(today.getFullYear(), today.getMonth(), 1);
-      from = d;
-      to   = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      to.setHours(23, 59, 59, 999);
-      break;
-    }
-
-    case "last_month": {
-      const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      from = d;
-      to   = new Date(today.getFullYear(), today.getMonth(), 0);
-      to.setHours(23, 59, 59, 999);
-      break;
-    }
-
-    case "custom": {
-      if (!startDateStr || !endDateStr) {
-        return {
-          fromIso: null,
-          toIso: null,
-          errorText: "Veuillez choisir une date de début et une date de fin."
-        };
-      }
-      const s = new Date(startDateStr + "T00:00:00");
-      const e = new Date(endDateStr + "T23:59:59");
-      if (e < s) {
-        return {
-          fromIso: null,
-          toIso: null,
-          errorText: "La date de fin doit être supérieure ou égale à la date de début."
-        };
-      }
-      from = s;
-      to   = e;
-      break;
-    }
-
-    default:
-      // "all" ou valeur inconnue => pas de filtre
-      return { fromIso: null, toIso: null, errorText: null };
+    start = new Date(startInput.value + "T00:00:00");
+    end   = new Date(endInput.value + "T00:00:00");
+    // inclure le jour de fin
+    end.setDate(end.getDate() + 1);
   }
 
-  return {
-    fromIso: from ? from.toISOString() : null,
-    toIso:   to   ? to.toISOString()   : null,
-    errorText: null
-  };
+  return { start, end, mode };
 }
 
 // =====================================
-//  3. STATS BILLETS (collection validations)
+//  3. STATS BILLETS (validations)
 // =====================================
 
-async function chargerStatsValidations() {
-  const msg   = $("stats-billets-message");
-  const perEl = $("statsBilletsPeriod");
-  const startEl = $("statsBilletsDateStart");
-  const endEl   = $("statsBilletsDateEnd");
-
+async function chargerStatsBillets() {
+  const msg = $("stats-message-billets");
   if (msg) {
+    msg.style.display = "block";
     msg.textContent = "Chargement des stats billets...";
     msg.className = "message message-info";
   }
 
-  const periodValue = perEl ? perEl.value : "today";
-  const startStr = startEl ? startEl.value : "";
-  const endStr   = endEl ? endEl.value   : "";
-
-  const { fromIso, toIso, errorText } = computePeriodRange(periodValue, startStr, endStr);
-
-  if (errorText) {
+  const period = getSelectedPeriod();
+  if (period.error === "custom-missing") {
     if (msg) {
-      msg.textContent = errorText;
-      msg.className = "message message-error";
+      msg.style.display = "block";
+      msg.textContent = "Veuillez choisir une période personnalisée (du / au).";
+      msg.className = "message message-warning";
     }
     return;
   }
 
-  const queries = [Appwrite.Query.limit(10000)];
-
-  if (fromIso) {
-    queries.push(Appwrite.Query.greaterThanEqual("date_validation", fromIso));
-  }
-  if (toIso) {
-    queries.push(Appwrite.Query.lessThanEqual("date_validation", toIso));
-  }
+  const { start, end } = period;
+  const startIso = start.toISOString();
+  const endIso   = end.toISOString();
 
   try {
     const res = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
-      queries
+      [
+        Appwrite.Query.greaterThanEqual("date_validation", startIso),
+        Appwrite.Query.lessThan("date_validation", endIso),
+        Appwrite.Query.limit(10000)
+      ]
     );
 
     const docs = res.documents || [];
-    console.log("[ADMIN] Validations récupérées (billets) :", docs.length);
+    console.log("[ADMIN] Validations récupérées (période) :", docs.length);
 
     const totalValidations = docs.length;
+
     let recetteTotale   = 0;
     let recetteNormal   = 0;
     let recetteEtudiant = 0;
@@ -546,7 +437,7 @@ async function chargerStatsValidations() {
         const row = document.createElement("tr");
         const td  = document.createElement("td");
         td.colSpan    = 3;
-        td.textContent= "Aucune validation pour la période sélectionnée.";
+        td.textContent= "Aucune validation pour cette période.";
         row.appendChild(td);
         tbody.appendChild(row);
       } else {
@@ -570,12 +461,14 @@ async function chargerStatsValidations() {
     }
 
     if (msg) {
+      msg.style.display = "block";
       msg.textContent = "Stats billets mises à jour.";
       msg.className = "message message-success";
     }
   } catch (err) {
-    console.error("[ADMIN] Erreur chargement stats validations :", err);
+    console.error("[ADMIN] Erreur chargement stats billets :", err);
     if (msg) {
+      msg.style.display = "block";
       msg.textContent = "Erreur lors du chargement des stats billets (voir console).";
       msg.className = "message message-error";
     }
@@ -583,107 +476,105 @@ async function chargerStatsValidations() {
 }
 
 // =====================================
-//  4. STATS RESTAURATION (ventes_resto)
+//  4. STATS RESTAURATION
 // =====================================
 
-async function chargerStatsResto() {
-  const msg   = $("stats-resto-message");
-  const perEl = $("statsRestoPeriod");
-  const startEl = $("statsRestoDateStart");
-  const endEl   = $("statsRestoDateEnd");
+let restoMenuCache = null;
 
+async function chargerMenuRestoPourStats() {
+  if (restoMenuCache) return restoMenuCache;
+
+  try {
+    const res = await adminDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_MENU_RESTO_COLLECTION_ID,
+      [Appwrite.Query.limit(200)]
+    );
+    restoMenuCache = res.documents || [];
+    return restoMenuCache;
+  } catch (err) {
+    console.warn("[ADMIN] Impossible de charger le menu resto pour les stats :", err);
+    restoMenuCache = [];
+    return restoMenuCache;
+  }
+}
+
+async function chargerStatsResto() {
+  const msg = $("stats-message-resto");
   if (msg) {
+    msg.style.display = "block";
     msg.textContent = "Chargement des stats restauration...";
     msg.className = "message message-info";
   }
 
-  const periodValue = perEl ? perEl.value : "today";
-  const startStr = startEl ? startEl.value : "";
-  const endStr   = endEl ? endEl.value   : "";
-
-  const { fromIso, toIso, errorText } = computePeriodRange(periodValue, startStr, endStr);
-
-  if (errorText) {
+  const period = getSelectedPeriod();
+  if (period.error === "custom-missing") {
     if (msg) {
-      msg.textContent = errorText;
-      msg.className = "message message-error";
+      msg.style.display = "block";
+      msg.textContent = "Veuillez choisir une période personnalisée (du / au).";
+      msg.className = "message message-warning";
     }
     return;
   }
 
-  const queries = [Appwrite.Query.limit(10000)];
-
-  if (fromIso) {
-    queries.push(Appwrite.Query.greaterThanEqual("date_vente", fromIso));
-  }
-  if (toIso) {
-    queries.push(Appwrite.Query.lessThanEqual("date_vente", toIso));
-  }
+  const { start, end } = period;
+  const startIso = start.toISOString();
+  const endIso   = end.toISOString();
 
   try {
-    // Charger les ventes
     const res = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_VENTES_RESTO_COLLECTION_ID,
-      queries
+      [
+        Appwrite.Query.greaterThanEqual("date_vente", startIso),
+        Appwrite.Query.lessThan("date_vente", endIso),
+        Appwrite.Query.limit(10000)
+      ]
     );
 
-    const ventes = res.documents || [];
-    console.log("[ADMIN] Ventes resto récupérées :", ventes.length);
+    const docs = res.documents || [];
+    console.log("[ADMIN] Ventes resto récupérées (période) :", docs.length);
 
-    // Charger le menu pour avoir les libellés (cache)
-    if (!menuRestoCache) {
-      const menuRes = await adminDB.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_MENU_RESTO_COLLECTION_ID,
-        [Appwrite.Query.limit(200)]
-      );
-      menuRestoCache = menuRes.documents || [];
-    }
-
-    const labelByCode = {};
-    menuRestoCache.forEach((p) => {
-      labelByCode[p.code_produit] = p.libelle || p.code_produit;
-    });
-
-    // Agrégations
-    const commandesSet = new Set();          // numero_vente
-    let totalPlats     = 0;                  // somme des quantités
-    let totalRecette   = 0;                  // somme des montants
+    // stats globales
+    const numeros = new Set();
+    let totalPlats = 0;
+    let totalMontant = 0;
 
     const parProduit = {}; // { code_produit: { qte, montant } }
 
-    ventes.forEach((v) => {
-      const code = v.code_produit || "INCONNU";
-      const qte  = parseInt(v.quantite || 0, 10) || 0;
-      const mnt  = parseInt(v.montant_total || 0, 10) || 0;
+    docs.forEach((d) => {
+      const numeroVente = d.numero_vente || d.$id;
+      numeros.add(numeroVente);
 
-      if (v.numero_vente) {
-        commandesSet.add(v.numero_vente);
-      }
+      const qte = parseInt(d.quantite || 0, 10) || 0;
+      const montant = parseInt(d.montant_total || 0, 10) || 0;
 
-      totalPlats   += qte;
-      totalRecette += mnt;
+      totalPlats += qte;
+      totalMontant += montant;
 
+      const code = d.code_produit || "N/A";
       if (!parProduit[code]) {
         parProduit[code] = { qte: 0, montant: 0 };
       }
       parProduit[code].qte     += qte;
-      parProduit[code].montant += mnt;
+      parProduit[code].montant += montant;
     });
 
-    const nbTickets = commandesSet.size;
-
-    // Maj des tuiles
     const elTickets = $("stat-resto-tickets");
-    const elPlats   = $("stat-resto-plats");
-    const elRecette = $("stat-resto-revenue");
+    const elPlats   = $("stat-resto-plates");
+    const elTotal   = $("stat-resto-total");
 
-    if (elTickets) elTickets.textContent = nbTickets.toString();
+    if (elTickets) elTickets.textContent = numeros.size.toString();
     if (elPlats)   elPlats.textContent   = totalPlats.toString();
-    if (elRecette) elRecette.textContent = formatGNF(totalRecette);
+    if (elTotal)   elTotal.textContent   = formatGNF(totalMontant);
 
-    // Tableau détail par produit
+    // Détail par produit (avec libellé depuis menu_resto)
+    const menu = await chargerMenuRestoPourStats();
+    const libellesByCode = {};
+    menu.forEach((p) => {
+      libellesByCode[p.code_produit] = p.libelle || p.code_produit;
+    });
+
     const tbody = $("stats-resto-body");
     if (tbody) {
       tbody.innerHTML = "";
@@ -692,8 +583,8 @@ async function chargerStatsResto() {
       if (codes.length === 0) {
         const row = document.createElement("tr");
         const td  = document.createElement("td");
-        td.colSpan = 4;
-        td.textContent = "Aucune vente pour la période sélectionnée.";
+        td.colSpan    = 4;
+        td.textContent= "Aucune vente restauration pour cette période.";
         row.appendChild(td);
         tbody.appendChild(row);
       } else {
@@ -701,31 +592,33 @@ async function chargerStatsResto() {
           const row = document.createElement("tr");
 
           const tdCode   = document.createElement("td");
-          const tdLabel  = document.createElement("td");
+          const tdLib    = document.createElement("td");
           const tdQte    = document.createElement("td");
-          const tdMnt    = document.createElement("td");
+          const tdMontant= document.createElement("td");
 
-          tdCode.textContent  = code;
-          tdLabel.textContent = labelByCode[code] || code;
-          tdQte.textContent   = parProduit[code].qte.toString();
-          tdMnt.textContent   = formatGNF(parProduit[code].montant);
+          tdCode.textContent = code;
+          tdLib.textContent  = libellesByCode[code] || "";
+          tdQte.textContent  = parProduit[code].qte.toString();
+          tdMontant.textContent = formatGNF(parProduit[code].montant);
 
           row.appendChild(tdCode);
-          row.appendChild(tdLabel);
+          row.appendChild(tdLib);
           row.appendChild(tdQte);
-          row.appendChild(tdMnt);
+          row.appendChild(tdMontant);
           tbody.appendChild(row);
         });
       }
     }
 
     if (msg) {
+      msg.style.display = "block";
       msg.textContent = "Stats restauration mises à jour.";
       msg.className = "message message-success";
     }
   } catch (err) {
-    console.error("[ADMIN] Erreur chargement stats resto :", err);
+    console.error("[ADMIN] Erreur chargement stats restauration :", err);
     if (msg) {
+      msg.style.display = "block";
       msg.textContent = "Erreur lors du chargement des stats restauration (voir console).";
       msg.className = "message message-error";
     }
@@ -802,7 +695,43 @@ async function effacerTousLesBillets() {
 //  6. SAISIE : étudiants & agents
 // =====================================
 
-// Génère un numéro étudiant de la forme UNIV-XX-1234
+// --- Messages formulaires ---
+
+function showAdminEtuMessage(text, type) {
+  const msg = $("admin-etu-message");
+
+  if (!msg) {
+    alert(text);
+    return;
+  }
+
+  msg.style.display = "block";
+  msg.textContent   = text;
+  msg.className     = "message";
+
+  if (type === "success") {
+    msg.classList.add("message-success");
+  } else if (type === "error") {
+    msg.classList.add("message-error");
+  } else {
+    msg.classList.add("message-info");
+  }
+}
+
+function showAdminAgentMessage(text, type) {
+  const msg = $("admin-agent-message");
+  if (!msg) return;
+
+  msg.textContent = text;
+  msg.className   = "status";
+
+  if (type === "success") msg.style.color = "#16a34a";
+  else if (type === "error") msg.style.color = "#b91c1c";
+  else msg.style.color = "#6b7280";
+}
+
+// --- Génère un numéro étudiant de la forme UNIV-XX-1234 ---
+
 function genererNumeroEtudiant(universite) {
   const clean = (universite || "")
     .normalize("NFD")
@@ -811,6 +740,8 @@ function genererNumeroEtudiant(universite) {
     .replace(/[^A-Z]/g, "");          // garde seulement les lettres
 
   const codeEcole = clean.slice(0, 2) || "XX";
+
+  // 4 chiffres aléatoires entre 1000 et 9999
   const randomDigits = Math.floor(1000 + Math.random() * 9000);
 
   return `UNIV-${codeEcole}-${randomDigits}`;
@@ -989,75 +920,54 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Stats billets
-  const refreshStatsBilletsBtn = $("refreshStatsBilletsBtn");
-  if (refreshStatsBilletsBtn) {
-    refreshStatsBilletsBtn.addEventListener("click", (e) => {
+  // Bouton "Actualiser les stats"
+  const refreshStatsBtn = $("refreshStatsBtn");
+  if (refreshStatsBtn) {
+    refreshStatsBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      chargerStatsValidations();
-    });
-  }
-
-  // Changement de période billets
-  const billetsPeriodSelect = $("statsBilletsPeriod");
-  if (billetsPeriodSelect) {
-    billetsPeriodSelect.addEventListener("change", () => {
-      chargerStatsValidations();
-    });
-  }
-  const billetsStart = $("statsBilletsDateStart");
-  const billetsEnd   = $("statsBilletsDateEnd");
-  if (billetsStart) billetsStart.addEventListener("change", () => chargerStatsValidations());
-  if (billetsEnd)   billetsEnd.addEventListener("change", () => chargerStatsValidations());
-
-  // Stats resto
-  const refreshStatsRestoBtn = $("refreshStatsRestoBtn");
-  if (refreshStatsRestoBtn) {
-    refreshStatsRestoBtn.addEventListener("click", (e) => {
-      e.preventDefault();
+      chargerStatsBillets();
       chargerStatsResto();
     });
   }
 
-  const restoPeriodSelect = $("statsRestoPeriod");
-  if (restoPeriodSelect) {
-    restoPeriodSelect.addEventListener("change", () => {
-      chargerStatsResto();
-    });
-  }
-  const restoStart = $("statsRestoDateStart");
-  const restoEnd   = $("statsRestoDateEnd");
-  if (restoStart) restoStart.addEventListener("change", () => chargerStatsResto());
-  if (restoEnd)   restoEnd.addEventListener("change", () => chargerStatsResto());
+  // Sélecteur de période : montrer / cacher les dates personnalisées
+  const statsPeriodSelect = $("statsPeriod");
+  const customRange       = $("stats-custom-range");
 
-  // Toggle "Billets" / "Restauration" dans la zone stats
-  const btnShowBillets = $("btnShowStatsBillets");
-  const btnShowResto   = $("btnShowStatsResto");
-  const cardBillets    = $("card-stats-billets");
-  const cardResto      = $("card-stats-resto");
-
-  function setStatsTab(tab) {
-    if (!cardBillets || !cardResto) return;
-
-    const isBillets = tab === "billets";
-    cardBillets.style.display = isBillets ? "block" : "none";
-    cardResto.style.display   = isBillets ? "none"  : "block";
-
-    if (btnShowBillets) btnShowBillets.classList.toggle("active-tab", isBillets);
-    if (btnShowResto)   btnShowResto.classList.toggle("active-tab", !isBillets);
+  if (statsPeriodSelect && customRange) {
+    const toggleCustomRange = () => {
+      customRange.style.display =
+        statsPeriodSelect.value === "custom" ? "flex" : "none";
+    };
+    statsPeriodSelect.addEventListener("change", toggleCustomRange);
+    toggleCustomRange();
   }
 
-  if (btnShowBillets) {
-    btnShowBillets.addEventListener("click", (e) => {
-      e.preventDefault();
-      setStatsTab("billets");
-    });
-  }
-  if (btnShowResto) {
-    btnShowResto.addEventListener("click", (e) => {
-      e.preventDefault();
-      setStatsTab("resto");
-    });
+  // Onglets Billets / Restauration
+  const billetsPanel = $("stats-billets-panel");
+  const restoPanel   = $("stats-resto-panel");
+
+  const modeBillets = $("statsModeBillets");
+  const modeResto   = $("statsModeResto");
+
+  const infoBillets = $("stats-info-billets");
+  const infoResto   = $("stats-info-resto");
+
+  const updateStatsMode = () => {
+    const mode =
+      (modeResto && modeResto.checked) ? "resto" : "billets";
+
+    if (billetsPanel) billetsPanel.style.display = mode === "billets" ? "block" : "none";
+    if (restoPanel)   restoPanel.style.display   = mode === "resto"   ? "block" : "none";
+
+    if (infoBillets) infoBillets.style.display = mode === "billets" ? "block" : "none";
+    if (infoResto)   infoResto.style.display   = mode === "resto"   ? "block" : "none";
+  };
+
+  if (modeBillets && modeResto) {
+    modeBillets.addEventListener("change", updateStatsMode);
+    modeResto.addEventListener("change", updateStatsMode);
+    updateStatsMode();
   }
 
   // Maintenance
