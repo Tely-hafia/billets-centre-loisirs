@@ -284,6 +284,40 @@
       box-shadow: var(--shadow-soft);
     }
     
+    .gps-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1.5rem;
+    }
+    
+    .gps-btn {
+      padding: 0.8rem 1.5rem;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition-fast);
+    }
+    
+    .gps-btn-google {
+      background: #4285F4;
+      color: white;
+    }
+    
+    .gps-btn-waze {
+      background: #33CCFF;
+      color: white;
+    }
+    
+    .gps-btn-apple {
+      background: #000000;
+      color: white;
+    }
+
     /* Accès pro discret */
     .admin-access {
       background: var(--bg-card);
@@ -330,14 +364,14 @@
         font-size: 1.2rem;
       }
       
-      .admin-buttons {
+      .admin-buttons, .gps-buttons {
         flex-direction: column;
         align-items: center;
       }
       
-      .admin-btn {
+      .admin-btn, .gps-btn {
         width: 100%;
-        max-width: 200px;
+        max-width: 250px;
       }
     }
   </style>
@@ -466,6 +500,36 @@
       </div>
     </section>
 
+    <!-- Informations pratiques -->
+    <section class="info-section" style="margin: 4rem -1.5rem; border-radius: 0;">
+      <h2 style="margin-bottom: 1rem;">Informations Pratiques</h2>
+      <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+        Tout ce que vous devez savoir pour profiter au maximum de notre centre
+      </p>
+
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-number">7j/7</div>
+          <div class="stat-label">Jours d'ouverture</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-number">10h-02h</div>
+          <div class="stat-label">Horaires</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-number">100+</div>
+          <div class="stat-label">Places assises</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-number">WiFi</div>
+          <div class="stat-label">Gratuit</div>
+        </div>
+      </div>
+    </section>
+
     <!-- CTA Réservation -->
     <section id="reservation" class="reservation-cta">
       <h2>Réservez votre expérience</h2>
@@ -491,11 +555,11 @@
       </a>
     </section>
 
-    <!-- Map -->
+    <!-- Map avec GPS -->
     <section class="map-section">
       <h2 style="margin-bottom: 1rem;">📍 Nous trouver</h2>
       <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-        Hafia Labé, proche université Hafia - Ouvert 7j/7 de 10h à 02h
+        Hafia Labé, proche université Hafia
       </p>
       
       <!-- Carte OpenStreetMap avec vos coordonnées -->
@@ -511,18 +575,28 @@
         </iframe>
       </div>
       
+      <!-- Boutons GPS -->
+      <div class="gps-buttons">
+        <a href="https://maps.google.com/?q=11.223501,-12.385032" 
+           class="gps-btn gps-btn-google" 
+           target="_blank">
+          🗺️ Google Maps
+        </a>
+        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes" 
+           class="gps-btn gps-btn-waze" 
+           target="_blank">
+          🚗 Waze
+        </a>
+        <a href="https://maps.apple.com/?q=11.223501,-12.385032" 
+           class="gps-btn gps-btn-apple" 
+           target="_blank">
+          🍎 Apple Plans
+        </a>
+      </div>
+      
       <div style="margin-top: 1.5rem; text-align: center;">
         <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
         <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
-        <p><strong>🕒 Horaires :</strong> 7j/7 • 10h-02h</p>
-        <p style="margin-top: 1rem;">
-          <a href="https://www.openstreetmap.org/?mlat=11.223501&mlon=-12.385032#map=17/11.223501/-12.385032" 
-             target="_blank" 
-             style="color: var(--accent-primary); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
-            <span>🗺️</span>
-            <span>Voir en grand sur la carte</span>
-          </a>
-        </p>
       </div>
     </section>
 
