@@ -72,9 +72,9 @@
     </section>
 
     <!-- === MODE 1 : Saisie / Enregistrement === -->
-    <div id="admin-zone-saisie">
+    <div id="admin-zone-saisie" class="mode-content">
 
-      <!-- Enregistrer un étudiant -->
+      <!-- ENREGISTRER UN ÉTUDIANT -->
       <section class="card" id="admin-etudiants">
         <h2>Enregistrer un étudiant</h2>
 
@@ -144,7 +144,7 @@
         <p id="admin-etu-message" class="message" style="display:none;"></p>
       </section>
 
-      <!-- Création d'un agent -->
+      <!-- CRÉATION D'UN AGENT -->
       <section class="card">
         <h2>Créer un agent</h2>
 
@@ -170,9 +170,9 @@
         <div class="form-row">
           <label for="admin-agent-role">
             Rôle / poste <span style="color:#ef4444;">*</span> <br />
-            <span class="status">Ex : <em>admin</em>, <em>billets entrée</em>, <em>resto</em>, <em>jeux internes</em>…</span>
+            <span class="status">Ex : <em>admin</em>, <em>billets entrée</em>, <em>restauration</em>, <em>jeux internes</em>…</span>
           </label>
-          <input type="text" id="admin-agent-role" placeholder="Ex : admin, billets entrée, resto..." />
+          <input type="text" id="admin-agent-role" placeholder="Ex : admin, billets entrée, restauration..." />
         </div>
 
         <div class="form-row" style="flex-direction:row; align-items:center; gap:0.6rem;">
@@ -190,7 +190,7 @@
     </div> <!-- /admin-zone-saisie -->
 
     <!-- === MODE 2 : Gestion & statistiques === -->
-    <div id="admin-zone-gestion" style="display:none;">
+    <div id="admin-zone-gestion" class="mode-content" style="display:none;">
 
       <!-- Gestion des billets (CSV) -->
       <section class="card">
@@ -227,51 +227,60 @@
         <p id="importStatus" class="status"></p>
       </section>
 
-      <!-- Onglets stats Billets / Restauration -->
+      <!-- Statistiques Billets / Restauration -->
       <section class="card">
         <h2>📊 Statistiques</h2>
 
+        <!-- Onglets Billets / Restauration -->
         <div class="stats-tabs">
-          <button id="btnShowStatsBillets" type="button" class="stats-tab active-tab">
-            Billets
-          </button>
-          <button id="btnShowStatsResto" type="button" class="stats-tab">
-            Restauration
-          </button>
+          <label class="stats-tab">
+            <input type="radio" name="statsMode" id="statsModeBillets" value="billets" checked />
+            <span>Billets</span>
+          </label>
+
+          <label class="stats-tab">
+            <input type="radio" name="statsMode" id="statsModeResto" value="resto" />
+            <span>Restauration</span>
+          </label>
         </div>
 
-        <!-- Carte Stats Billets -->
-        <section id="card-stats-billets">
+        <!-- Bouton + Période -->
+        <div class="stats-actions-row">
+          <button id="refreshStatsBtn" class="btn-primary" type="button">
+            Actualiser les stats
+          </button>
 
-          <div class="stats-header-row">
-            <button id="refreshStatsBilletsBtn" class="btn-primary" type="button">
-              Actualiser les stats
-            </button>
-
-            <div class="stats-period-selector">
-              <label for="statsBilletsPeriod">Période :</label>
-              <select id="statsBilletsPeriod">
-                <option value="today">Aujourd'hui</option>
-                <option value="yesterday">Hier</option>
-                <option value="this_week" selected>Semaine en cours</option>
-                <option value="last_7_days">7 derniers jours</option>
-                <option value="this_month">Mois en cours</option>
-                <option value="last_month">Mois dernier</option>
-                <option value="custom">Période personnalisée</option>
-              </select>
-              <div class="date-range">
-                <input type="date" id="statsBilletsDateStart" />
-                <span>au</span>
-                <input type="date" id="statsBilletsDateEnd" />
-              </div>
-            </div>
+          <div class="stats-period">
+            <label for="statsPeriod">Période :</label>
+            <select id="statsPeriod">
+              <option value="today">Aujourd'hui</option>
+              <option value="week" selected>Semaine en cours</option>
+              <option value="month">Mois en cours</option>
+              <option value="custom">Période personnalisée</option>
+            </select>
           </div>
+        </div>
 
-          <p class="status">
-            Les montants sont calculés à partir de la collection <strong>validations</strong>
-            (billets d'entrée + billets internes) pour la période sélectionnée.
-          </p>
+        <!-- Dates personnalisées (affichées uniquement si "custom") -->
+        <div id="stats-custom-range" class="stats-date-range">
+          <input type="date" id="statsStartDate" />
+          <span>au</span>
+          <input type="date" id="statsEndDate" />
+        </div>
 
+        <!-- Texte d'info -->
+        <p id="stats-info-billets" class="status">
+          Les montants sont calculés à partir de la collection <strong>validations</strong>
+          (billets d'entrée + billets internes) pour la période sélectionnée.
+        </p>
+
+        <p id="stats-info-resto" class="status" style="display:none;">
+          Les montants sont calculés à partir de la collection <strong>ventes_resto</strong>
+          (commandes restauration) pour la période sélectionnée.
+        </p>
+
+        <!-- PANNEAU BILLETS -->
+        <div id="stats-billets-panel">
           <div class="stats-grid">
             <div class="stat-item">
               <h3>Billets validés</h3>
@@ -307,40 +316,11 @@
             </table>
           </div>
 
-          <p id="stats-billets-message" class="message"></p>
-        </section>
+          <p id="stats-message-billets" class="message" style="display:none;"></p>
+        </div>
 
-        <!-- Carte Stats Restauration -->
-        <section id="card-stats-resto" style="display:none; margin-top:1.5rem;">
-
-          <div class="stats-header-row">
-            <button id="refreshStatsRestoBtn" class="btn-primary" type="button">
-              Actualiser les stats
-            </button>
-
-            <div class="stats-period-selector">
-              <label for="statsRestoPeriod">Période :</label>
-              <select id="statsRestoPeriod">
-                <option value="today">Aujourd'hui</option>
-                <option value="yesterday">Hier</option>
-                <option value="this_week" selected>Semaine en cours</option>
-                <option value="last_7_days">7 derniers jours</option>
-                <option value="this_month">Mois en cours</option>
-                <option value="last_month">Mois dernier</option>
-                <option value="custom">Période personnalisée</option>
-              </select>
-              <div class="date-range">
-                <input type="date" id="statsRestoDateStart" />
-                <span>au</span>
-                <input type="date" id="statsRestoDateEnd" />
-              </div>
-            </div>
-          </div>
-
-          <p class="status">
-            Données issues de la collection <strong>ventes_resto</strong> pour la période choisie.
-          </p>
-
+        <!-- PANNEAU RESTAURATION -->
+        <div id="stats-resto-panel" style="display:none;">
           <div class="stats-grid">
             <div class="stat-item">
               <h3>Tickets (commandes)</h3>
@@ -348,11 +328,11 @@
             </div>
             <div class="stat-item">
               <h3>Plats vendus</h3>
-              <p id="stat-resto-plats">0</p>
+              <p id="stat-resto-plates">0</p>
             </div>
             <div class="stat-item">
               <h3>Recette restauration</h3>
-              <p id="stat-resto-revenue">0 GNF</p>
+              <p id="stat-resto-total">0 GNF</p>
             </div>
           </div>
 
@@ -373,9 +353,8 @@
             </table>
           </div>
 
-          <p id="stats-resto-message" class="message"></p>
-        </section>
-
+          <p id="stats-message-resto" class="message" style="display:none;"></p>
+        </div>
       </section>
 
       <!-- Maintenance -->
@@ -405,7 +384,7 @@
 
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-<!-- Script admin (version à ajuster si besoin) -->
+<!-- Script admin -->
 <script src="js/admin-appwrite.js?v=4"></script>
 
 </body>
