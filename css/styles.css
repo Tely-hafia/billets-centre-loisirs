@@ -1062,3 +1062,135 @@ footer {
     display: none !important;
   }
 }
+
+/* =========================
+   Onglets statistiques Billets / Restauration
+   ========================= */
+
+.stats-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.5rem 0 1.2rem;
+  flex-wrap: wrap;
+}
+
+.stats-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.stats-tab input {
+  display: none;
+}
+
+.stats-tab span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1.4rem;
+  border-radius: 999px;
+  border: 2px solid var(--border-soft);
+  background: #ffffff;
+  color: var(--text-main);
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: var(--transition-fast);
+}
+
+/* petit rond comme pour Tarif appliqué */
+.stats-tab span::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid #d1d5db;
+  background: #ffffff;
+}
+
+/* État actif : fond orange comme tes boutons principaux */
+.stats-tab input:checked + span {
+  background: linear-gradient(135deg, var(--accent-primary), #ff8e53);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.25);
+}
+
+.stats-tab input:checked + span::before {
+  border-color: #ffffff;
+  background: #ffffff;
+}
+
+/* Ligne bouton + select période */
+.stats-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.stats-actions-row .btn-primary {
+  margin-right: auto;
+}
+
+.stats-period {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stats-period select {
+  min-width: 190px;
+}
+
+/* dates personnalisées : ligne sous la période */
+.stats-date-range {
+  display: none;           /* JS change en flex quand "custom" */
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stats-date-range input[type="date"] {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-soft);
+  font-size: 0.95rem;
+}
+
+.stats-date-range input[type="date"]:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+/* Responsive petit écran pour les stats */
+@media (max-width: 640px) {
+  .stats-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-actions-row .btn-primary {
+    margin-right: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stats-period {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .stats-period select {
+    flex: 1;
+  }
+
+  .stats-date-range {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
