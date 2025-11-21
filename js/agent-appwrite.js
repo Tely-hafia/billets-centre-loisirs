@@ -95,6 +95,9 @@ let currentMode = "billets";
 let currentBilletsSubMode = "ENTREE";
 let lastVenteNumber = 0;
 
+// >>> AJOUT : dernier numéro étudiant vérifié
+let lastVerifiedEtudiant = null;
+
 // ===============================
 //  UI MODES
 // ===============================
@@ -357,8 +360,10 @@ async function verifierBillet() {
         return;
       }
 
-      // Tarif étudiant → vérifier étudiant
+      // Tarif étudiant → vérification obligatoire + contrôle du bouton
       if (tarifChoisi === "etudiant") {
+
+        // 1) numéro obligatoire
         if (!numeroEtu) {
           showResult(
             "Pour le tarif étudiant, le numéro étudiant est obligatoire.",
@@ -367,6 +372,16 @@ async function verifierBillet() {
           return;
         }
 
+        // 2) l'agent doit avoir cliqué sur "Vérifier l'étudiant"
+        if (!lastVerifiedEtudiant || lastVerifiedEtudiant !== numeroEtu) {
+          showResult(
+            "Veuillez d'abord cliquer sur « Vérifier l'étudiant » pour ce numéro, puis valider le billet.",
+            "error"
+          );
+          return;
+        }
+
+        // 3) on revérifie côté Appwrite (sécurité)
         try {
           const etuRes = await db.listDocuments(
             APPWRITE_DATABASE_ID,
@@ -412,6 +427,9 @@ async function verifierBillet() {
 
       const ticketInput = $("ticketNumber");
       if (ticketInput) ticketInput.value = "";
+
+      // une fois validé, on réinitialise la vérif étudiante
+      lastVerifiedEtudiant = null;
 
       chargerNombreBillets();
     } catch (err) {
@@ -565,6 +583,9 @@ async function verifierEtudiant() {
   zoneInfo.className = "result";
   zoneInfo.textContent = "";
 
+  // on réinitialise à chaque tentative
+  lastVerifiedEtudiant = null;
+
   if (!numeroEtu) {
     zoneInfo.classList.add("error");
     zoneInfo.textContent = "Veuillez saisir un numéro étudiant.";
@@ -590,6 +611,9 @@ async function verifierEtudiant() {
     }
 
     const etu = res.documents[0];
+
+    // mémoriser ce numéro comme "vérifié"
+    lastVerifiedEtudiant = numeroEtu;
 
     zoneInfo.classList.add("ok");
     zoneInfo.innerHTML =
@@ -1087,12 +1111,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (radioNormal) {
     radioNormal.addEventListener("change", () => {
+      lastVerifiedEtudiant = null; // la vérif étudiante ne sert plus
       updateTarifEtudiantVisibility();
     });
   }
   if (radioEtu) {
     radioEtu.addEventListener("change", () => {
+      lastVerifiedEtudiant = null;
       updateTarifEtudiantVisibility();
+    });
+  }
+
+  // Si on modifie le numéro étudiant → on annule la vérif
+  const etuInput = $("etuNumber");
+  if (etuInput) {
+    etuInput.addEventListener("input", () => {
+      lastVerifiedEtudiant = null;
+      const zoneInfo = $("etu-info");
+      if (zoneInfo) {
+        zoneInfo.style.display = "none";
+        zoneInfo.textContent = "";
+        zoneInfo.className = "result";
+      }
     });
   }
 
