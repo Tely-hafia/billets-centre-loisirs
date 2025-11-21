@@ -229,63 +229,80 @@
 
       <!-- Statistiques BILLETS -->
       <section class="card">
-        <h2>📊 Statistiques Billets</h2>
+  <h2>📊 Statistiques Billets</h2>
 
-        <div class="form-row" style="align-items:center; gap:0.75rem;">
-          <button id="refreshStatsBtn" class="btn-primary" type="button">
-            Actualiser les stats
-          </button>
+  <button id="refreshStatsBtn" class="btn-primary" type="button" style="margin-bottom:1rem;">
+    Actualiser les stats
+  </button>
 
-          <label for="billets-range" style="margin:0; font-weight:600;">Période :</label>
-          <select id="billets-range">
-            <option value="jour">Aujourd'hui</option>
-            <option value="semaine">Semaine en cours</option>
-            <option value="mois">Mois en cours</option>
-          </select>
-        </div>
+  <!-- NOUVEAU : choix de période -->
+  <div class="form-row" style="max-width:400px;">
+    <label for="stats-periode">Période :</label>
+    <select id="stats-periode">
+      <option value="today">Aujourd'hui</option>
+      <option value="this_week">Semaine en cours</option>
+      <option value="this_month">Mois en cours</option>
+      <option value="all">Tout l’historique</option>
+      <option value="custom">Période personnalisée</option>
+    </select>
+  </div>
 
-        <p class="status">
-          Les montants sont calculés à partir de la collection <strong>validations</strong>
-          (billets d'entrée + billets internes) pour la période sélectionnée.
-        </p>
+  <!-- NOUVEAU : dates personnalisées (affichées seulement si "Période personnalisée") -->
+  <div id="stats-custom-dates" class="form-row" style="max-width:420px; display:none; gap:0.5rem; align-items:flex-end;">
+    <div style="flex:1;">
+      <label for="stats-date-start">Du :</label>
+      <input type="date" id="stats-date-start" />
+    </div>
+    <div style="flex:1;">
+      <label for="stats-date-end">Au :</label>
+      <input type="date" id="stats-date-end" />
+    </div>
+  </div>
 
-        <div class="stats-grid">
-          <div class="stat-item">
-            <h3>Billets validés</h3>
-            <p id="stat-validations-count">0</p>
-          </div>
-          <div class="stat-item">
-            <h3>Recette totale billets</h3>
-            <p id="stat-revenue-total">0 GNF</p>
-          </div>
-          <div class="stat-item">
-            <h3>Recette tarif normal</h3>
-            <p id="stat-revenue-normal">0 GNF</p>
-          </div>
-          <div class="stat-item">
-            <h3>Recette tarif étudiant</h3>
-            <p id="stat-revenue-etudiant">0 GNF</p>
-          </div>
-        </div>
+  <p class="status">
+    Les montants sont calculés à partir de la collection <strong>validations</strong>
+    (billets d'entrée + billets internes) pour la période sélectionnée.
+  </p>
 
-        <h3 style="margin-top:2rem;">Détail par type d'accès</h3>
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Type d'accès / billet</th>
-                <th>Nb validations</th>
-                <th>Recette (GNF)</th>
-              </tr>
-            </thead>
-            <tbody id="stats-type-body">
-              <!-- rempli par JS -->
-            </tbody>
-          </table>
-        </div>
+  <!-- le reste de la carte ne change pas -->
+  <div class="stats-grid">
+    <div class="stat-item">
+      <h3>Billets validés</h3>
+      <p id="stat-validations-count">0</p>
+    </div>
+    <div class="stat-item">
+      <h3>Recette totale billets</h3>
+      <p id="stat-revenue-total">0 GNF</p>
+    </div>
+    <div class="stat-item">
+      <h3>Recette tarif normal</h3>
+      <p id="stat-revenue-normal">0 GNF</p>
+    </div>
+    <div class="stat-item">
+      <h3>Recette tarif étudiant</h3>
+      <p id="stat-revenue-etudiant">0 GNF</p>
+    </div>
+  </div>
 
-        <p id="stats-message" class="message"></p>
-      </section>
+  <h3 style="margin-top:2rem;">Détail par type d'accès</h3>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Type d'accès / billet</th>
+          <th>Nb validations</th>
+          <th>Recette (GNF)</th>
+        </tr>
+      </thead>
+      <tbody id="stats-type-body">
+        <!-- rempli par JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <p id="stats-message" class="message"></p>
+</section>
+
 
       <!-- Statistiques RESTAURATION -->
       <section class="card">
