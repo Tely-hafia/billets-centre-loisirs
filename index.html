@@ -284,17 +284,6 @@
       box-shadow: var(--shadow-soft);
     }
     
-    .map-placeholder {
-      background: linear-gradient(135deg, var(--border-soft), var(--accent-soft));
-      height: 300px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-      font-style: italic;
-    }
-    
     /* Accès pro discret */
     .admin-access {
       background: var(--bg-card);
@@ -506,17 +495,34 @@
     <section class="map-section">
       <h2 style="margin-bottom: 1rem;">📍 Nous trouver</h2>
       <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-        Rue principale, Quartier Calypso - Ouvert 7j/7 de 10h à 02h
+        Hafia Labé, proche université Hafia - Ouvert 7j/7 de 10h à 02h
       </p>
       
-      <div class="map-placeholder">
-        🗺️ Carte interactive - Localisation du Calypso
-        <!-- Remplacez par une vraie carte Google Maps ou OpenStreetMap -->
+      <!-- Carte OpenStreetMap avec vos coordonnées -->
+      <div style="border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-soft);">
+        <iframe 
+          src="https://www.openstreetmap.org/export/embed.html?bbox=-12.387032,11.222501,-12.383032,11.224501&layer=mapnik&marker=11.223501,-12.385032"
+          width="100%" 
+          height="300" 
+          style="border: none;"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          title="Calypso Centre de Loisirs - Hafia Labé">
+        </iframe>
       </div>
       
       <div style="margin-top: 1.5rem; text-align: center;">
+        <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
         <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
-        <p><strong>📧 Email :</strong> contact@calypsoloisirs.com</p>
+        <p><strong>🕒 Horaires :</strong> 7j/7 • 10h-02h</p>
+        <p style="margin-top: 1rem;">
+          <a href="https://www.openstreetmap.org/?mlat=11.223501&mlon=-12.385032#map=17/11.223501/-12.385032" 
+             target="_blank" 
+             style="color: var(--accent-primary); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+            <span>🗺️</span>
+            <span>Voir en grand sur la carte</span>
+          </a>
+        </p>
       </div>
     </section>
 
