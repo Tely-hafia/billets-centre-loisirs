@@ -376,7 +376,7 @@
       
       <div class="access-buttons">
         <a href="#reservation" class="btn-primary btn-large">
-          🏆 Réserver une table
+          🏆 Réservation
         </a>
         <a href="#contact" class="btn-secondary btn-large">
           📞 Nous contacter
@@ -417,17 +417,6 @@
           <!-- Les points seront générés par JavaScript -->
         </div>
       </div>
-    </section>
-
-    <!-- CTA Réservation -->
-    <section id="reservation" class="reservation-cta">
-      <h2>Réservez votre expérience</h2>
-      <p>Garantissez votre place pour une soirée inoubliable au Calypso</p>
-      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20réserver%20une%20table%20au%20Calypso" 
-         class="btn-large" 
-         style="background: white; color: #ff6b35; text-decoration: none;">
-        🏆 Réserver maintenant
-      </a>
     </section>
 
     <!-- Nos Services -->
@@ -486,6 +475,17 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- CTA Réservation -->
+    <section id="reservation" class="reservation-cta">
+      <h2>Réservez votre expérience</h2>
+      <p>Garantissez votre place pour une soirée inoubliable au Calypso</p>
+      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20réserver%20une%20table%20au%20Calypso" 
+         class="btn-large" 
+         style="background: white; color: #ff6b35; text-decoration: none;">
+        🏆 Réserver maintenant
+      </a>
     </section>
 
     <!-- Contact WhatsApp -->
@@ -576,6 +576,11 @@
 
     function prevSlide() {
       currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+      updateCarousel();
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
       updateCarousel();
     }
 
