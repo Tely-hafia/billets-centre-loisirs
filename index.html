@@ -133,24 +133,161 @@
       font-weight: 600;
     }
 
-    /* Galerie */
+    /* Galerie carousel */
     .gallery-section {
       padding: 4rem 0;
+      background: var(--bg-body);
     }
     
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1rem;
-      margin: 2rem 0;
-    }
-    
-    .gallery-item {
-      border-radius: var(--radius-md);
-      overflow: hidden;
+    .gallery-carousel {
       position: relative;
-      height: 200px;
+      max-width: 1000px;
+      margin: 0 auto;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .carousel-track {
+      display: flex;
+      transition: transform 0.5s ease-in-out;
+    }
+    
+    .carousel-slide {
+      min-width: 100%;
+      height: 400px;
       background: linear-gradient(135deg, var(--accent-soft), var(--border-soft));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .carousel-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      transition: var(--transition-fast);
+      z-index: 10;
+    }
+    
+    .carousel-nav:hover {
+      background: white;
+      transform: translateY(-50%) scale(1.1);
+    }
+    
+    .carousel-prev {
+      left: 20px;
+    }
+    
+    .carousel-next {
+      right: 20px;
+    }
+    
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .carousel-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--border-soft);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+    
+    .carousel-dot.active {
+      background: var(--accent-primary);
+      transform: scale(1.2);
+    }
+
+    /* CTA Réservation */
+    .reservation-cta {
+      background: linear-gradient(135deg, var(--accent-primary), #ff8e53);
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+      border-radius: var(--radius-lg);
+      margin: 3rem 0;
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .reservation-cta h2 {
+      margin-bottom: 1rem;
+      font-size: 2rem;
+    }
+    
+    .reservation-cta p {
+      margin-bottom: 2rem;
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    /* Contact WhatsApp */
+    .whatsapp-contact {
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      color: white;
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+      margin: 2rem 0;
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .whatsapp-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    
+    .whatsapp-btn {
+      background: white;
+      color: #25D366;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition-fast);
+    }
+    
+    .whatsapp-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    /* Map */
+    .map-section {
+      background: var(--bg-card);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      margin: 2rem 0;
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .map-placeholder {
+      background: linear-gradient(135deg, var(--border-soft), var(--accent-soft));
+      height: 300px;
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -158,113 +295,30 @@
       font-style: italic;
     }
     
-    .gallery-item::before {
-      content: "🖼️ Image";
-      font-size: 1.5rem;
-    }
-    
-    /* Formulaire de contact */
-    .contact-section {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 4rem 2rem;
-      margin: 0 -1.5rem;
-    }
-    
-    .contact-container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    
-    .contact-form {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-    
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
-      color: white;
-    }
-    
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-      width: 100%;
-      padding: 1rem;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-      font-size: 1rem;
-      transition: var(--transition-fast);
-    }
-    
-    .form-group input::placeholder,
-    .form-group textarea::placeholder {
-      color: rgba(255, 255, 255, 0.7);
-    }
-    
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: white;
-      background: rgba(255, 255, 255, 0.2);
-    }
-    
-    .form-group textarea {
-      resize: vertical;
-      min-height: 120px;
-    }
-    
-    .btn-contact {
-      background: white;
-      color: #667eea;
-      border: none;
-    }
-    
-    .btn-contact:hover {
-      background: #f8fafc;
-      transform: translateY(-2px);
-    }
-    
-    /* Événements */
-    .events-section {
-      padding: 4rem 0;
-    }
-    
-    .events-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin: 2rem 0;
-    }
-    
-    .event-card {
+    /* Accès pro discret */
+    .admin-access {
       background: var(--bg-card);
+      padding: 1.5rem;
       border-radius: var(--radius-lg);
-      padding: 2rem;
-      box-shadow: var(--shadow-soft);
-      border-left: 4px solid var(--accent-primary);
+      margin: 2rem 0;
+      text-align: center;
+      border: 1px solid var(--border-soft);
     }
     
-    .event-date {
-      background: var(--accent-primary);
-      color: white;
-      padding: 0.5rem 1rem;
+    .admin-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    
+    .admin-btn {
+      padding: 0.8rem 1.5rem;
+      font-size: 0.9rem;
+      text-decoration: none;
       border-radius: var(--radius-md);
-      font-weight: 600;
-      display: inline-block;
-      margin-bottom: 1rem;
+      transition: var(--transition-fast);
     }
     
     @media (max-width: 768px) {
@@ -282,8 +336,19 @@
         max-width: 300px;
       }
       
-      .gallery-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      .carousel-slide {
+        height: 300px;
+        font-size: 1.2rem;
+      }
+      
+      .admin-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .admin-btn {
+        width: 100%;
+        max-width: 200px;
       }
     }
   </style>
@@ -310,11 +375,11 @@
       </p>
       
       <div class="access-buttons">
-        <a href="agent.html" class="btn-primary btn-large">
-          🎫 Espace Agent
+        <a href="#reservation" class="btn-primary btn-large">
+          🏆 Réserver une table
         </a>
-        <a href="admin.html" class="btn-secondary btn-large">
-          ⚙️ Administration
+        <a href="#contact" class="btn-secondary btn-large">
+          📞 Nous contacter
         </a>
       </div>
     </div>
@@ -322,7 +387,50 @@
 
   <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
 
-    <!-- Features Grid -->
+    <!-- Galerie Carousel -->
+    <section class="gallery-section">
+      <h2 style="text-align: center; margin-bottom: 1rem;">Découvrez le Calypso</h2>
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
+        Parcourez notre univers en images
+      </p>
+
+      <div class="gallery-carousel">
+        <div class="carousel-track" id="carouselTrack">
+          <div class="carousel-slide" style="background: linear-gradient(135deg, #ff6b35, #ff8e53);">
+            <span style="color: white;">🍽️ Espace Restauration Élégant</span>
+          </div>
+          <div class="carousel-slide" style="background: linear-gradient(135deg, #4ecdc4, #67e6dc);">
+            <span style="color: white;">💨 Salon Chicha Confortable</span>
+          </div>
+          <div class="carousel-slide" style="background: linear-gradient(135deg, #45b7d1, #67d1e6);">
+            <span style="color: white;">🎮 Espace Jeux Convivial</span>
+          </div>
+          <div class="carousel-slide" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+            <span style="color: white;">🌙 Terrasse Ambiance Nocturne</span>
+          </div>
+        </div>
+        
+        <button class="carousel-nav carousel-prev" onclick="prevSlide()">❮</button>
+        <button class="carousel-nav carousel-next" onclick="nextSlide()">❯</button>
+        
+        <div class="carousel-dots" id="carouselDots">
+          <!-- Les points seront générés par JavaScript -->
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Réservation -->
+    <section id="reservation" class="reservation-cta">
+      <h2>Réservez votre expérience</h2>
+      <p>Garantissez votre place pour une soirée inoubliable au Calypso</p>
+      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20réserver%20une%20table%20au%20Calypso" 
+         class="btn-large" 
+         style="background: white; color: #ff6b35; text-decoration: none;">
+        🏆 Réserver maintenant
+      </a>
+    </section>
+
+    <!-- Nos Services -->
     <section>
       <h2 style="text-align: center; margin-bottom: 1rem;">Nos Services</h2>
       <p style="text-align: center; color: var(--text-muted); margin-bottom: 3rem;">
@@ -380,159 +488,51 @@
       </div>
     </section>
 
-    <!-- Galerie Photos -->
-    <section class="gallery-section">
-      <h2 style="text-align: center; margin-bottom: 1rem;">Galerie Photos</h2>
-      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
-        Découvrez l'ambiance du Calypso
+    <!-- Contact WhatsApp -->
+    <section id="contact" class="whatsapp-contact">
+      <span class="whatsapp-icon">📱</span>
+      <h2 style="margin-bottom: 1rem;">Contactez-nous sur WhatsApp</h2>
+      <p style="margin-bottom: 2rem; opacity: 0.9;">
+        Réponse rapide garantie ! Cliquez pour nous envoyer un message
       </p>
+      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20le%20Calypso" 
+         class="whatsapp-btn" 
+         target="_blank">
+        💬 Nous écrire sur WhatsApp
+      </a>
+    </section>
 
-      <div class="gallery-grid">
-        <div class="gallery-item" style="background: linear-gradient(135deg, #ff6b35, #ff8e53);">
-          <!-- Remplacez par une image réelle -->
-          <span style="color: white; font-weight: 600;">Espace Restauration</span>
-        </div>
-        <div class="gallery-item" style="background: linear-gradient(135deg, #4ecdc4, #67e6dc);">
-          <span style="color: white; font-weight: 600;">Salon Chicha</span>
-        </div>
-        <div class="gallery-item" style="background: linear-gradient(135deg, #45b7d1, #67d1e6);">
-          <span style="color: white; font-weight: 600;">Espace Jeux</span>
-        </div>
-        <div class="gallery-item" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-          <span style="color: white; font-weight: 600;">Terrasse</span>
-        </div>
-        <div class="gallery-item" style="background: linear-gradient(135deg, #ff4757, #ff3742);">
-          <span style="color: white; font-weight: 600;">Cocktails</span>
-        </div>
-        <div class="gallery-item" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
-          <span style="color: white; font-weight: 600;">Événements</span>
-        </div>
+    <!-- Map -->
+    <section class="map-section">
+      <h2 style="margin-bottom: 1rem;">📍 Nous trouver</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+        Rue principale, Quartier Calypso - Ouvert 7j/7 de 10h à 02h
+      </p>
+      
+      <div class="map-placeholder">
+        🗺️ Carte interactive - Localisation du Calypso
+        <!-- Remplacez par une vraie carte Google Maps ou OpenStreetMap -->
+      </div>
+      
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
+        <p><strong>📧 Email :</strong> contact@calypsoloisirs.com</p>
       </div>
     </section>
 
-    <!-- Événements à venir -->
-    <section class="events-section">
-      <h2 style="text-align: center; margin-bottom: 1rem;">Événements à Venir</h2>
-      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
-        Ne manquez pas nos prochains événements spéciaux
+    <!-- Accès pro (discret) -->
+    <section class="admin-access">
+      <h3 style="margin-bottom: 1rem; color: var(--text-muted);">Accès Professionnel</h3>
+      <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+        Personnel et administrateurs du centre
       </p>
-
-      <div class="events-grid">
-        <div class="event-card">
-          <div class="event-date">15 Déc - 20h00</div>
-          <h3 style="margin-bottom: 1rem;">Soirée Live Music</h3>
-          <p>Venez profiter d'une ambiance musicale exceptionnelle avec nos artistes locaux. Entrée libre.</p>
-        </div>
-        
-        <div class="event-card">
-          <div class="event-date">22 Déc - 19h00</div>
-          <h3 style="margin-bottom: 1rem;">Tournoi de Billard</h3>
-          <p>Inscription gratuite - Lots à gagner ! Ouvert à tous les niveaux. Inscription sur place.</p>
-        </div>
-        
-        <div class="event-card">
-          <div class="event-date">31 Déc - 21h00</div>
-          <h3 style="margin-bottom: 1rem;">Soirée Réveillon</h3>
-          <p>Menu spécial, ambiance festive et cocktail de bienvenue offert. Réservation recommandée.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Informations pratiques -->
-    <section class="info-section" style="margin: 4rem -1.5rem; border-radius: 0;">
-      <h2 style="margin-bottom: 1rem;">Informations Pratiques</h2>
-      <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-        Tout ce que vous devez savoir pour profiter au maximum de notre centre
-      </p>
-
-      <div class="stats-container">
-        <div class="stat-card">
-          <div class="stat-number">7j/7</div>
-          <div class="stat-label">Jours d'ouverture</div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-number">10h-02h</div>
-          <div class="stat-label">Horaires</div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-number">100+</div>
-          <div class="stat-label">Places assises</div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-number">WiFi</div>
-          <div class="stat-label">Gratuit</div>
-        </div>
-      </div>
-
-      <div style="max-width: 600px; margin: 3rem auto 0; text-align: left;">
-        <h3 style="margin-bottom: 1rem;">📍 Nous trouver</h3>
-        <p><strong>Adresse :</strong> Rue principale, Quartier Calypso</p>
-        <p><strong>Téléphone :</strong> +224 00 00 00 00</p>
-        <p><strong>Email :</strong> contact@calypsoloisirs.com</p>
-        
-        <div style="margin-top: 2rem;">
-          <h3 style="margin-bottom: 1rem;">🎯 Accès professionnel</h3>
-          <p>Personnel et administrateurs, utilisez les boutons ci-dessous pour accéder à vos interfaces dédiées :</p>
-          
-          <div class="access-buttons" style="justify-content: flex-start; margin: 1.5rem 0;">
-            <a href="agent.html" class="btn-primary" style="min-width: 180px;">
-              🎫 Poste Agent
-            </a>
-            <a href="admin.html" class="btn-secondary" style="min-width: 180px;">
-              ⚙️ Administration
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Formulaire de Contact -->
-    <section class="contact-section">
-      <div class="contact-container">
-        <h2 style="text-align: center; margin-bottom: 1rem; color: white;">Contactez-nous</h2>
-        <p style="text-align: center; margin-bottom: 2rem; opacity: 0.9;">
-          Une question ? Une réservation ? N'hésitez pas à nous écrire
-        </p>
-
-        <form class="contact-form">
-          <div class="form-group">
-            <label for="name">Nom complet</label>
-            <input type="text" id="name" placeholder="Votre nom" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" placeholder="votre@email.com" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="phone">Téléphone</label>
-            <input type="tel" id="phone" placeholder="+224 00 00 00 00">
-          </div>
-          
-          <div class="form-group">
-            <label for="subject">Sujet</label>
-            <select id="subject" required>
-              <option value="">Choisir un sujet</option>
-              <option value="reservation">Réservation</option>
-              <option value="information">Demande d'information</option>
-              <option value="event">Événement privé</option>
-              <option value="other">Autre</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="message">Message</label>
-            <textarea id="message" placeholder="Votre message..." required></textarea>
-          </div>
-          
-          <button type="submit" class="btn-primary btn-contact" style="width: 100%;">
-            📨 Envoyer le message
-          </button>
-        </form>
+      <div class="admin-buttons">
+        <a href="agent.html" class="admin-btn" style="background: var(--accent-soft); color: var(--accent-primary);">
+          🎫 Espace Agent
+        </a>
+        <a href="admin.html" class="admin-btn" style="background: var(--border-soft); color: var(--text-muted);">
+          ⚙️ Administration
+        </a>
       </div>
     </section>
 
@@ -546,33 +546,54 @@
   </footer>
 
   <script>
-    // Script simple pour le formulaire de contact
-    document.addEventListener('DOMContentLoaded', function() {
-      const contactForm = document.querySelector('.contact-form');
+    // Carousel functionality
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.carousel-slide');
+    const track = document.getElementById('carouselTrack');
+    const dotsContainer = document.getElementById('carouselDots');
+
+    // Create dots
+    slides.forEach((_, index) => {
+      const dot = document.createElement('div');
+      dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
+      dot.addEventListener('click', () => goToSlide(index));
+      dotsContainer.appendChild(dot);
+    });
+
+    function updateCarousel() {
+      track.style.transform = `translateX(-${currentSlide * 100}%)`;
       
-      if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
-          e.preventDefault();
-          
-          // Récupération des données du formulaire
-          const formData = {
-            name: document.getElementById('name').value,
-            email: document.getElementById('email').value,
-            phone: document.getElementById('phone').value,
-            subject: document.getElementById('subject').value,
-            message: document.getElementById('message').value
-          };
-          
-          // Simulation d'envoi
-          console.log('Message envoyé :', formData);
-          
-          // Message de confirmation
-          alert('Merci pour votre message ! Nous vous répondrons dans les plus brefs délais.');
-          
-          // Réinitialisation du formulaire
-          contactForm.reset();
-        });
-      }
+      // Update dots
+      document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index === currentSlide);
+      });
+    }
+
+    function nextSlide() {
+      currentSlide = (currentSlide + 1) % slides.length;
+      updateCarousel();
+    }
+
+    function prevSlide() {
+      currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+      updateCarousel();
+    }
+
+    // Auto-advance carousel
+    setInterval(nextSlide, 5000);
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
     });
   </script>
 
