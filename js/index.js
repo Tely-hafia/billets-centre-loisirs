@@ -16,7 +16,6 @@ if (typeof Appwrite === "undefined") {
 
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-
 const db = new Appwrite.Databases(client);
 
 // ===============================
@@ -46,11 +45,40 @@ function clearReservationMessage() {
 }
 
 // ===============================
+//  POPUP RESERVATION
+// ===============================
+function openReservationPopup() {
+  const overlay = $("reservation-block");
+  const card = overlay?.querySelector(".reservation-card");
+  if (!overlay || !card) return;
+
+  overlay.classList.add("visible");
+  card.classList.add("visible");
+  document.body.style.overflow = "hidden";
+
+  clearReservationMessage();
+}
+
+function closeReservationPopup() {
+  const overlay = $("reservation-block");
+  const card = overlay?.querySelector(".reservation-card");
+  if (!overlay || !card) return;
+
+  overlay.classList.remove("visible");
+  card.classList.remove("visible");
+  document.body.style.overflow = "";
+
+  // refermer aussi le calendrier si ouvert
+  const calendarCard = $("calendarCard");
+  if (calendarCard) calendarCard.style.display = "none";
+}
+
+// ===============================
 //  CALENDRIER
 // ===============================
-let calCurrentMonth;      // 0 - 11
-let calCurrentYear;       // année complète
-let calSelectedDate = null; // Date JS
+let calCurrentMonth;         // 0 - 11
+let calCurrentYear;          // année complète
+let calSelectedDate = null;  // Date JS
 
 function initCalendar() {
   const today = new Date();
@@ -102,6 +130,7 @@ function renderCalendar() {
   const firstDayOfMonth = new Date(calCurrentYear, calCurrentMonth, 1);
   const startingWeekDay = (firstDayOfMonth.getDay() + 6) % 7; // 0=lu .. 6=di
   const daysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -136,10 +165,7 @@ function renderCalendar() {
     }
 
     // Sélection actuelle
-    if (
-      calSelectedDate &&
-      dateObj.getTime() === calSelectedDate.getTime()
-    ) {
+    if (calSelectedDate && dateObj.getTime() === calSelectedDate.getTime()) {
       cell.classList.add("selected");
     }
 
@@ -157,13 +183,11 @@ function renderCalendar() {
           input.value = `${dd}/${mm}/${yyyy}`;
         }
 
-        renderCalendar(); // pour mettre la classe selected
+        renderCalendar();
 
         // on ferme le calendrier après sélection
         const card = $("calendarCard");
-        if (card) {
-          card.style.display = "none";
-        }
+        if (card) card.style.display = "none";
       });
     } else {
       cell.disabled = true;
@@ -181,6 +205,7 @@ function parseDateFrToISO(dateStr) {
   const parts = dateStr.split("/");
   if (parts.length !== 3) return null;
   const [ddStr, mmStr, yyyyStr] = parts;
+
   const dd = parseInt(ddStr, 10);
   const mm = parseInt(mmStr, 10);
   const yyyy = parseInt(yyyyStr, 10);
@@ -214,9 +239,7 @@ async function generateReservationNumber(dateIso) {
       const parts = num.split("-");
       const lastPart = parts[2] || "";
       const idx = parseInt(lastPart, 10);
-      if (!isNaN(idx) && idx > maxIndex) {
-        maxIndex = idx;
-      }
+      if (!isNaN(idx) && idx > maxIndex) maxIndex = idx;
     }
 
     const nextIndex = maxIndex + 1;
@@ -224,10 +247,78 @@ async function generateReservationNumber(dateIso) {
     return `${prefix}${indexStr}`;
   } catch (err) {
     console.error("[SITE] Erreur génération numéro réservation :", err);
-    // fallback simple si problème
     const random = String(Math.floor(Math.random() * 9999)).padStart(4, "0");
     return `${prefix}${random}`;
   }
+}
+
+// ===============================
+//  TICKET PNG (CANVAS)
+// ===============================
+async function generateTicketPNG(data) {
+  const {
+    numero,
+    nom,
+    prenom,
+    telephone,
+    activite,
+    dateStr
+  } = data;
+
+  const canvas = document.createElement("canvas");
+  const W = 900, H = 520;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  // Fond
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  // Bordure
+  ctx.strokeStyle = "#0f172a";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(20, 20, W - 40, H - 40);
+
+  // Bandeau haut
+  ctx.fillStyle = "#2563eb";
+  ctx.fillRect(20, 20, W - 40, 90);
+
+  // Titre
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 32px Arial";
+  ctx.fillText("Calypço - Ticket de Réservation", 50, 75);
+
+  // Sous-titre
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 26px Arial";
+  ctx.fillText(`N° ${numero}`, 50, 155);
+
+  ctx.font = "20px Arial";
+  ctx.fillText(`Nom / Prénom : ${nom} ${prenom}`, 50, 215);
+  ctx.fillText(`Téléphone : ${telephone}`, 50, 255);
+  ctx.fillText(`Activité : ${activite}`, 50, 295);
+  ctx.fillText(`Date de réservation : ${dateStr}`, 50, 335);
+
+  // Message bas
+  ctx.font = "italic 16px Arial";
+  ctx.fillStyle = "#475569";
+  ctx.fillText("Merci de présenter ce ticket à l’accueil.", 50, 410);
+
+  // Export PNG + téléchargement
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ticket-${numero}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      resolve();
+    }, "image/png");
+  });
 }
 
 // ===============================
@@ -278,14 +369,29 @@ async function submitReservation(e) {
     );
 
     showReservationMessage(
-      `Votre réservation a été enregistrée avec le numéro : ${numero}.`,
+      `Votre réservation a été enregistrée. Ticket en cours de téléchargement...`,
       "success"
     );
 
+    // Générer puis télécharger le ticket PNG
+    await generateTicketPNG({
+      numero,
+      nom,
+      prenom,
+      telephone,
+      activite,
+      dateStr
+    });
+
+    // Fermer automatiquement APRÈS le téléchargement
+    closeReservationPopup();
+
+    // Reset formulaire + calendrier
     const form = $("reservationForm");
     if (form) form.reset();
     calSelectedDate = null;
     renderCalendar();
+
   } catch (err) {
     console.error("[SITE] Erreur enregistrement réservation :", err);
     showReservationMessage(
@@ -301,36 +407,52 @@ async function submitReservation(e) {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[SITE] DOMContentLoaded – init Calypço");
 
-  // 1) Afficher la section réservation au clic sur le bouton
   const btnShowReservation = $("btnShowReservation");
+  const btnCloseReservation = $("btnCloseReservation");
   const reservationBlock = $("reservation-block");
+  const reservationCard = reservationBlock?.querySelector(".reservation-card");
 
-  if (btnShowReservation && reservationBlock) {
-    btnShowReservation.addEventListener("click", () => {
-      reservationBlock.style.display = "block";
-      reservationBlock.scrollIntoView({ behavior: "smooth", block: "start" });
+  // La popup reste cachée au départ (CSS).
+  // Ouvrir avec bouton 🏆 Réservation
+  if (btnShowReservation) {
+    btnShowReservation.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openReservationPopup();
     });
   }
 
-  // 2) Calendrier : caché par défaut, visible quand on clique sur la date
+  // Fermer avec croix ×
+  if (btnCloseReservation) {
+    btnCloseReservation.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeReservationPopup();
+    });
+  }
+
+  // Fermer si clic sur fond overlay
+  if (reservationBlock && reservationCard) {
+    reservationBlock.addEventListener("click", () => closeReservationPopup());
+    reservationCard.addEventListener("click", (e) => e.stopPropagation());
+  }
+
+  // Fermer avec Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeReservationPopup();
+  });
+
+  // ===== Calendrier toggle =====
   const dateInput = $("resDateDisplay");
   const calendarCard = $("calendarCard");
 
   if (calendarCard) {
-    // on le cache au départ
     calendarCard.style.display = "none";
-
-    // empêcher la fermeture quand on clique dedans
-    calendarCard.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
+    calendarCard.addEventListener("click", (e) => e.stopPropagation());
   }
 
   if (dateInput) {
     dateInput.addEventListener("click", (e) => {
       e.stopPropagation();
       if (calendarCard) {
-        // toggle
         const visible = calendarCard.style.display === "block";
         calendarCard.style.display = visible ? "none" : "block";
       }
@@ -339,17 +461,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Fermer le calendrier quand on clique ailleurs
   document.addEventListener("click", () => {
-    if (calendarCard) {
-      calendarCard.style.display = "none";
-    }
+    if (calendarCard) calendarCard.style.display = "none";
   });
 
-  // 3) Formulaire
+  // Submit formulaire
   const form = $("reservationForm");
-  if (form) {
-    form.addEventListener("submit", submitReservation);
-  }
+  if (form) form.addEventListener("submit", submitReservation);
 
-  // 4) Initialiser le calendrier
+  // Init calendrier
   initCalendar();
 });
