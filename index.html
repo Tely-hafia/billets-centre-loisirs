@@ -225,11 +225,21 @@
     .date-display-input::placeholder {
       color: var(--text-muted);
     }
+
+    /* Calendrier masqué par défaut, affiché après clic sur le champ date */
+.calendar-card {
+  display: none;
+}
+
+.calendar-card.visible {
+  display: block;
+}
+
 /* Overlay popup */
 #reservation-block.reservation-overlay {
   position: fixed;
   inset: 0;
-  display: none;
+  display: none; /* caché au départ */
   align-items: center;
   justify-content: center;
   background: radial-gradient(circle at top, rgba(15,23,42,0.25), rgba(15,23,42,0.75));
@@ -277,6 +287,7 @@
   color: #4b5563;
   box-shadow: 0 6px 14px rgba(15,23,42,0.16);
 }
+
 
 /* pour éviter de casser ton style global, on ne touche pas aux autres classes */
 
