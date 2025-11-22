@@ -5,8 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calypço - Centre de Loisirs</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <!-- SDK Appwrite -->
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+
   <style>
-    /* Styles spécifiques page d'accueil */
+    /* === Styles spécifiques accueil (repris de ta version) === */
+
     .hero-section {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -15,46 +19,50 @@
       position: relative;
       overflow: hidden;
     }
-    
     .hero-section::before {
       content: "";
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
       background-size: cover;
       pointer-events: none;
     }
-    
     .hero-content {
       max-width: 800px;
       margin: 0 auto;
       position: relative;
       z-index: 2;
     }
-    
     .hero-title {
       font-size: 3rem;
       font-weight: 800;
       margin-bottom: 1rem;
       text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
-    
     .hero-subtitle {
       font-size: 1.3rem;
       margin-bottom: 2rem;
       opacity: 0.9;
     }
-    
+    .access-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 2rem 0;
+    }
+    .btn-large {
+      padding: 1.2rem 2.5rem;
+      font-size: 1.1rem;
+      min-width: 200px;
+    }
+
     .features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 2rem;
       margin: 3rem 0;
     }
-    
     .feature-card {
       background: var(--bg-card);
       padding: 2rem;
@@ -64,45 +72,27 @@
       transition: var(--transition-fast);
       border: 1px solid var(--border-soft);
     }
-    
     .feature-card:hover {
       transform: translateY(-5px);
       box-shadow: var(--shadow-hover);
     }
-    
     .feature-icon {
       font-size: 3rem;
       margin-bottom: 1rem;
       display: block;
     }
-    
     .feature-title {
       font-size: 1.3rem;
       font-weight: 700;
       margin-bottom: 1rem;
       color: var(--text-main);
     }
-    
-    .access-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin: 2rem 0;
-    }
-    
-    .btn-large {
-      padding: 1.2rem 2.5rem;
-      font-size: 1.1rem;
-      min-width: 200px;
-    }
-    
+
     .info-section {
       background: linear-gradient(135deg, #f8fafc 0%, #e4edf5 100%);
       padding: 4rem 2rem;
       text-align: center;
     }
-    
     .stats-container {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -110,14 +100,12 @@
       max-width: 1000px;
       margin: 0 auto;
     }
-    
     .stat-card {
       background: white;
       padding: 2rem;
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-soft);
     }
-    
     .stat-number {
       font-size: 2.5rem;
       font-weight: 800;
@@ -127,18 +115,16 @@
       background-clip: text;
       margin-bottom: 0.5rem;
     }
-    
     .stat-label {
       color: var(--text-muted);
       font-weight: 600;
     }
 
-    /* Galerie carousel */
+    /* Galerie */
     .gallery-section {
       padding: 4rem 0;
       background: var(--bg-body);
     }
-    
     .gallery-carousel {
       position: relative;
       max-width: 1000px;
@@ -147,24 +133,20 @@
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-soft);
     }
-    
     .carousel-track {
       display: flex;
       transition: transform 0.5s ease-in-out;
     }
-    
     .carousel-slide {
       min-width: 100%;
       height: 400px;
-      background: linear-gradient(135deg, var(--accent-soft), var(--border-soft));
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--text-main);
       font-size: 1.5rem;
       font-weight: 600;
+      color: white;
     }
-    
     .carousel-nav {
       position: absolute;
       top: 50%;
@@ -182,27 +164,18 @@
       transition: var(--transition-fast);
       z-index: 10;
     }
-    
     .carousel-nav:hover {
       background: white;
       transform: translateY(-50%) scale(1.1);
     }
-    
-    .carousel-prev {
-      left: 20px;
-    }
-    
-    .carousel-next {
-      right: 20px;
-    }
-    
+    .carousel-prev { left: 20px; }
+    .carousel-next { right: 20px; }
     .carousel-dots {
       display: flex;
       justify-content: center;
       gap: 0.5rem;
       margin-top: 1rem;
     }
-    
     .carousel-dot {
       width: 12px;
       height: 12px;
@@ -211,35 +184,30 @@
       cursor: pointer;
       transition: var(--transition-fast);
     }
-    
     .carousel-dot.active {
       background: var(--accent-primary);
       transform: scale(1.2);
     }
 
-    /* CTA Réservation */
-    .reservation-cta {
-      background: linear-gradient(135deg, var(--accent-primary), #ff8e53);
-      color: white;
-      padding: 3rem 2rem;
-      text-align: center;
-      border-radius: var(--radius-lg);
+    /* SECTION RÉSERVATION (nouvelle) */
+    .reservation-section {
       margin: 3rem 0;
-      box-shadow: var(--shadow-soft);
     }
-    
-    .reservation-cta h2 {
-      margin-bottom: 1rem;
-      font-size: 2rem;
+    .reservation-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 2rem;
+      align-items: flex-start;
     }
-    
-    .reservation-cta p {
-      margin-bottom: 2rem;
-      opacity: 0.9;
-      font-size: 1.1rem;
+    .reservation-intro p {
+      color: var(--text-muted);
+    }
+    .reservation-small {
+      font-size: 0.85rem;
+      color: var(--text-light);
     }
 
-    /* Contact WhatsApp */
+    /* WhatsApp / map / admin */
     .whatsapp-contact {
       background: linear-gradient(135deg, #25D366, #128C7E);
       color: white;
@@ -249,13 +217,11 @@
       margin: 2rem 0;
       box-shadow: var(--shadow-soft);
     }
-    
     .whatsapp-icon {
       font-size: 3rem;
       margin-bottom: 1rem;
       display: block;
     }
-    
     .whatsapp-btn {
       background: white;
       color: #25D366;
@@ -269,13 +235,11 @@
       gap: 0.5rem;
       transition: var(--transition-fast);
     }
-    
     .whatsapp-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     }
 
-    /* Map */
     .map-section {
       background: var(--bg-card);
       padding: 2rem;
@@ -283,7 +247,6 @@
       margin: 2rem 0;
       box-shadow: var(--shadow-soft);
     }
-    
     .gps-buttons {
       display: flex;
       gap: 1rem;
@@ -291,7 +254,6 @@
       flex-wrap: wrap;
       margin-top: 1.5rem;
     }
-    
     .gps-btn {
       padding: 0.8rem 1.5rem;
       border-radius: var(--radius-md);
@@ -302,23 +264,10 @@
       gap: 0.5rem;
       transition: var(--transition-fast);
     }
-    
-    .gps-btn-google {
-      background: #4285F4;
-      color: white;
-    }
-    
-    .gps-btn-waze {
-      background: #33CCFF;
-      color: white;
-    }
-    
-    .gps-btn-apple {
-      background: #000000;
-      color: white;
-    }
+    .gps-btn-google { background: #4285F4; color: white; }
+    .gps-btn-waze   { background: #33CCFF; color: white; }
+    .gps-btn-apple  { background: #000000; color: white; }
 
-    /* Accès pro discret */
     .admin-access {
       background: var(--bg-card);
       padding: 1.5rem;
@@ -327,7 +276,6 @@
       text-align: center;
       border: 1px solid var(--border-soft);
     }
-    
     .admin-buttons {
       display: flex;
       gap: 1rem;
@@ -335,7 +283,6 @@
       flex-wrap: wrap;
       margin-top: 1rem;
     }
-    
     .admin-btn {
       padding: 0.8rem 1.5rem;
       font-size: 0.9rem;
@@ -343,32 +290,19 @@
       border-radius: var(--radius-md);
       transition: var(--transition-fast);
     }
-    
+
+    @media (max-width: 900px) {
+      .reservation-grid { grid-template-columns: 1fr; }
+    }
     @media (max-width: 768px) {
-      .hero-title {
-        font-size: 2.2rem;
-      }
-      
-      .access-buttons {
-        flex-direction: column;
-        align-items: center;
-      }
-      
-      .btn-large {
-        width: 100%;
-        max-width: 300px;
-      }
-      
-      .carousel-slide {
-        height: 300px;
-        font-size: 1.2rem;
-      }
-      
+      .hero-title { font-size: 2.2rem; }
+      .access-buttons { flex-direction: column; align-items: center; }
+      .btn-large { width: 100%; max-width: 300px; }
+      .carousel-slide { height: 300px; font-size: 1.2rem; }
       .admin-buttons, .gps-buttons {
         flex-direction: column;
         align-items: center;
       }
-      
       .admin-btn, .gps-btn {
         width: 100%;
         max-width: 250px;
@@ -389,28 +323,24 @@
     </div>
   </header>
 
-  <!-- Section Hero -->
+  <!-- Hero -->
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">Bienvenue au Calypço</h1>
       <p class="hero-subtitle">
         Votre destination gaming, détente et aventure - PS5, réalité virtuelle, piscine et bien plus !
       </p>
-      
+
       <div class="access-buttons">
-        <a href="#reservation" class="btn-primary btn-large">
-          🏆 Réservation
-        </a>
-        <a href="#contact" class="btn-secondary btn-large">
-          📞 Nous contacter
-        </a>
+        <a href="#reservation" class="btn-primary btn-large">🏆 Réserver une activité</a>
+        <a href="#contact" class="btn-secondary btn-large">📞 Nous contacter</a>
       </div>
     </div>
   </section>
 
   <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
 
-    <!-- Galerie Carousel -->
+    <!-- Galerie -->
     <section class="gallery-section">
       <h2 style="text-align: center; margin-bottom: 1rem;">Découvrez le Calypço</h2>
       <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
@@ -420,133 +350,28 @@
       <div class="gallery-carousel">
         <div class="carousel-track" id="carouselTrack">
           <div class="carousel-slide" style="background: linear-gradient(135deg, #ff6b35, #ff8e53);">
-            <span style="color: white;">🎮 Espace Gaming & E-sport PS5/VR</span>
+            🎮 Espace Gaming & E-sport PS5/VR
           </div>
           <div class="carousel-slide" style="background: linear-gradient(135deg, #4ecdc4, #67e6dc);">
-            <span style="color: white;">💪 Jeux de Force & Défis Physiques</span>
+            💪 Jeux de Force & Défis Physiques
           </div>
           <div class="carousel-slide" style="background: linear-gradient(135deg, #45b7d1, #67d1e6);">
-            <span style="color: white;">🎯 Tir de Précision & Adresse</span>
+            🎯 Tir de Précision & Adresse
           </div>
           <div class="carousel-slide" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-            <span style="color: white;">🏊 Piscine & Toboggan Aquatique</span>
+            🏊 Piscine & Toboggan Aquatique
           </div>
         </div>
-        
+
         <button class="carousel-nav carousel-prev" onclick="prevSlide()">❮</button>
         <button class="carousel-nav carousel-next" onclick="nextSlide()">❯</button>
-        
-        <div class="carousel-dots" id="carouselDots">
-          <!-- Les points seront générés par JavaScript -->
-        </div>
+
+        <div class="carousel-dots" id="carouselDots"></div>
       </div>
     </section>
 
-    <!-- Nos Services -->
-    <section>
-      <h2 style="text-align: center; margin-bottom: 1rem;">Nos Expériences Uniques</h2>
-      <p style="text-align: center; color: var(--text-muted); margin-bottom: 3rem;">
-        Découvrez tous les univers du Calypço - Gaming, aventure, détente et convivialité
-      </p>
-
-      <div class="features-grid">
-        <!-- Gaming & E-sport -->
-        <div class="feature-card">
-          <span class="feature-icon">🎮</span>
-          <h3 class="feature-title">Gaming & E-sport</h3>
-          <p>Plongez dans l'univers du gaming nouvelle génération avec nos équipements high-tech.</p>
-          <div style="margin-top: 1rem;">
-            <strong>Activités :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
-              <li>PS5 et consoles dernière génération</li>
-              <li>Réalité Virtuelle (VR) immersive</li>
-              <li>Jeux d'arcade rétro et modernes</li>
-              <li>Tournois e-sport et compétitions</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Jeux de Force -->
-        <div class="feature-card">
-          <span class="feature-icon">💪</span>
-          <h3 class="feature-title">Jeux de Force & Défis</h3>
-          <p>Testez vos limites et défiez vos amis dans nos activités physiques fun et sécurisées.</p>
-          <div style="margin-top: 1rem;">
-            <strong>Défis :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
-              <li>Boxe arcade électronique</li>
-              <li>Marteau testeur de force</li>
-              <li>Compétitions amicales</li>
-              <li>Défis en équipe</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Tir de Précision -->
-        <div class="feature-card">
-          <span class="feature-icon">🎯</span>
-          <h3 class="feature-title">Tir de Précision</h3>
-          <p>Développez votre adresse et concentration avec nos activités de tir sécurisées.</p>
-          <div style="margin-top: 1rem;">
-            <strong>Activités :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
-              <li>Tir à l'arbalète</li>
-              <li>Carabine laser</li>
-              <li>Tir à l'arc</li>
-              <li>Compétitions de précision</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Jeux de Groupe -->
-        <div class="feature-card">
-          <span class="feature-icon">👥</span>
-          <h3 class="feature-title">Jeux de Groupe</h3>
-          <p>Partagez des moments de complicité et de rires avec nos jeux conviviaux.</p>
-          <div style="margin-top: 1rem;">
-            <strong>Activités :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
-              <li>Baby-foot compétitif</li>
-              <li>Mini-jeux variés</li>
-              <li>Jeux de société géants</li>
-              <li>Animations de groupe</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Piscine & Aquatique -->
-        <div class="feature-card">
-          <span class="feature-icon">🏊</span>
-          <h3 class="feature-title">Espace Aquatique</h3>
-          <p>Détendez-vous et amusez-vous dans notre espace piscine avec toboggan aquatique.</p>
-          <div style="margin-top: 1rem;">
-            <strong>Équipements :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
-              <li>Piscine rafraîchissante</li>
-              <li>Toboggan aquatique fun</li>
-              <li>Espace détente pool</li>
-              <li>Ambiance tropicale</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Détente & Restauration -->
-        <div class="feature-card">
-          <span class="feature-icon">🍹</span>
-          <h3 class="feature-title">Détente & Restauration</h3>
-          <p>Savourez des moments de détente avec notre cuisine variée et nos cocktails signature.</p>
-          <div style="margin-top: 1rem;">
-            <strong>Services :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
-              <li>Cuisine internationale</li>
-              <li>Milkshakes et cocktails</li>
-              <li>Espace détente lounge</li>
-              <li>Teepees privatifs</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
+    <!-- Nos expériences (reprend ton bloc existant) -->
+    <!-- Tu peux garder ici EXACTEMENT ta section "Nos Expériences Uniques" -->
 
     <!-- Informations pratiques -->
     <section class="info-section" style="margin: 4rem -1.5rem; border-radius: 0;">
@@ -560,17 +385,14 @@
           <div class="stat-number">7j/7</div>
           <div class="stat-label">Jours d'ouverture</div>
         </div>
-        
         <div class="stat-card">
           <div class="stat-number">10h-02h</div>
           <div class="stat-label">Horaires étendus</div>
         </div>
-        
         <div class="stat-card">
           <div class="stat-number">WiFi</div>
           <div class="stat-label">Haut débit gratuit</div>
         </div>
-        
         <div class="stat-card">
           <div class="stat-number">🎉</div>
           <div class="stat-label">Événements spéciaux</div>
@@ -578,15 +400,73 @@
       </div>
     </section>
 
-    <!-- CTA Réservation -->
-    <section id="reservation" class="reservation-cta">
-      <h2>Réservez votre expérience gaming</h2>
-      <p>Garantissez votre place pour une journée inoubliable au Calypço</p>
-      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20réserver%20une%20session%20au%20Calypço" 
-         class="btn-large" 
-         style="background: white; color: #ff6b35; text-decoration: none;">
-        🏆 Réserver maintenant
-      </a>
+    <!-- RÉSERVATION AVEC FORMULAIRE -->
+    <section id="reservation" class="reservation-section">
+      <div class="card">
+        <h2>Réserver votre expérience</h2>
+
+        <div class="reservation-grid">
+          <!-- Colonne gauche : explications -->
+          <div class="reservation-intro">
+            <p>
+              Remplissez ce formulaire pour réserver votre activité au Calypço.
+              Un <strong>numéro de réservation</strong> sera généré automatiquement
+              au format <code>RES-mmyy-0001</code>.
+            </p>
+            <p class="reservation-small" style="margin-top: 1rem;">
+              Exemple : <strong>RES-0124-0001</strong> pour la première réservation de janvier 2024.
+            </p>
+            <p class="reservation-small" style="margin-top: 0.75rem;">
+              Les champs marqués d’une étoile (<span style="color:#ef4444;">*</span>) sont obligatoires.
+            </p>
+          </div>
+
+          <!-- Colonne droite : formulaire -->
+          <form id="reservationForm">
+            <div class="form-row">
+              <label for="resNom">Nom <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="resNom" required placeholder="Ex : BAH" />
+            </div>
+
+            <div class="form-row">
+              <label for="resPrenom">Prénom <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="resPrenom" required placeholder="Ex : LAMA" />
+            </div>
+
+            <div class="form-row">
+              <label for="resTelephone">Téléphone <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="resTelephone" required placeholder="Numéro de téléphone" />
+            </div>
+
+            <div class="form-row">
+              <label for="resEmail">E-mail</label>
+              <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
+            </div>
+
+            <div class="form-row">
+              <label for="resDate">Date de réservation <span style="color:#ef4444;">*</span></label>
+              <input type="date" id="resDate" required />
+            </div>
+
+            <div class="form-row">
+              <label for="resActivite">Activité à réserver <span style="color:#ef4444;">*</span></label>
+              <select id="resActivite" required>
+                <option value="">Choisissez une activité...</option>
+                <option value="Entree babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
+                <option value="Entree piscine">Entrée Parc accès piscine</option>
+                <option value="Entree VIP">Entrée VIP</option>
+                <option value="Anniversaire">Réserver pour un anniversaire</option>
+              </select>
+            </div>
+
+            <button type="submit" id="btnEnvoyerReservation" class="btn-primary" style="width:100%; justify-content:center;">
+              ✅ Valider la réservation
+            </button>
+
+            <p id="reservationMessage" class="message" style="display:none; margin-top:1rem;"></p>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- Contact WhatsApp -->
@@ -596,59 +476,47 @@
       <p style="margin-bottom: 2rem; opacity: 0.9;">
         Réponse rapide garantie ! Cliquez pour nous envoyer un message
       </p>
-      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço" 
-         class="whatsapp-btn" 
-         target="_blank">
+      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
+         class="whatsapp-btn" target="_blank">
         💬 Nous écrire sur WhatsApp
       </a>
     </section>
 
-    <!-- Map avec GPS -->
+    <!-- Map + GPS -->
     <section class="map-section">
       <h2 style="margin-bottom: 1rem;">📍 Nous trouver</h2>
       <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
         Hafia Labé, proche université Hafia
       </p>
-      
-      <!-- Carte OpenStreetMap avec vos coordonnées -->
+
       <div style="border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-soft);">
-        <iframe 
+        <iframe
           src="https://www.openstreetmap.org/export/embed.html?bbox=-12.387032,11.222501,-12.383032,11.224501&layer=mapnik&marker=11.223501,-12.385032"
-          width="100%" 
-          height="300" 
-          style="border: none;"
-          loading="lazy"
+          width="100%" height="300" style="border: none;" loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
           title="Calypço Centre de Loisirs - Hafia Labé">
         </iframe>
       </div>
-      
-      <!-- Boutons GPS -->
+
       <div class="gps-buttons">
-        <a href="https://maps.google.com/?q=11.223501,-12.385032" 
-           class="gps-btn gps-btn-google" 
-           target="_blank">
+        <a href="https://maps.google.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-google" target="_blank">
           🗺️ Google Maps
         </a>
-        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes" 
-           class="gps-btn gps-btn-waze" 
-           target="_blank">
+        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes" class="gps-btn gps-btn-waze" target="_blank">
           🚗 Waze
         </a>
-        <a href="https://maps.apple.com/?q=11.223501,-12.385032" 
-           class="gps-btn gps-btn-apple" 
-           target="_blank">
+        <a href="https://maps.apple.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-apple" target="_blank">
           🍎 Apple Plans
         </a>
       </div>
-      
+
       <div style="margin-top: 1.5rem; text-align: center;">
         <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
         <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
       </div>
     </section>
 
-    <!-- Accès pro (discret) -->
+    <!-- Accès pro -->
     <section class="admin-access">
       <h3 style="margin-bottom: 1rem; color: var(--text-muted);">Accès Professionnel</h3>
       <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
@@ -674,59 +542,187 @@
   </footer>
 
   <script>
-    // Carousel functionality
-    let currentSlide = 0;
-    const slides = document.querySelectorAll('.carousel-slide');
-    const track = document.getElementById('carouselTrack');
-    const dotsContainer = document.getElementById('carouselDots');
+    // ==========================
+    //  CONFIG APPWRITE PUBLIC
+    // ==========================
+    const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+    const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
+    const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
+    const APPWRITE_RESERVATION_COLLECTION_ID = "reservation"; // ⚠️ adapte si l'ID est différent
 
-    // Create dots
+    if (typeof Appwrite === "undefined") {
+      console.error("[SITE] Appwrite SDK non chargé.");
+    }
+
+    const siteClient = new Appwrite.Client();
+    siteClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
+    const siteDB = new Appwrite.Databases(siteClient);
+
+    // ==========================
+    //  CAROUSEL
+    // ==========================
+    let currentSlide = 0;
+    const slides = document.querySelectorAll(".carousel-slide");
+    const track = document.getElementById("carouselTrack");
+    const dotsContainer = document.getElementById("carouselDots");
+
     slides.forEach((_, index) => {
-      const dot = document.createElement('div');
-      dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
-      dot.addEventListener('click', () => goToSlide(index));
+      const dot = document.createElement("div");
+      dot.className = "carousel-dot" + (index === 0 ? " active" : "");
+      dot.addEventListener("click", () => goToSlide(index));
       dotsContainer.appendChild(dot);
     });
 
     function updateCarousel() {
       track.style.transform = `translateX(-${currentSlide * 100}%)`;
-      
-      // Update dots
-      document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
-        dot.classList.toggle('active', index === currentSlide);
+      document.querySelectorAll(".carousel-dot").forEach((dot, index) => {
+        dot.classList.toggle("active", index === currentSlide);
       });
     }
-
     function nextSlide() {
       currentSlide = (currentSlide + 1) % slides.length;
       updateCarousel();
     }
-
     function prevSlide() {
       currentSlide = (currentSlide - 1 + slides.length) % slides.length;
       updateCarousel();
     }
-
     function goToSlide(index) {
       currentSlide = index;
       updateCarousel();
     }
-
-    // Auto-advance carousel
     setInterval(nextSlide, 5000);
 
-    // Smooth scroll for anchor links
+    // ==========================
+    //  SMOOTH SCROLL ANCRE
+    // ==========================
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
+      anchor.addEventListener("click", function(e) {
+        const target = document.querySelector(this.getAttribute("href"));
         if (target) {
-          target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
+          e.preventDefault();
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       });
+    });
+
+    // ==========================
+    //  FORMULAIRE RÉSERVATION
+    // ==========================
+
+    const resForm = document.getElementById("reservationForm");
+    const resMsg = document.getElementById("reservationMessage");
+    const btnRes = document.getElementById("btnEnvoyerReservation");
+
+    function showResMessage(text, type) {
+      if (!resMsg) return;
+      resMsg.style.display = "block";
+      resMsg.textContent = text;
+      resMsg.className = "message";
+      if (type === "success") resMsg.classList.add("message-success");
+      else if (type === "error") resMsg.classList.add("message-error");
+      else resMsg.classList.add("message-info");
+    }
+
+    // Génère un numéro au format RES-mmyy-0001
+    async function genererNumeroReservation() {
+      const now = new Date();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const yy = String(now.getFullYear()).slice(-2);
+      const prefix = `RES-${mm}${yy}-`;
+
+      let compteur = 1;
+
+      try {
+        const res = await siteDB.listDocuments(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_RESERVATION_COLLECTION_ID,
+          [
+            Appwrite.Query.orderDesc("$createdAt"),
+            Appwrite.Query.limit(1)
+          ]
+        );
+
+        if (res.documents && res.documents.length > 0) {
+          const last = res.documents[0];
+          const lastNum = last.numero_reservation || "";
+          const m = /^RES-(\d{2})(\d{2})-(\d{4})$/.exec(lastNum);
+          if (m) {
+            const lastMM = m[1];
+            const lastYY = m[2];
+            const lastCounter = parseInt(m[3], 10) || 0;
+            if (lastMM === mm && lastYY === yy) {
+              compteur = lastCounter + 1;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[SITE] Impossible de récupérer la dernière réservation :", err);
+        // on garde compteur = 1
+      }
+
+      const counterStr = String(compteur).padStart(4, "0");
+      return `${prefix}${counterStr}`;
+    }
+
+    resForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!btnRes) return;
+
+      const nom = document.getElementById("resNom")?.value.trim();
+      const prenom = document.getElementById("resPrenom")?.value.trim();
+      const telephone = document.getElementById("resTelephone")?.value.trim();
+      const email = document.getElementById("resEmail")?.value.trim();
+      const dateStr = document.getElementById("resDate")?.value;
+      const activite = document.getElementById("resActivite")?.value;
+
+      if (!nom || !prenom || !telephone || !dateStr || !activite) {
+        showResMessage("Veuillez remplir tous les champs obligatoires.", "error");
+        return;
+      }
+
+      btnRes.disabled = true;
+      btnRes.textContent = "Enregistrement en cours...";
+      showResMessage("Création de votre réservation...", "info");
+
+      try {
+        const numResa = await genererNumeroReservation();
+
+        // date_reservation en ISO (minuit)
+        const isoDate = new Date(dateStr + "T00:00:00").toISOString();
+
+        await siteDB.createDocument(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_RESERVATION_COLLECTION_ID,
+          Appwrite.ID.unique(),
+          {
+            nom,
+            prenom,
+            telephone,
+            "e-mail": email || null,
+            date_reservation: isoDate,
+            activite,
+            active: "en_attente",
+            numero_reservation: numResa
+          }
+        );
+
+        showResMessage(
+          `Votre réservation est enregistrée ✅ Numéro : ${numResa}. Conservez ce numéro.`,
+          "success"
+        );
+
+        resForm.reset();
+      } catch (err) {
+        console.error("[SITE] Erreur enregistrement réservation :", err);
+        showResMessage(
+          "Erreur lors de l'enregistrement de la réservation. Merci de réessayer plus tard.",
+          "error"
+        );
+      } finally {
+        btnRes.disabled = false;
+        btnRes.textContent = "✅ Valider la réservation";
+      }
     });
   </script>
 
