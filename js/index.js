@@ -1,355 +1,352 @@
-console.log("[SITE] index.js chargé – Calypço");
+// ================================
+//  Config Appwrite
+// ================================
+console.log("[SITE] index.js chargé – réservation Calypço");
 
-// ===============================
-//  CONFIG APPWRITE
-// ===============================
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
-const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
-const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
+const APPWRITE_PROJECT_ID = "TON_PROJECT_ID";              // <-- à remplacer
+const APPWRITE_DATABASE_ID = "TON_DATABASE_ID";            // <-- à remplacer
+const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";  // id de la collection
 
 if (typeof Appwrite === "undefined") {
-  console.error(
-    "[SITE] Appwrite SDK non chargé. Vérifie le script CDN appwrite@13.0.0 dans le HTML."
-  );
+  console.error("[SITE] Appwrite SDK non chargé.");
 }
 
-const client = new Appwrite.Client();
-client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
+const client = new Appwrite.Client()
+  .setEndpoint(APPWRITE_ENDPOINT)
+  .setProject(APPWRITE_PROJECT_ID);
 
 const db = new Appwrite.Databases(client);
 
-// ===============================
-//  HELPERS DOM
-// ===============================
+// ================================
+//  Utilitaires
+// ================================
 function $(id) {
   return document.getElementById(id);
 }
 
-function showReservationMessage(text, type) {
-  const zone = $("reservationMessage");
-  if (!zone) return;
-  zone.style.display = "block";
-  zone.textContent = text;
-  zone.className = "message";
-  if (type === "success") zone.classList.add("message-success");
-  else if (type === "error") zone.classList.add("message-error");
-  else zone.classList.add("message-info");
+function formatDateForDisplay(dateObj) {
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const y = dateObj.getFullYear();
+  return `${d}/${m}/${y}`;
 }
 
-function clearReservationMessage() {
-  const zone = $("reservationMessage");
-  if (!zone) return;
-  zone.style.display = "none";
-  zone.textContent = "";
-  zone.className = "message";
+function formatDateForISO(dateObj) {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}T00:00:00.000Z`;
 }
 
-// ===============================
-//  CALENDRIER
-// ===============================
-let calCurrentMonth;      // 0 - 11
-let calCurrentYear;       // année complète
-let calSelectedDate = null; // Date JS
-
-function initCalendar() {
-  const today = new Date();
-  calCurrentMonth = today.getMonth();
-  calCurrentYear = today.getFullYear();
-  renderCalendar();
-
-  const btnPrev = $("calPrev");
-  const btnNext = $("calNext");
-
-  if (btnPrev) {
-    btnPrev.addEventListener("click", (e) => {
-      e.stopPropagation();
-      calCurrentMonth--;
-      if (calCurrentMonth < 0) {
-        calCurrentMonth = 11;
-        calCurrentYear--;
-      }
-      renderCalendar();
-    });
-  }
-
-  if (btnNext) {
-    btnNext.addEventListener("click", (e) => {
-      e.stopPropagation();
-      calCurrentMonth++;
-      if (calCurrentMonth > 11) {
-        calCurrentMonth = 0;
-        calCurrentYear++;
-      }
-      renderCalendar();
-    });
-  }
+function generateReservationNumber(dateObj, index) {
+  // RES-mmyy-0001
+  const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const yy = String(dateObj.getFullYear()).slice(-2);
+  const seq = String(index).padStart(4, "0");
+  return `RES-${mm}${yy}-${seq}`;
 }
 
-function renderCalendar() {
+// ================================
+//  Calendrier
+// ================================
+let currentMonth;
+let currentYear;
+let selectedDate = null;
+let calendarInitialized = false;
+
+function buildCalendar(year, month) {
   const daysContainer = $("calendarDays");
   const titleEl = $("calMonthTitle");
   if (!daysContainer || !titleEl) return;
 
-  const monthNames = [
-    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
-  ];
-
-  titleEl.textContent = `${monthNames[calCurrentMonth]} ${calCurrentYear}`;
   daysContainer.innerHTML = "";
 
-  const firstDayOfMonth = new Date(calCurrentYear, calCurrentMonth, 1);
-  const startingWeekDay = (firstDayOfMonth.getDay() + 6) % 7; // 0=lu .. 6=di
-  const daysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
+  const date = new Date(year, month, 1);
+  const monthName = date.toLocaleString("fr-FR", { month: "long" });
+  titleEl.textContent =
+    monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + year;
+
+  const firstDayIndex = (date.getDay() + 6) % 7; // lundi=0
+  const lastDay = new Date(year, month + 1, 0).getDate();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // cases vides avant le 1er
-  for (let i = 0; i < startingWeekDay; i++) {
+  for (let i = 0; i < firstDayIndex; i++) {
     const empty = document.createElement("div");
     daysContainer.appendChild(empty);
   }
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    const cell = document.createElement("button");
-    cell.type = "button";
-    cell.className = "calendar-day";
-    cell.textContent = String(day);
+  for (let d = 1; d <= lastDay; d++) {
+    const cellDate = new Date(year, month, d);
+    cellDate.setHours(0, 0, 0, 0);
 
-    const dateObj = new Date(calCurrentYear, calCurrentMonth, day);
-    dateObj.setHours(0, 0, 0, 0);
+    const dayEl = document.createElement("button");
+    dayEl.type = "button";
+    dayEl.className = "calendar-day";
+    dayEl.textContent = d.toString();
 
-    const weekday = (dateObj.getDay() + 6) % 7; // 0=lu,1=ma,...6=di
-    let isDisabled = false;
+    const dayOfWeek = (cellDate.getDay() + 6) % 7; // 0 lundi, 1 mardi...
 
-    // Lundi (0) et mardi (1) fermés
-    if (weekday === 0 || weekday === 1) {
-      cell.classList.add("ferme");
-      isDisabled = true;
+    // dates passées
+    if (cellDate < today) {
+      dayEl.classList.add("passee");
+      dayEl.disabled = true;
     }
 
-    // Dates passées
-    if (dateObj < today) {
-      cell.classList.add("passee");
-      isDisabled = true;
+    // lundi / mardi fermés
+    if (dayOfWeek === 0 || dayOfWeek === 1) {
+      dayEl.classList.add("ferme");
+      dayEl.disabled = true;
     }
 
-    // Sélection actuelle
     if (
-      calSelectedDate &&
-      dateObj.getTime() === calSelectedDate.getTime()
+      selectedDate &&
+      cellDate.getTime() === selectedDate.getTime()
     ) {
-      cell.classList.add("selected");
+      dayEl.classList.add("selected");
     }
 
-    if (!isDisabled) {
-      cell.addEventListener("click", (e) => {
-        e.stopPropagation();
-
-        calSelectedDate = dateObj;
-
+    if (!dayEl.disabled) {
+      dayEl.addEventListener("click", () => {
+        selectedDate = cellDate;
         const input = $("resDateDisplay");
         if (input) {
-          const dd = String(day).padStart(2, "0");
-          const mm = String(calCurrentMonth + 1).padStart(2, "0");
-          const yyyy = String(calCurrentYear);
-          input.value = `${dd}/${mm}/${yyyy}`;
+          input.value = formatDateForDisplay(selectedDate);
         }
-
-        renderCalendar(); // pour mettre la classe selected
-
-        // on ferme le calendrier après sélection
-        const card = $("calendarCard");
-        if (card) {
-          card.style.display = "none";
-        }
+        buildCalendar(currentYear, currentMonth);
       });
-    } else {
-      cell.disabled = true;
     }
 
-    daysContainer.appendChild(cell);
+    daysContainer.appendChild(dayEl);
   }
 }
 
-// ===============================
-//  FORMAT DATE & NUMÉRO RÉSERVATION
-// ===============================
-function parseDateFrToISO(dateStr) {
-  // "dd/mm/yyyy" -> ISO
-  const parts = dateStr.split("/");
-  if (parts.length !== 3) return null;
-  const [ddStr, mmStr, yyyyStr] = parts;
-  const dd = parseInt(ddStr, 10);
-  const mm = parseInt(mmStr, 10);
-  const yyyy = parseInt(yyyyStr, 10);
+function initCalendar() {
+  if (calendarInitialized) return;
+  calendarInitialized = true;
 
-  if (!dd || !mm || !yyyy) return null;
+  const now = new Date();
+  currentMonth = now.getMonth();
+  currentYear = now.getFullYear();
 
-  const d = new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0));
-  return d.toISOString();
-}
+  const prevBtn = $("calPrev");
+  const nextBtn = $("calNext");
 
-async function generateReservationNumber(dateIso) {
-  // format RES-mmyy-0001
-  const d = new Date(dateIso);
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const year = String(d.getUTCFullYear()).slice(-2);
-  const prefix = `RES-${month}${year}-`;
-
-  try {
-    const res = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_RESERVATION_COLLECTION_ID,
-      [
-        Appwrite.Query.startsWith("numero_reservation", prefix),
-        Appwrite.Query.limit(10000)
-      ]
-    );
-
-    let maxIndex = 0;
-    for (const doc of res.documents) {
-      const num = doc.numero_reservation || "";
-      const parts = num.split("-");
-      const lastPart = parts[2] || "";
-      const idx = parseInt(lastPart, 10);
-      if (!isNaN(idx) && idx > maxIndex) {
-        maxIndex = idx;
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
       }
-    }
-
-    const nextIndex = maxIndex + 1;
-    const indexStr = String(nextIndex).padStart(4, "0");
-    return `${prefix}${indexStr}`;
-  } catch (err) {
-    console.error("[SITE] Erreur génération numéro réservation :", err);
-    // fallback simple si problème
-    const random = String(Math.floor(Math.random() * 9999)).padStart(4, "0");
-    return `${prefix}${random}`;
-  }
-}
-
-// ===============================
-//  ENVOI RESERVATION
-// ===============================
-async function submitReservation(e) {
-  e.preventDefault();
-  clearReservationMessage();
-
-  const nom = $("resNom")?.value.trim();
-  const prenom = $("resPrenom")?.value.trim();
-  const telephone = $("resTelephone")?.value.trim();
-  const email = $("resEmail")?.value.trim();
-  const dateStr = $("resDateDisplay")?.value.trim();
-  const activite = $("resActivite")?.value.trim();
-
-  if (!nom || !prenom || !telephone || !dateStr || !activite) {
-    showReservationMessage(
-      "Merci de remplir tous les champs obligatoires.",
-      "error"
-    );
-    return;
-  }
-
-  const dateIso = parseDateFrToISO(dateStr);
-  if (!dateIso) {
-    showReservationMessage("La date de réservation est invalide.", "error");
-    return;
-  }
-
-  try {
-    const numero = await generateReservationNumber(dateIso);
-
-    await db.createDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_RESERVATION_COLLECTION_ID,
-      Appwrite.ID.unique(),
-      {
-        nom,
-        prenom,
-        telephone,
-        "e-mail": email || null,
-        date_reservation: dateIso,
-        activite,
-        numero_reservation: numero,
-        actif: true
-      }
-    );
-
-    showReservationMessage(
-      `Votre réservation a été enregistrée avec le numéro : ${numero}.`,
-      "success"
-    );
-
-    const form = $("reservationForm");
-    if (form) form.reset();
-    calSelectedDate = null;
-    renderCalendar();
-  } catch (err) {
-    console.error("[SITE] Erreur enregistrement réservation :", err);
-    showReservationMessage(
-      "Erreur lors de l'enregistrement de la réservation. Merci de réessayer plus tard.",
-      "error"
-    );
-  }
-}
-
-// ===============================
-//  INIT GLOBAL
-// ===============================
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("[SITE] DOMContentLoaded – init Calypço");
-
-  // 1) Afficher la section réservation au clic sur le bouton
-  const btnShowReservation = $("btnShowReservation");
-  const reservationBlock = $("reservation-block");
-
-  if (btnShowReservation && reservationBlock) {
-    btnShowReservation.addEventListener("click", () => {
-      reservationBlock.style.display = "block";
-      reservationBlock.scrollIntoView({ behavior: "smooth", block: "start" });
+      buildCalendar(currentYear, currentMonth);
     });
   }
 
-  // 2) Calendrier : caché par défaut, visible quand on clique sur la date
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      buildCalendar(currentYear, currentMonth);
+    });
+  }
+
+  buildCalendar(currentYear, currentMonth);
+}
+
+// ================================
+//  Popup réservation - CORRIGÉ
+// ================================
+function setupReservationOverlay() {
+  const overlay = $("reservation-block");
+  const card = overlay ? overlay.querySelector(".reservation-card") : null;
+  const btnOpen = $("btnShowReservation");
+  const btnClose = $("btnCloseReservation");
   const dateInput = $("resDateDisplay");
-  const calendarCard = $("calendarCard");
 
-  if (calendarCard) {
-    // on le cache au départ
-    calendarCard.style.display = "none";
+  if (!overlay || !card || !btnOpen) {
+    console.warn("[SITE] éléments overlay réservation manquants.");
+    return;
+  }
 
-    // empêcher la fermeture quand on clique dedans
-    calendarCard.addEventListener("click", (e) => {
+  // sécurité : s'assurer que c'est caché au chargement
+  overlay.style.display = "none";
+  overlay.classList.remove("visible");
+  card.classList.remove("visible");
+
+  function openOverlay() {
+    overlay.style.display = "flex";
+    document.body.style.overflow = "hidden"; // Empêche le scroll de la page
+    // léger délai pour déclencher la transition
+    setTimeout(() => {
+      overlay.classList.add("visible");
+      card.classList.add("visible");
+    }, 10);
+    
+    // Initialiser le calendrier si pas déjà fait
+    if (!calendarInitialized) {
+      initCalendar();
+    }
+  }
+
+  function closeOverlay() {
+    overlay.classList.remove("visible");
+    card.classList.remove("visible");
+    document.body.style.overflow = ""; // Réactive le scroll
+
+    setTimeout(() => {
+      overlay.style.display = "none";
+    }, 300);
+  }
+
+  btnOpen.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openOverlay();
+  });
+
+  if (btnClose) {
+    btnClose.addEventListener("click", (e) => {
       e.stopPropagation();
+      closeOverlay();
     });
   }
 
-  if (dateInput) {
-    dateInput.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (calendarCard) {
-        // toggle
-        const visible = calendarCard.style.display === "block";
-        calendarCard.style.display = visible ? "none" : "block";
-      }
-    });
-  }
-
-  // Fermer le calendrier quand on clique ailleurs
-  document.addEventListener("click", () => {
-    if (calendarCard) {
-      calendarCard.style.display = "none";
+  // clic hors de la carte pour fermer
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      closeOverlay();
     }
   });
 
-  // 3) Formulaire
-  const form = $("reservationForm");
-  if (form) {
-    form.addEventListener("submit", submitReservation);
+  // touche ESC
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && overlay.classList.contains("visible")) {
+      closeOverlay();
+    }
+  });
+
+  // Empêcher la propagation des clics dans la carte
+  card.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
+  // ouverture du calendrier au clic sur le champ date
+  if (dateInput) {
+    dateInput.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!calendarInitialized) {
+        initCalendar();
+      }
+    });
   }
 
-  // 4) Initialiser le calendrier
-  initCalendar();
+  // on expose la fonction de fermeture pour la réutiliser après succès
+  window.__closeReservationOverlay = closeOverlay;
+}
+
+// ================================
+//  Formulaire de réservation
+// ================================
+function setupReservationForm() {
+  const form = $("reservationForm");
+  const msg = $("reservationMessage");
+
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!msg) return;
+
+    const nom = $("resNom")?.value.trim();
+    const prenom = $("resPrenom")?.value.trim();
+    const telephone = $("resTelephone")?.value.trim();
+    const email = $("resEmail")?.value.trim() || null;
+    const activite = $("resActivite")?.value;
+    const dateStr = $("resDateDisplay")?.value;
+
+    if (!nom || !prenom || !telephone || !activite || !dateStr || !selectedDate) {
+      msg.textContent = "Merci de remplir tous les champs obligatoires.";
+      msg.className = "message message-error";
+      msg.style.display = "block";
+      return;
+    }
+
+    msg.textContent = "Enregistrement en cours...";
+    msg.className = "message message-info";
+    msg.style.display = "block";
+
+    try {
+      // compter les réservations du même mois
+      const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+      const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+
+      const list = await db.listDocuments(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_RESERVATION_COLLECTION_ID,
+        [
+          Appwrite.Query.greaterEqual("date_reservation", formatDateForISO(monthStart)),
+          Appwrite.Query.lessEqual("date_reservation", formatDateForISO(monthEnd)),
+          Appwrite.Query.limit(1000)
+        ]
+      );
+
+      const nextIndex = (list.total || list.documents?.length || 0) + 1;
+      const numeroReservation = generateReservationNumber(selectedDate, nextIndex);
+
+      await db.createDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_RESERVATION_COLLECTION_ID,
+        Appwrite.ID.unique(),
+        {
+          nom,
+          prenom,
+          telephone,
+          "e-mail": email,
+          date_reservation: formatDateForISO(selectedDate),
+          activite,
+          numero_reservation: numeroReservation,
+          actif: true
+        }
+      );
+
+      msg.textContent = `Réservation enregistrée. Numéro : ${numeroReservation}`;
+      msg.className = "message message-success";
+      msg.style.display = "block";
+
+      // reset formulaire & calendrier
+      form.reset();
+      selectedDate = null;
+      if (typeof currentYear !== "undefined" && typeof currentMonth !== "undefined") {
+        buildCalendar(currentYear, currentMonth);
+      }
+      const dateInput = $("resDateDisplay");
+      if (dateInput) dateInput.value = "";
+
+      // fermer la popup après une petite seconde pour laisser lire le message
+      setTimeout(() => {
+        if (window.__closeReservationOverlay) {
+          window.__closeReservationOverlay();
+        }
+      }, 2000);
+    } catch (err) {
+      console.error("[SITE] Erreur enregistrement réservation :", err);
+      msg.textContent =
+        "Erreur lors de l'enregistrement de la réservation. Merci de réessayer plus tard.";
+      msg.className = "message message-error";
+      msg.style.display = "block";
+    }
+  });
+}
+
+// ================================
+//  DOMContentLoaded
+// ================================
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("[SITE] DOMContentLoaded – init réservation");
+  setupReservationOverlay();
+  setupReservationForm();
 });
