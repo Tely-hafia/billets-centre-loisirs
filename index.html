@@ -26,71 +26,76 @@
       }
     }
 
-    /* === OVERLAY FLOTTANT AVEC ANIMATION === */
-    .reservation-overlay {
+    /* === OVERLAY CORRIGÉ === */
+    #reservation-block.reservation-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.55);
-      display: flex;
-      align-items: flex-start;
+      display: none;
+      align-items: center;
       justify-content: center;
-      padding-top: 4rem;
-      z-index: 1000;
-
+      background: radial-gradient(circle at top, rgba(15,23,42,0.25), rgba(15,23,42,0.75));
+      z-index: 9999;
+      transition: opacity 0.3s ease;
       opacity: 0;
-      pointer-events: none;
-      transform: scale(1.02);
-      transition: opacity 0.25s ease, transform 0.25s ease;
     }
 
-    .reservation-overlay.show {
+    #reservation-block.reservation-overlay.visible {
       opacity: 1;
-      pointer-events: auto;
+      display: flex;
+    }
+
+    /* Carte centrale avec largeur limitée */
+    #reservation-block .reservation-card {
+      max-width: 900px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      transform: scale(0.92);
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin: 2rem;
+    }
+
+    #reservation-block .reservation-card.visible {
       transform: scale(1);
+      opacity: 1;
     }
 
-    .reservation-dialog {
-      max-width: 1200px;
-      width: 100%;
-      padding: 0 1.5rem;
-    }
-
-    .reservation-close-btn {
+    /* Bouton fermeture */
+    .reservation-close {
       position: absolute;
-      top: 1.25rem;
-      right: 1.5rem;
+      top: 1rem;
+      right: 1rem;
       width: 32px;
       height: 32px;
       border-radius: 999px;
       border: 1px solid var(--border-soft);
-      background: #ffffff;
+      background: #fff;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: #4b5563;
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+      box-shadow: 0 4px 10px rgba(15,23,42,0.15);
       transition: var(--transition-fast);
       z-index: 10;
     }
 
-    .reservation-close-btn:hover {
+    .reservation-close:hover {
       transform: translateY(-1px);
       box-shadow: var(--shadow-soft);
+      background: #ef4444;
+      color: white;
     }
 
-    @media (max-width: 768px) {
-      .reservation-overlay {
-        align-items: stretch;
-        padding-top: 2rem;
-      }
-      .reservation-dialog {
-        padding: 0 0.75rem;
-      }
-    }
-
+    /* Calendrier visible par défaut dans le popup */
     .calendar-card {
       background: var(--bg-card);
       border-radius: var(--radius-lg);
@@ -98,6 +103,7 @@
       box-shadow: var(--shadow-soft);
       border: 1px solid rgba(226, 232, 240, 0.9);
       position: relative;
+      display: block !important;
     }
 
     .calendar-header {
@@ -225,71 +231,6 @@
     .date-display-input::placeholder {
       color: var(--text-muted);
     }
-
-    /* Calendrier masqué par défaut, affiché après clic sur le champ date */
-.calendar-card {
-  display: none;
-}
-
-.calendar-card.visible {
-  display: block;
-}
-
-/* Overlay popup */
-#reservation-block.reservation-overlay {
-  position: fixed;
-  inset: 0;
-  display: none; /* caché au départ */
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at top, rgba(15,23,42,0.25), rgba(15,23,42,0.75));
-  z-index: 50;
-  transition: opacity 0.3s ease;
-  opacity: 0;
-}
-
-#reservation-block.reservation-overlay.visible {
-  opacity: 1;
-}
-
-/* Carte centrale */
-#reservation-block .reservation-card {
-  max-width: 1100px;
-  width: 95%;
-  max-height: 90vh;
-  overflow-y: auto;
-  transform: scale(0.92);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-#reservation-block .reservation-card.visible {
-  transform: scale(1);
-  opacity: 1;
-}
-
-/* Bouton X */
-.reservation-close {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  border: 1px solid var(--border-soft);
-  background: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #4b5563;
-  box-shadow: 0 6px 14px rgba(15,23,42,0.16);
-}
-
-
-/* pour éviter de casser ton style global, on ne touche pas aux autres classes */
 
     /* --- STYLES PAGE D'ACCUEIL --- */
     .hero-section {
@@ -636,6 +577,17 @@
         width: 100%;
         max-width: 250px;
       }
+
+      /* Responsive popup */
+      #reservation-block .reservation-card {
+        width: 95%;
+        margin: 1rem;
+        padding: 1.5rem;
+      }
+
+      .reservation-grid {
+        gap: 1rem;
+      }
     }
   </style>
 </head>
@@ -671,106 +623,105 @@
     </div>
   </section>
 
-      <!-- SECTION RESERVATION (popup flottante, cachée au départ) -->
-    <section id="reservation-block" class="reservation-overlay">
-      <div class="card reservation-card">
-        <!-- Bouton fermer -->
-        <button type="button" class="reservation-close" id="btnCloseReservation">×</button>
+  <!-- SECTION RESERVATION (popup flottante, cachée au départ) -->
+  <section id="reservation-block" class="reservation-overlay">
+    <div class="card reservation-card">
+      <!-- Bouton fermer -->
+      <button type="button" class="reservation-close" id="btnCloseReservation">×</button>
 
-        <h2>Réserver votre expérience</h2>
+      <h2>Réserver votre expérience</h2>
 
-        <div class="reservation-grid">
-          <!-- Formulaire -->
-          <form id="reservationForm">
-            <div class="form-row">
-              <label for="resNom">Nom *</label>
-              <input type="text" id="resNom" placeholder="Votre nom" required />
+      <div class="reservation-grid">
+        <!-- Formulaire -->
+        <form id="reservationForm">
+          <div class="form-row">
+            <label for="resNom">Nom *</label>
+            <input type="text" id="resNom" placeholder="Votre nom" required />
+          </div>
+
+          <div class="form-row">
+            <label for="resPrenom">Prénom *</label>
+            <input type="text" id="resPrenom" placeholder="Votre prénom" required />
+          </div>
+
+          <div class="form-row">
+            <label for="resTelephone">Téléphone *</label>
+            <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
+          </div>
+
+          <div class="form-row">
+            <label for="resEmail">E-mail</label>
+            <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
+          </div>
+
+          <div class="form-row">
+            <label for="resDateDisplay">Date de réservation *</label>
+            <input
+              type="text"
+              id="resDateDisplay"
+              class="date-display-input"
+              placeholder="Cliquez pour choisir une date"
+              readonly
+              required
+            />
+          </div>
+
+          <div class="form-row">
+            <label for="resActivite">Activité à réserver *</label>
+            <select id="resActivite" required>
+              <option value="">Choisir une activité...</option>
+              <option value="Entree Parc babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
+              <option value="Entree Parc piscine">Entrée Parc accès piscine</option>
+              <option value="Entree VIP">Entrée VIP</option>
+              <option value="Anniversaire">Réserver pour un anniversaire</option>
+            </select>
+          </div>
+
+          <button id="btnSubmitReservation" type="submit" class="btn-primary">
+            ✅ Valider la réservation
+          </button>
+
+          <p id="reservationMessage" class="message" style="display:none;"></p>
+        </form>
+
+        <!-- Calendrier -->
+        <div id="calendarCard" class="calendar-card">
+          <div class="calendar-header">
+            <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
+            <div class="calendar-month-title" id="calMonthTitle">Mois</div>
+            <button type="button" id="calNext" class="calendar-nav-btn">›</button>
+          </div>
+
+          <div class="calendar-weekdays">
+            <span class="lundi-ferme">lu</span>
+            <span class="mardi-ferme">ma</span>
+            <span>me</span>
+            <span>je</span>
+            <span>ve</span>
+            <span>sa</span>
+            <span>di</span>
+          </div>
+
+          <div class="calendar-days" id="calendarDays"></div>
+
+          <div class="calendar-legend">
+            <div class="legend-item">
+              <span class="legend-dot legend-dispo"></span> Dates disponibles
             </div>
-
-            <div class="form-row">
-              <label for="resPrenom">Prénom *</label>
-              <input type="text" id="resPrenom" placeholder="Votre prénom" required />
+            <div class="legend-item">
+              <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
             </div>
-
-            <div class="form-row">
-              <label for="resTelephone">Téléphone *</label>
-              <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
+            <div class="legend-item">
+              <span class="legend-dot legend-passee"></span> Dates passées
             </div>
-
-            <div class="form-row">
-              <label for="resEmail">E-mail</label>
-              <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
-            </div>
-
-            <div class="form-row">
-              <label for="resDateDisplay">Date de réservation *</label>
-              <input
-                type="text"
-                id="resDateDisplay"
-                class="date-display-input"
-                placeholder="Cliquez pour choisir une date"
-                readonly
-                required
-              />
-            </div>
-
-            <div class="form-row">
-              <label for="resActivite">Activité à réserver *</label>
-              <select id="resActivite" required>
-                <option value="">Choisir une activité...</option>
-                <option value="Entree Parc babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
-                <option value="Entree Parc piscine">Entrée Parc accès piscine</option>
-                <option value="Entree VIP">Entrée VIP</option>
-                <option value="Anniversaire">Réserver pour un anniversaire</option>
-              </select>
-            </div>
-
-            <button id="btnSubmitReservation" type="submit" class="btn-primary">
-              ✅ Valider la réservation
-            </button>
-
-            <p id="reservationMessage" class="message" style="display:none;"></p>
-          </form>
-
-          <!-- Calendrier -->
-          <div id="calendarCard" class="calendar-card">
-            <div class="calendar-header">
-              <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
-              <div class="calendar-month-title" id="calMonthTitle">Mois</div>
-              <button type="button" id="calNext" class="calendar-nav-btn">›</button>
-            </div>
-
-            <div class="calendar-weekdays">
-              <span class="lundi-ferme">lu</span>
-              <span class="mardi-ferme">ma</span>
-              <span>me</span>
-              <span>je</span>
-              <span>ve</span>
-              <span>sa</span>
-              <span>di</span>
-            </div>
-
-            <div class="calendar-days" id="calendarDays"></div>
-
-            <div class="calendar-legend">
-              <div class="legend-item">
-                <span class="legend-dot legend-dispo"></span> Dates disponibles
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot legend-passee"></span> Dates passées
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot legend-select"></span> Date sélectionnée
-              </div>
+            <div class="legend-item">
+              <span class="legend-dot legend-select"></span> Date sélectionnée
             </div>
           </div>
         </div>
       </div>
-    </section>
-
+    </div>
+  </section>
 
   <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
 
