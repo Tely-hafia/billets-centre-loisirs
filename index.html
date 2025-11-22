@@ -6,11 +6,11 @@
   <title>Calypço - Centre de Loisirs</title>
   <link rel="stylesheet" href="css/styles.css" />
   <style>
-    /* --- CALENDRIER RESERVATION --- */
+    /* --- CALENDRIER / RESERVATION --- */
     .reservation-section {
       max-width: 1200px;
-      margin: 3rem auto;
-      padding: 0 1.5rem;
+      margin: 0 auto;
+      padding: 0;
     }
 
     .reservation-grid {
@@ -23,6 +23,71 @@
     @media (max-width: 900px) {
       .reservation-grid {
         grid-template-columns: 1fr;
+      }
+    }
+
+    /* === OVERLAY FLOTTANT AVEC ANIMATION === */
+    .reservation-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 4rem;
+      z-index: 1000;
+
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(1.02);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .reservation-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+
+    .reservation-dialog {
+      max-width: 1200px;
+      width: 100%;
+      padding: 0 1.5rem;
+    }
+
+    .reservation-close-btn {
+      position: absolute;
+      top: 1.25rem;
+      right: 1.5rem;
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #4b5563;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+      transition: var(--transition-fast);
+      z-index: 10;
+    }
+
+    .reservation-close-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    @media (max-width: 768px) {
+      .reservation-overlay {
+        align-items: stretch;
+        padding-top: 2rem;
+      }
+      .reservation-dialog {
+        padding: 0 0.75rem;
       }
     }
 
@@ -123,7 +188,7 @@
       background: #2563eb;
       color: #fff;
       font-weight: 700;
-      box-shadow: 0 6px 18px rgba(37,99,235,0.35);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
     }
 
     .calendar-legend {
@@ -159,10 +224,6 @@
 
     .date-display-input::placeholder {
       color: var(--text-muted);
-    }
-
-    #reservation-block {
-      display: none;
     }
 
     /* --- STYLES PAGE D'ACCUEIL --- */
@@ -545,104 +606,110 @@
     </div>
   </section>
 
-  <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
+  <!-- POPUP RESERVATION FLOTTANTE -->
+  <div id="reservationOverlay" class="reservation-overlay">
+    <div class="reservation-dialog">
+      <section id="reservation-block" class="reservation-section">
+        <div class="card" style="position:relative;">
+          <button type="button" id="btnCloseReservation" class="reservation-close-btn">×</button>
 
-    <!-- SECTION RESERVATION (cachée au départ) -->
-    <section id="reservation-block" class="reservation-section">
-      <div class="card">
-        <h2>Réserver votre expérience</h2>
+          <h2>Réserver votre expérience</h2>
 
-        <div class="reservation-grid">
-          <!-- Formulaire -->
-          <form id="reservationForm">
-            <div class="form-row">
-              <label for="resNom">Nom *</label>
-              <input type="text" id="resNom" placeholder="Votre nom" required />
-            </div>
-
-            <div class="form-row">
-              <label for="resPrenom">Prénom *</label>
-              <input type="text" id="resPrenom" placeholder="Votre prénom" required />
-            </div>
-
-            <div class="form-row">
-              <label for="resTelephone">Téléphone *</label>
-              <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
-            </div>
-
-            <div class="form-row">
-              <label for="resEmail">E-mail</label>
-              <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
-            </div>
-
-            <div class="form-row">
-              <label for="resDateDisplay">Date de réservation *</label>
-              <input
-                type="text"
-                id="resDateDisplay"
-                class="date-display-input"
-                placeholder="Cliquez pour choisir une date"
-                readonly
-                required
-              />
-            </div>
-
-            <div class="form-row">
-              <label for="resActivite">Activité à réserver *</label>
-              <select id="resActivite" required>
-                <option value="">Choisir une activité...</option>
-                <option value="Entree Parc babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
-                <option value="Entree Parc piscine">Entrée Parc accès piscine</option>
-                <option value="Entree VIP">Entrée VIP</option>
-                <option value="Anniversaire">Réserver pour un anniversaire</option>
-              </select>
-            </div>
-
-            <button id="btnSubmitReservation" type="submit" class="btn-primary">
-              ✅ Valider la réservation
-            </button>
-
-            <p id="reservationMessage" class="message" style="display:none;"></p>
-          </form>
-
-          <!-- Calendrier -->
-          <div id="calendarCard" class="calendar-card">
-            <div class="calendar-header">
-              <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
-              <div class="calendar-month-title" id="calMonthTitle">Mois</div>
-              <button type="button" id="calNext" class="calendar-nav-btn">›</button>
-            </div>
-
-            <div class="calendar-weekdays">
-              <span class="lundi-ferme">lu</span>
-              <span class="mardi-ferme">ma</span>
-              <span>me</span>
-              <span>je</span>
-              <span>ve</span>
-              <span>sa</span>
-              <span>di</span>
-            </div>
-
-            <div class="calendar-days" id="calendarDays"></div>
-
-            <div class="calendar-legend">
-              <div class="legend-item">
-                <span class="legend-dot legend-dispo"></span> Dates disponibles
+          <div class="reservation-grid">
+            <!-- Formulaire -->
+            <form id="reservationForm">
+              <div class="form-row">
+                <label for="resNom">Nom *</label>
+                <input type="text" id="resNom" placeholder="Votre nom" required />
               </div>
-              <div class="legend-item">
-                <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
+
+              <div class="form-row">
+                <label for="resPrenom">Prénom *</label>
+                <input type="text" id="resPrenom" placeholder="Votre prénom" required />
               </div>
-              <div class="legend-item">
-                <span class="legend-dot legend-passee"></span> Dates passées
+
+              <div class="form-row">
+                <label for="resTelephone">Téléphone *</label>
+                <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
               </div>
-              <div class="legend-item">
-                <span class="legend-dot legend-select"></span> Date sélectionnée
+
+              <div class="form-row">
+                <label for="resEmail">E-mail</label>
+                <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
+              </div>
+
+              <div class="form-row">
+                <label for="resDateDisplay">Date de réservation *</label>
+                <input
+                  type="text"
+                  id="resDateDisplay"
+                  class="date-display-input"
+                  placeholder="Cliquez pour choisir une date"
+                  readonly
+                  required
+                />
+              </div>
+
+              <div class="form-row">
+                <label for="resActivite">Activité à réserver *</label>
+                <select id="resActivite" required>
+                  <option value="">Choisir une activité...</option>
+                  <option value="Entree Parc babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
+                  <option value="Entree Parc piscine">Entrée Parc accès piscine</option>
+                  <option value="Entree VIP">Entrée VIP</option>
+                  <option value="Anniversaire">Réserver pour un anniversaire</option>
+                </select>
+              </div>
+
+              <button id="btnSubmitReservation" type="submit" class="btn-primary">
+                ✅ Valider la réservation
+              </button>
+
+              <p id="reservationMessage" class="message" style="display:none;"></p>
+            </form>
+
+            <!-- Calendrier -->
+            <div id="calendarCard" class="calendar-card">
+              <div class="calendar-header">
+                <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
+                <div class="calendar-month-title" id="calMonthTitle">Mois</div>
+                <button type="button" id="calNext" class="calendar-nav-btn">›</button>
+              </div>
+
+              <div class="calendar-weekdays">
+                <span class="lundi-ferme">lu</span>
+                <span class="mardi-ferme">ma</span>
+                <span>me</span>
+                <span>je</span>
+                <span>ve</span>
+                <span>sa</span>
+                <span>di</span>
+              </div>
+
+              <div class="calendar-days" id="calendarDays"></div>
+
+              <div class="calendar-legend">
+                <div class="legend-item">
+                  <span class="legend-dot legend-dispo"></span> Dates disponibles
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-passee"></span> Dates passées
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-select"></span> Date sélectionnée
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
+  </div>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
 
     <!-- Galerie Carousel -->
     <section class="gallery-section">
@@ -899,7 +966,7 @@
   <!-- SDK Appwrite -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
   <!-- Script page d'accueil / réservation -->
-  <script src="js/index.js?v=2"></script>
+  <script src="js/index.js?v=3"></script>
 
   <script>
     // Script pour la galerie carousel
@@ -943,7 +1010,7 @@
     // Auto-advance carousel
     setInterval(nextSlide, 5000);
 
-    // Smooth scroll for anchor links
+    // Smooth scroll pour les ancres
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();
