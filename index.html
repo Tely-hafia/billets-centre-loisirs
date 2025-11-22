@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calypço - Centre de Loisirs</title>
   <link rel="stylesheet" href="css/styles.css" />
- <!-- Flatpickr -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+
+  <!-- Flatpickr -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
   <style>
-    /* --- CALENDRIER / RESERVATION --- */
+    /* --- RESERVATION / POPUP --- */
     .reservation-section {
       max-width: 1200px;
       margin: 0 auto;
@@ -20,18 +21,12 @@
 
     .reservation-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
-      gap: 2rem;
+      grid-template-columns: 1fr; /* plus de colonne calendrier */
+      gap: 1.5rem;
       align-items: flex-start;
     }
 
-    @media (max-width: 900px) {
-      .reservation-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* === OVERLAY CORRIGÉ === */
+    /* OVERLAY */
     #reservation-block.reservation-overlay {
       position: fixed;
       inset: 0;
@@ -49,7 +44,7 @@
       display: flex;
     }
 
-    /* Carte centrale avec largeur limitée */
+    /* Carte centrale */
     #reservation-block .reservation-card {
       max-width: 900px;
       width: 90%;
@@ -100,134 +95,6 @@
       color: white;
     }
 
-    /* Calendrier visible par défaut dans le popup */
-    .calendar-card {
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem 1.75rem;
-      box-shadow: var(--shadow-soft);
-      border: 1px solid rgba(226, 232, 240, 0.9);
-      position: relative;
-      display: block !important;
-    }
-
-    .calendar-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-    }
-
-    .calendar-nav-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 999px;
-      border: 1px solid var(--border-soft);
-      background: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition-fast);
-      font-weight: 700;
-    }
-
-    .calendar-nav-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .calendar-month-title {
-      font-weight: 700;
-      font-size: 1rem;
-    }
-
-    .calendar-weekdays {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      text-transform: lowercase;
-      margin-bottom: 0.5rem;
-    }
-
-    .calendar-weekdays span.lundi-ferme,
-    .calendar-weekdays span.mardi-ferme {
-      color: #ef4444;
-      font-weight: 600;
-    }
-
-    .calendar-days {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 0.25rem;
-    }
-
-    .calendar-day {
-      height: 40px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      border: 1px solid transparent;
-      background: #e0f2fe;
-      color: #0f172a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition-fast);
-    }
-
-    .calendar-day:hover {
-      background: #bfdbfe;
-    }
-
-    .calendar-day.passee {
-      background: #f3f4f6;
-      color: #9ca3af;
-      cursor: not-allowed;
-    }
-
-    .calendar-day.ferme {
-      background: #fee2e2;
-      color: #b91c1c;
-      border-color: #fecaca;
-      cursor: not-allowed;
-    }
-
-    .calendar-day.selected {
-      background: #2563eb;
-      color: #fff;
-      font-weight: 700;
-      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
-    }
-
-    .calendar-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-    }
-
-    .legend-dispo   { background:#bfdbfe; }
-    .legend-ferme   { background:#fecaca; }
-    .legend-passee  { background:#d1d5db; }
-    .legend-select  { background:#2563eb; }
-
     .date-display-input {
       cursor: pointer;
       background: #f8fafc;
@@ -235,6 +102,37 @@
 
     .date-display-input::placeholder {
       color: var(--text-muted);
+    }
+
+    /* --- FLATPICKR --- */
+    .flatpickr-calendar {
+      z-index: 100000 !important;
+      box-shadow: var(--shadow-soft);
+      border-radius: var(--radius-md);
+    }
+
+    /* Lundi/Mardi fermés */
+    .fp-ferme {
+      background: #fee2e2 !important;
+      color: #b91c1c !important;
+    }
+
+    /* --- TICKET PREVIEW --- */
+    .ticket-preview-zone {
+      margin-top: 1.25rem;
+      padding: 1rem;
+      border: 1px dashed var(--border-soft);
+      border-radius: var(--radius-md);
+      background: #f8fafc;
+    }
+
+    .ticket-preview-img {
+      width: 100%;
+      max-width: 520px;
+      display: block;
+      margin: 0 auto;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-soft);
     }
 
     /* --- STYLES PAGE D'ACCUEIL --- */
@@ -246,7 +144,7 @@
       position: relative;
       overflow: hidden;
     }
-    
+
     .hero-section::before {
       content: "";
       position: absolute;
@@ -258,34 +156,34 @@
       background-size: cover;
       pointer-events: none;
     }
-    
+
     .hero-content {
       max-width: 800px;
       margin: 0 auto;
       position: relative;
       z-index: 2;
     }
-    
+
     .hero-title {
       font-size: 3rem;
       font-weight: 800;
       margin-bottom: 1rem;
       text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
-    
+
     .hero-subtitle {
       font-size: 1.3rem;
       margin-bottom: 2rem;
       opacity: 0.9;
     }
-    
+
     .features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 2rem;
       margin: 3rem 0;
     }
-    
+
     .feature-card {
       background: var(--bg-card);
       padding: 2rem;
@@ -295,25 +193,25 @@
       transition: var(--transition-fast);
       border: 1px solid var(--border-soft);
     }
-    
+
     .feature-card:hover {
       transform: translateY(-5px);
       box-shadow: var(--shadow-hover);
     }
-    
+
     .feature-icon {
       font-size: 3rem;
       margin-bottom: 1rem;
       display: block;
     }
-    
+
     .feature-title {
       font-size: 1.3rem;
       font-weight: 700;
       margin-bottom: 1rem;
       color: var(--text-main);
     }
-    
+
     .access-buttons {
       display: flex;
       gap: 1rem;
@@ -321,19 +219,19 @@
       flex-wrap: wrap;
       margin: 2rem 0;
     }
-    
+
     .btn-large {
       padding: 1.2rem 2.5rem;
       font-size: 1.1rem;
       min-width: 200px;
     }
-    
+
     .info-section {
       background: linear-gradient(135deg, #f8fafc 0%, #e4edf5 100%);
       padding: 4rem 2rem;
       text-align: center;
     }
-    
+
     .stats-container {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -341,14 +239,14 @@
       max-width: 1000px;
       margin: 0 auto;
     }
-    
+
     .stat-card {
       background: white;
       padding: 2rem;
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-soft);
     }
-    
+
     .stat-number {
       font-size: 2.5rem;
       font-weight: 800;
@@ -358,7 +256,7 @@
       background-clip: text;
       margin-bottom: 0.5rem;
     }
-    
+
     .stat-label {
       color: var(--text-muted);
       font-weight: 600;
@@ -369,7 +267,7 @@
       padding: 4rem 0;
       background: var(--bg-body);
     }
-    
+
     .gallery-carousel {
       position: relative;
       max-width: 1000px;
@@ -378,12 +276,12 @@
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-soft);
     }
-    
+
     .carousel-track {
       display: flex;
       transition: transform 0.5s ease-in-out;
     }
-    
+
     .carousel-slide {
       min-width: 100%;
       height: 400px;
@@ -395,7 +293,7 @@
       font-size: 1.5rem;
       font-weight: 600;
     }
-    
+
     .carousel-nav {
       position: absolute;
       top: 50%;
@@ -413,27 +311,22 @@
       transition: var(--transition-fast);
       z-index: 10;
     }
-    
+
     .carousel-nav:hover {
       background: white;
       transform: translateY(-50%) scale(1.1);
     }
-    
-    .carousel-prev {
-      left: 20px;
-    }
-    
-    .carousel-next {
-      right: 20px;
-    }
-    
+
+    .carousel-prev { left: 20px; }
+    .carousel-next { right: 20px; }
+
     .carousel-dots {
       display: flex;
       justify-content: center;
       gap: 0.5rem;
       margin-top: 1rem;
     }
-    
+
     .carousel-dot {
       width: 12px;
       height: 12px;
@@ -442,7 +335,7 @@
       cursor: pointer;
       transition: var(--transition-fast);
     }
-    
+
     .carousel-dot.active {
       background: var(--accent-primary);
       transform: scale(1.2);
@@ -458,13 +351,13 @@
       margin: 2rem 0;
       box-shadow: var(--shadow-soft);
     }
-    
+
     .whatsapp-icon {
       font-size: 3rem;
       margin-bottom: 1rem;
       display: block;
     }
-    
+
     .whatsapp-btn {
       background: white;
       color: #25D366;
@@ -478,7 +371,7 @@
       gap: 0.5rem;
       transition: var(--transition-fast);
     }
-    
+
     .whatsapp-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
@@ -492,7 +385,7 @@
       margin: 2rem 0;
       box-shadow: var(--shadow-soft);
     }
-    
+
     .gps-buttons {
       display: flex;
       gap: 1rem;
@@ -500,7 +393,7 @@
       flex-wrap: wrap;
       margin-top: 1.5rem;
     }
-    
+
     .gps-btn {
       padding: 0.8rem 1.5rem;
       border-radius: var(--radius-md);
@@ -511,21 +404,10 @@
       gap: 0.5rem;
       transition: var(--transition-fast);
     }
-    
-    .gps-btn-google {
-      background: #4285F4;
-      color: white;
-    }
-    
-    .gps-btn-waze {
-      background: #33CCFF;
-      color: white;
-    }
-    
-    .gps-btn-apple {
-      background: #000000;
-      color: white;
-    }
+
+    .gps-btn-google { background: #4285F4; color: white; }
+    .gps-btn-waze { background: #33CCFF; color: white; }
+    .gps-btn-apple { background: #000000; color: white; }
 
     /* Accès pro discret */
     .admin-access {
@@ -536,7 +418,7 @@
       text-align: center;
       border: 1px solid var(--border-soft);
     }
-    
+
     .admin-buttons {
       display: flex;
       gap: 1rem;
@@ -544,7 +426,7 @@
       flex-wrap: wrap;
       margin-top: 1rem;
     }
-    
+
     .admin-btn {
       padding: 0.8rem 1.5rem;
       font-size: 0.9rem;
@@ -552,137 +434,50 @@
       border-radius: var(--radius-md);
       transition: var(--transition-fast);
     }
-    
+
+    /* Mobile */
     @media (max-width: 768px) {
-      .hero-title {
-        font-size: 2.2rem;
-      }
-      
+      .hero-title { font-size: 2.2rem; }
+
       .access-buttons {
         flex-direction: column;
         align-items: center;
       }
-      
+
       .btn-large {
         width: 100%;
         max-width: 300px;
       }
-      
+
       .carousel-slide {
         height: 300px;
         font-size: 1.2rem;
       }
-      
+
       .admin-buttons, .gps-buttons {
         flex-direction: column;
         align-items: center;
       }
-      
+
       .admin-btn, .gps-btn {
         width: 100%;
         max-width: 250px;
       }
 
-      /* Responsive popup */
       #reservation-block .reservation-card {
         width: 95%;
-        margin: 1rem;
-        padding: 1.5rem;
+        margin: 1rem auto;
+        padding: 1.25rem;
       }
 
-      .reservation-grid {
-        gap: 1rem;
+      .flatpickr-calendar.open {
+        width: calc(100vw - 2.5rem);
+        max-width: 360px;
       }
     }
   </style>
-
-  <style>
-  /* ... tous tes styles actuels ... */
-
-  /* Ticket preview */
-  .ticket-preview-zone {
-    margin-top: 1.25rem;
-    padding: 1rem;
-    border: 1px dashed var(--border-soft);
-    border-radius: var(--radius-md);
-    background: #f8fafc;
-  }
-
-  .ticket-preview-img {
-    width: 100%;
-    max-width: 520px;
-    display: block;
-    margin: 0 auto;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-soft);
-  }
-
-  /* Mobile popup centrée proprement */
-  @media (max-width: 768px) {
-    #reservation-block .reservation-card {
-      width: 95%;
-      margin: 1rem auto;
-      padding: 1.25rem;
-    }
-
-    .reservation-grid {
-      grid-template-columns: 1fr !important; /* calendrier en dessous */
-    }
-  }
-
-    /* Flatpickr dans popup */
-.flatpickr-calendar {
-  z-index: 100000 !important;
-  box-shadow: var(--shadow-soft);
-  border-radius: var(--radius-md);
-}
-
-/* Lundi/Mardi fermés visuellement */
-.fp-ferme {
-  background: #fee2e2 !important;
-  color: #b91c1c !important;
-}
-
-/* Ticket preview */
-.ticket-preview-zone {
-  margin-top: 1.25rem;
-  padding: 1rem;
-  border: 1px dashed var(--border-soft);
-  border-radius: var(--radius-md);
-  background: #f8fafc;
-}
-
-.ticket-preview-img {
-  width: 100%;
-  max-width: 520px;
-  display: block;
-  margin: 0 auto;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-soft);
-}
-
-/* Mobile : popup centrée + calendrier dropdown sous input + colonne unique */
-@media (max-width: 768px) {
-  #reservation-block .reservation-card {
-    width: 95%;
-    margin: 1rem auto;
-    padding: 1.25rem;
-  }
-
-  .reservation-grid {
-    grid-template-columns: 1fr !important; /* plus de colonne droite */
-  }
-
-  /* Flatpickr largeur confortable sur mobile */
-  .flatpickr-calendar.open {
-    width: calc(100vw - 2.5rem);
-    max-width: 360px;
-  }
-}
-
-</style>
-
 </head>
+
 <body>
 
   <!-- Header -->
@@ -703,7 +498,7 @@
       <p class="hero-subtitle">
         Votre destination gaming, détente et aventure - PS5, réalité virtuelle, piscine et bien plus !
       </p>
-      
+
       <div class="access-buttons">
         <button id="btnShowReservation" class="btn-primary btn-large" type="button">
           🏆 Réservation
@@ -718,13 +513,11 @@
   <!-- SECTION RESERVATION (popup flottante, cachée au départ) -->
   <section id="reservation-block" class="reservation-overlay">
     <div class="card reservation-card">
-      <!-- Bouton fermer -->
       <button type="button" class="reservation-close" id="btnCloseReservation">×</button>
 
       <h2>Réserver votre expérience</h2>
 
       <div class="reservation-grid">
-        <!-- Formulaire -->
         <form id="reservationForm">
           <div class="form-row">
             <label for="resNom">Nom *</label>
@@ -738,7 +531,7 @@
 
           <div class="form-row">
             <label for="resTelephone">Téléphone *</label>
-            <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
+            <input type="tel" id="resTelephone" placeholder="Votre numéro de téléphone" required />
           </div>
 
           <div class="form-row">
@@ -775,42 +568,6 @@
 
           <p id="reservationMessage" class="message" style="display:none;"></p>
         </form>
-
-        <!-- Calendrier -->
-        <div id="calendarCard" class="calendar-card">
-          <div class="calendar-header">
-            <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
-            <div class="calendar-month-title" id="calMonthTitle">Mois</div>
-            <button type="button" id="calNext" class="calendar-nav-btn">›</button>
-          </div>
-
-          <div class="calendar-weekdays">
-            <span class="lundi-ferme">lu</span>
-            <span class="mardi-ferme">ma</span>
-            <span>me</span>
-            <span>je</span>
-            <span>ve</span>
-            <span>sa</span>
-            <span>di</span>
-          </div>
-
-          <div class="calendar-days" id="calendarDays"></div>
-
-          <div class="calendar-legend">
-            <div class="legend-item">
-              <span class="legend-dot legend-dispo"></span> Dates disponibles
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot legend-passee"></span> Dates passées
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot legend-select"></span> Date sélectionnée
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </section>
@@ -839,13 +596,11 @@
             <span style="color: white;">🏊 Piscine & Toboggan Aquatique</span>
           </div>
         </div>
-        
+
         <button class="carousel-nav carousel-prev" onclick="prevSlide()">❮</button>
         <button class="carousel-nav carousel-next" onclick="nextSlide()">❯</button>
-        
-        <div class="carousel-dots" id="carouselDots">
-          <!-- Les points seront générés par JavaScript -->
-        </div>
+
+        <div class="carousel-dots" id="carouselDots"></div>
       </div>
     </section>
 
@@ -857,7 +612,6 @@
       </p>
 
       <div class="features-grid">
-        <!-- Gaming & E-sport -->
         <div class="feature-card">
           <span class="feature-icon">🎮</span>
           <h3 class="feature-title">Gaming & E-sport</h3>
@@ -873,7 +627,6 @@
           </div>
         </div>
 
-        <!-- Jeux de Force -->
         <div class="feature-card">
           <span class="feature-icon">💪</span>
           <h3 class="feature-title">Jeux de Force & Défis</h3>
@@ -889,7 +642,6 @@
           </div>
         </div>
 
-        <!-- Tir de Précision -->
         <div class="feature-card">
           <span class="feature-icon">🎯</span>
           <h3 class="feature-title">Tir de Précision</h3>
@@ -905,7 +657,6 @@
           </div>
         </div>
 
-        <!-- Jeux de Groupe -->
         <div class="feature-card">
           <span class="feature-icon">👥</span>
           <h3 class="feature-title">Jeux de Groupe</h3>
@@ -921,7 +672,6 @@
           </div>
         </div>
 
-        <!-- Piscine & Aquatique -->
         <div class="feature-card">
           <span class="feature-icon">🏊</span>
           <h3 class="feature-title">Espace Aquatique</h3>
@@ -937,7 +687,6 @@
           </div>
         </div>
 
-        <!-- Détente & Restauration -->
         <div class="feature-card">
           <span class="feature-icon">🍹</span>
           <h3 class="feature-title">Détente & Restauration</h3>
@@ -967,17 +716,17 @@
           <div class="stat-number">7j/7</div>
           <div class="stat-label">Jours d'ouverture</div>
         </div>
-        
+
         <div class="stat-card">
           <div class="stat-number">10h-02h</div>
           <div class="stat-label">Horaires étendus</div>
         </div>
-        
+
         <div class="stat-card">
           <div class="stat-number">WiFi</div>
           <div class="stat-label">Haut débit gratuit</div>
         </div>
-        
+
         <div class="stat-card">
           <div class="stat-number">🎉</div>
           <div class="stat-label">Événements spéciaux</div>
@@ -992,8 +741,8 @@
       <p style="margin-bottom: 2rem; opacity: 0.9;">
         Réponse rapide garantie ! Cliquez pour nous envoyer un message
       </p>
-      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço" 
-         class="whatsapp-btn" 
+      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
+         class="whatsapp-btn"
          target="_blank">
         💬 Nous écrire sur WhatsApp
       </a>
@@ -1005,39 +754,37 @@
       <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
         Hafia Labé, proche université Hafia
       </p>
-      
-      <!-- Carte OpenStreetMap avec vos coordonnées -->
+
       <div style="border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-soft);">
-        <iframe 
+        <iframe
           src="https://www.openstreetmap.org/export/embed.html?bbox=-12.387032,11.222501,-12.383032,11.224501&layer=mapnik&marker=11.223501,-12.385032"
-          width="100%" 
-          height="300" 
+          width="100%"
+          height="300"
           style="border: none;"
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
           title="Calypço Centre de Loisirs - Hafia Labé">
         </iframe>
       </div>
-      
-      <!-- Boutons GPS -->
+
       <div class="gps-buttons">
-        <a href="https://maps.google.com/?q=11.223501,-12.385032" 
-           class="gps-btn gps-btn-google" 
+        <a href="https://maps.google.com/?q=11.223501,-12.385032"
+           class="gps-btn gps-btn-google"
            target="_blank">
           🗺️ Google Maps
         </a>
-        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes" 
-           class="gps-btn gps-btn-waze" 
+        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes"
+           class="gps-btn gps-btn-waze"
            target="_blank">
           🚗 Waze
         </a>
-        <a href="https://maps.apple.com/?q=11.223501,-12.385032" 
-           class="gps-btn gps-btn-apple" 
+        <a href="https://maps.apple.com/?q=11.223501,-12.385032"
+           class="gps-btn gps-btn-apple"
            target="_blank">
           🍎 Apple Plans
         </a>
       </div>
-      
+
       <div style="margin-top: 1.5rem; text-align: center;">
         <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
         <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
@@ -1081,7 +828,6 @@
     const track = document.getElementById('carouselTrack');
     const dotsContainer = document.getElementById('carouselDots');
 
-    // Create dots
     slides.forEach((_, index) => {
       const dot = document.createElement('div');
       dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
@@ -1091,8 +837,6 @@
 
     function updateCarousel() {
       track.style.transform = `translateX(-${currentSlide * 100}%)`;
-      
-      // Update dots
       document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
         dot.classList.toggle('active', index === currentSlide);
       });
@@ -1113,19 +857,14 @@
       updateCarousel();
     }
 
-    // Auto-advance carousel
     setInterval(nextSlide, 5000);
 
-    // Smooth scroll pour les ancres
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();
         const target = document.querySelector(this.getAttribute('href'));
         if (target) {
-          target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
     });
