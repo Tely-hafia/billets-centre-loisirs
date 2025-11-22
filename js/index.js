@@ -6,11 +6,7 @@ console.log("[SITE] index.js chargé – Calypço");
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
-const APPWRITE_RESERVATION_COLLECTION_ID = "reservation"; // OK si c'est bien l'ID
-
-if (typeof Appwrite === "undefined") {
-  console.error("[SITE] Appwrite SDK non chargé. Vérifie le script CDN appwrite@13.0.0 dans le HTML.");
-}
+const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
 
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
@@ -19,21 +15,15 @@ const db = new Appwrite.Databases(client);
 // ===============================
 //  HELPERS DOM
 // ===============================
-function $(id) {
-  return document.getElementById(id);
-}
+const $ = (id) => document.getElementById(id);
 
-function showReservationMessage(text, type) {
+function showReservationMessage(text, type = "info") {
   const zone = $("reservationMessage");
   if (!zone) return;
   zone.style.display = "block";
   zone.textContent = text;
-  zone.className = "message";
-  if (type === "success") zone.classList.add("message-success");
-  else if (type === "error") zone.classList.add("message-error");
-  else zone.classList.add("message-info");
+  zone.className = "message message-" + type;
 }
-
 function clearReservationMessage() {
   const zone = $("reservationMessage");
   if (!zone) return;
@@ -43,7 +33,7 @@ function clearReservationMessage() {
 }
 
 // ===============================
-//  POPUP + ETAT RESERVATION
+//  POPUP + ETAT
 // ===============================
 let hasPendingReservation = false;
 let pendingPayload = null;
@@ -69,7 +59,7 @@ function closeReservationPopup(withWarningIfPending = true) {
       "Attention : si vous ne téléchargez pas votre preuve de réservation, la réservation sera annulée.",
       "error"
     );
-    // annule la réservation en attente
+    // annule ce qui est en attente
     hasPendingReservation = false;
     pendingPayload = null;
     pendingNumero = null;
@@ -85,13 +75,12 @@ function closeReservationPopup(withWarningIfPending = true) {
   overlay.classList.remove("visible");
   card.classList.remove("visible");
   document.body.style.overflow = "";
-
   clearReservationMessage();
   resetTicketUI();
 }
 
 // ===============================
-//  FLATPICKR (CALENDRIER)
+//  FLATPICKR
 // ===============================
 let fpInstance = null;
 
@@ -102,45 +91,26 @@ function initFlatpickr() {
     return;
   }
 
-  // si ton ancien bloc calendrier existe, on le cache définitivement
-  const oldCalendar = $("calendarCard");
-  if (oldCalendar) oldCalendar.style.display = "none";
-
   fpInstance = flatpickr(input, {
     locale: "fr",
     dateFormat: "d/m/Y",
     minDate: "today",
-    disableMobile: true, // force dropdown même sur mobile
-    disable: [
-      (date) => date.getDay() === 1 || date.getDay() === 2 // lundi 1, mardi 2
-    ],
-    onDayCreate: function(dObj, dStr, fp, dayElem) {
-      const day = dayElem.dateObj.getDay();
-      if (day === 1 || day === 2) {
-        dayElem.classList.add("fp-ferme"); // style rouge/gris via CSS
-      }
+    disableMobile: true,
+    disable: [(date) => date.getDay() === 1 || date.getDay() === 2],
+    onDayCreate(_, __, ___, dayElem) {
+      const d = dayElem.dateObj.getDay();
+      if (d === 1 || d === 2) dayElem.classList.add("fp-ferme");
     },
-    onChange: function(selectedDates, dateStr, instance) {
-      // dès qu'on choisit une date => champ rempli + calendrier se ferme
-      instance.close();
+    onChange(_, __, instance) {
+      instance.close(); // ferme direct après sélection
     }
-    // Flatpickr ferme déjà si on clique ailleurs
   });
 }
 
-// Pour convertir la date Flatpickr -> ISO UTC
 function parseDateFrToISO(dateStr) {
-  // "dd/mm/yyyy"
-  const parts = dateStr.split("/");
-  if (parts.length !== 3) return null;
-  const [ddStr, mmStr, yyyyStr] = parts;
-  const dd = parseInt(ddStr, 10);
-  const mm = parseInt(mmStr, 10);
-  const yyyy = parseInt(yyyyStr, 10);
+  const [dd, mm, yyyy] = dateStr.split("/").map(Number);
   if (!dd || !mm || !yyyy) return null;
-
-  const d = new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0));
-  return d.toISOString();
+  return new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0)).toISOString();
 }
 
 // ===============================
@@ -152,54 +122,45 @@ async function generateReservationNumber(dateIso) {
   const year = String(d.getUTCFullYear()).slice(-2);
   const prefix = `RES-${month}${year}-`;
 
-  try {
-    const res = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_RESERVATION_COLLECTION_ID,
-      [
-        Appwrite.Query.startsWith("numero_reservation", prefix),
-        Appwrite.Query.limit(10000)
-      ]
-    );
+  const res = await db.listDocuments(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_RESERVATION_COLLECTION_ID,
+    [
+      Appwrite.Query.startsWith("numero_reservation", prefix),
+      Appwrite.Query.limit(10000)
+    ]
+  );
 
-    let maxIndex = 0;
-    for (const doc of res.documents) {
-      const num = doc.numero_reservation || "";
-      const parts = num.split("-");
-      const idx = parseInt(parts[2] || "0", 10);
-      if (!isNaN(idx) && idx > maxIndex) maxIndex = idx;
-    }
-
-    const nextIndex = maxIndex + 1;
-    return `${prefix}${String(nextIndex).padStart(4, "0")}`;
-  } catch (err) {
-    console.error("[SITE] Erreur génération numéro réservation :", err);
-    const random = String(Math.floor(Math.random() * 9999)).padStart(4, "0");
-    return `${prefix}${random}`;
+  let maxIndex = 0;
+  for (const doc of res.documents) {
+    const num = doc.numero_reservation || "";
+    const idx = parseInt(num.split("-")[2] || "0", 10);
+    if (!isNaN(idx) && idx > maxIndex) maxIndex = idx;
   }
+
+  return `${prefix}${String(maxIndex + 1).padStart(4, "0")}`;
 }
 
 // ===============================
-//  TICKET PNG (APERÇU + DOWNLOAD)
+//  TICKET PNG (APERÇU)
 // ===============================
 function buildTicketCanvas({ numero, nom, prenom, telephone, activite, dateStr }) {
   const canvas = document.createElement("canvas");
-  const W = 900, H = 520;
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = 900;
+  canvas.height = 520;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.strokeStyle = "#0f172a";
   ctx.lineWidth = 4;
-  ctx.strokeRect(20, 20, W - 40, H - 40);
+  ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
   ctx.fillStyle = "#2563eb";
-  ctx.fillRect(20, 20, W - 40, 90);
+  ctx.fillRect(20, 20, canvas.width - 40, 90);
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "#fff";
   ctx.font = "bold 32px Arial";
   ctx.fillText("Calypço - Ticket de Réservation", 50, 75);
 
@@ -222,8 +183,7 @@ function buildTicketCanvas({ numero, nom, prenom, telephone, activite, dateStr }
 
 function createTicketPreview(data) {
   const canvas = buildTicketCanvas(data);
-  const dataURL = canvas.toDataURL("image/png");
-  return { dataURL };
+  return canvas.toDataURL("image/png");
 }
 
 function downloadDataURL(dataURL, filename) {
@@ -239,125 +199,91 @@ function downloadDataURL(dataURL, filename) {
 }
 
 // ===============================
-//  UI Ticket (injectée)
+//  UI Ticket (inject)
 // ===============================
 function ensureTicketUI() {
   const form = $("reservationForm");
-  if (!form) return;
-
-  if ($("ticketPreviewZone")) return;
+  if (!form || $("ticketPreviewZone")) return;
 
   const zone = document.createElement("div");
   zone.id = "ticketPreviewZone";
-  zone.style.display = "none";
   zone.className = "ticket-preview-zone";
+  zone.style.display = "none";
 
   zone.innerHTML = `
     <h3 style="margin-top:1rem;">Aperçu de votre ticket</h3>
-    <p style="color: var(--text-muted); font-size:0.9rem; margin-bottom:0.75rem;">
+    <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.75rem;">
       Téléchargez ce ticket pour confirmer votre réservation.
     </p>
-    <img id="ticketPreviewImg" alt="Aperçu ticket" class="ticket-preview-img" />
-    <div style="margin-top:1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
-      <button type="button" id="btnDownloadTicket" class="btn-primary">
-        📥 Télécharger la réservation
-      </button>
-      <button type="button" id="btnEditReservation" class="btn-secondary">
-        ✏️ Modifier
-      </button>
+    <img id="ticketPreviewImg" class="ticket-preview-img" alt="Aperçu ticket"/>
+    <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap;">
+      <button type="button" id="btnDownloadTicket" class="btn-primary">📥 Télécharger la réservation</button>
+      <button type="button" id="btnEditReservation" class="btn-secondary">✏️ Modifier</button>
     </div>
   `;
-
   form.appendChild(zone);
 
   zone.querySelector("#btnDownloadTicket").addEventListener("click", async () => {
-    if (!hasPendingReservation || !pendingPayload || !pendingNumero || !pendingTicketDataURL) {
+    if (!hasPendingReservation) {
       showReservationMessage("Aucune réservation en attente.", "error");
       return;
     }
 
-    // 1) Télécharger le ticket
     await downloadDataURL(pendingTicketDataURL, `ticket-${pendingNumero}.png`);
 
-    // 2) Enregistrer SEULEMENT APRES téléchargement
-    try {
-      await db.createDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_RESERVATION_COLLECTION_ID,
-        Appwrite.ID.unique(),
-        {
-          ...pendingPayload,
-          numero_reservation: pendingNumero
-        }
-      );
+    await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_RESERVATION_COLLECTION_ID,
+      Appwrite.ID.unique(),
+      { ...pendingPayload, numero_reservation: pendingNumero }
+    );
 
-      showReservationMessage(`Réservation confirmée ! Numéro : ${pendingNumero}`, "success");
+    showReservationMessage(`Réservation confirmée ! Numéro : ${pendingNumero}`, "success");
 
-      // reset
-      hasPendingReservation = false;
-      pendingPayload = null;
-      pendingNumero = null;
-      pendingTicketDataURL = null;
+    // reset puis fermeture
+    hasPendingReservation = false;
+    pendingPayload = pendingNumero = pendingTicketDataURL = null;
 
-      const formEl = $("reservationForm");
-      if (formEl) formEl.reset();
-
-      resetTicketUI();
-
-      // ferme popup automatiquement
-      closeReservationPopup(false);
-
-    } catch (err) {
-      console.error("[SITE] Erreur Appwrite confirmation :", err);
-      showReservationMessage(
-        "Téléchargement OK, mais erreur lors de la confirmation. Réessayez.",
-        "error"
-      );
-    }
+    form.reset();
+    resetTicketUI();
+    closeReservationPopup(false);
   });
 
   zone.querySelector("#btnEditReservation").addEventListener("click", () => {
     hasPendingReservation = false;
-    pendingPayload = null;
-    pendingNumero = null;
-    pendingTicketDataURL = null;
+    pendingPayload = pendingNumero = pendingTicketDataURL = null;
     resetTicketUI();
   });
 }
 
 function showTicketUI(dataURL) {
-  const zone = $("ticketPreviewZone");
-  const img = $("ticketPreviewImg");
-  const submitBtn = $("btnSubmitReservation");
-  if (!zone || !img) return;
-
-  img.src = dataURL;
-  zone.style.display = "block";
-  if (submitBtn) submitBtn.style.display = "none";
+  $("ticketPreviewImg").src = dataURL;
+  $("ticketPreviewZone").style.display = "block";
+  $("btnSubmitReservation").style.display = "none";
 }
 
 function resetTicketUI() {
-  const zone = $("ticketPreviewZone");
+  const z = $("ticketPreviewZone");
+  if (z) z.style.display = "none";
   const img = $("ticketPreviewImg");
-  const submitBtn = $("btnSubmitReservation");
-  if (zone) zone.style.display = "none";
   if (img) img.src = "";
-  if (submitBtn) submitBtn.style.display = "inline-flex";
+  const btn = $("btnSubmitReservation");
+  if (btn) btn.style.display = "inline-flex";
 }
 
 // ===============================
-//  SUBMIT => génère ticket, PAS de save
+//  SUBMIT => Génère ticket, PAS de save
 // ===============================
 async function submitReservation(e) {
   e.preventDefault();
   clearReservationMessage();
 
-  const nom = $("resNom")?.value.trim();
-  const prenom = $("resPrenom")?.value.trim();
-  const telephone = $("resTelephone")?.value.trim();
-  const email = $("resEmail")?.value.trim();
-  const dateStr = $("resDateDisplay")?.value.trim();
-  const activite = $("resActivite")?.value.trim();
+  const nom = $("resNom").value.trim();
+  const prenom = $("resPrenom").value.trim();
+  const telephone = $("resTelephone").value.trim();
+  const email = $("resEmail").value.trim();
+  const dateStr = $("resDateDisplay").value.trim();
+  const activite = $("resActivite").value.trim();
 
   if (!nom || !prenom || !telephone || !dateStr || !activite) {
     showReservationMessage("Merci de remplir tous les champs obligatoires.", "error");
@@ -366,81 +292,55 @@ async function submitReservation(e) {
 
   const dateIso = parseDateFrToISO(dateStr);
   if (!dateIso) {
-    showReservationMessage("La date de réservation est invalide.", "error");
+    showReservationMessage("Date invalide.", "error");
     return;
   }
 
-  try {
-    const numero = await generateReservationNumber(dateIso);
+  const numero = await generateReservationNumber(dateIso);
 
-    pendingNumero = numero;
-    pendingPayload = {
-      nom,
-      prenom,
-      telephone,
-      "e-mail": email || null,
-      date_reservation: dateIso,
-      activite,
-      actif: true
-    };
+  pendingNumero = numero;
+  pendingPayload = {
+    nom,
+    prenom,
+    telephone,
+    "e-mail": email || null,
+    date_reservation: dateIso,
+    activite,
+    actif: true
+  };
 
-    const { dataURL } = createTicketPreview({
-      numero, nom, prenom, telephone, activite, dateStr
-    });
+  pendingTicketDataURL = createTicketPreview({
+    numero, nom, prenom, telephone, activite, dateStr
+  });
 
-    pendingTicketDataURL = dataURL;
-    hasPendingReservation = true;
+  hasPendingReservation = true;
 
-    showReservationMessage(
-      `Ticket généré. Cliquez sur “Télécharger la réservation” pour confirmer.`,
-      "success"
-    );
+  showReservationMessage(
+    `Ticket généré. Cliquez sur “Télécharger la réservation” pour confirmer.`,
+    "success"
+  );
 
-    showTicketUI(dataURL);
-
-  } catch (err) {
-    console.error("[SITE] Erreur génération ticket :", err);
-    showReservationMessage("Erreur lors de la génération du ticket. Réessayez.", "error");
-  }
+  showTicketUI(pendingTicketDataURL);
 }
 
 // ===============================
-//  INIT GLOBAL
+//  INIT
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[SITE] DOMContentLoaded – init Calypço");
-
   ensureTicketUI();
   initFlatpickr();
 
-  const btnShowReservation = $("btnShowReservation");
-  const btnCloseReservation = $("btnCloseReservation");
-  const reservationBlock = $("reservation-block");
-  const reservationCard = reservationBlock?.querySelector(".reservation-card");
+  $("btnShowReservation").addEventListener("click", openReservationPopup);
+  $("btnCloseReservation").addEventListener("click", () => closeReservationPopup(true));
 
-  if (btnShowReservation) {
-    btnShowReservation.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openReservationPopup();
-    });
-  }
-
-  if (btnCloseReservation) {
-    btnCloseReservation.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeReservationPopup(true);
-    });
-  }
-
-  if (reservationBlock && reservationCard) {
-    reservationBlock.addEventListener("click", () => closeReservationPopup(true));
-    reservationCard.addEventListener("click", (e) => e.stopPropagation());
-  }
+  const overlay = $("reservation-block");
+  const card = overlay.querySelector(".reservation-card");
+  overlay.addEventListener("click", () => closeReservationPopup(true));
+  card.addEventListener("click", (e) => e.stopPropagation());
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeReservationPopup(true);
   });
 
-  const form = $("reservationForm");
-  if (form) form.addEventListener("submit", submitReservation);
+  $("reservationForm").addEventListener("submit", submitReservation);
 });
