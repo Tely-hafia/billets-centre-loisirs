@@ -624,6 +624,57 @@
       grid-template-columns: 1fr !important; /* calendrier en dessous */
     }
   }
+
+    /* Flatpickr dans popup */
+.flatpickr-calendar {
+  z-index: 100000 !important;
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-md);
+}
+
+/* Lundi/Mardi fermés visuellement */
+.fp-ferme {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+
+/* Ticket preview */
+.ticket-preview-zone {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+}
+
+.ticket-preview-img {
+  width: 100%;
+  max-width: 520px;
+  display: block;
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Mobile : popup centrée + calendrier dropdown sous input + colonne unique */
+@media (max-width: 768px) {
+  #reservation-block .reservation-card {
+    width: 95%;
+    margin: 1rem auto;
+    padding: 1.25rem;
+  }
+
+  .reservation-grid {
+    grid-template-columns: 1fr !important; /* plus de colonne droite */
+  }
+
+  /* Flatpickr largeur confortable sur mobile */
+  .flatpickr-calendar.open {
+    width: calc(100vw - 2.5rem);
+    max-width: 360px;
+  }
+}
+
 </style>
 
 </head>
