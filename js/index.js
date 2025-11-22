@@ -4,9 +4,9 @@
 console.log("[SITE] index.js chargé – réservation Calypço");
 
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-const APPWRITE_PROJECT_ID = "TON_PROJECT_ID";           // <-- remplace
-const APPWRITE_DATABASE_ID = "TON_DATABASE_ID";         // <-- remplace
-const APPWRITE_RESERVATION_COLLECTION_ID = "reservation"; // id de ta collection
+const APPWRITE_PROJECT_ID = "TON_PROJECT_ID";              // <-- à remplacer
+const APPWRITE_DATABASE_ID = "TON_DATABASE_ID";            // <-- à remplacer
+const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";  // id de la collection
 
 if (typeof Appwrite === "undefined") {
   console.error("[SITE] Appwrite SDK non chargé.");
@@ -33,7 +33,6 @@ function formatDateForDisplay(dateObj) {
 }
 
 function formatDateForISO(dateObj) {
-  // 2025-11-27T00:00:00.000Z (minuit UTC)
   const year = dateObj.getFullYear();
   const month = String(dateObj.getMonth() + 1).padStart(2, "0");
   const day = String(dateObj.getDate()).padStart(2, "0");
@@ -54,6 +53,7 @@ function generateReservationNumber(dateObj, index) {
 let currentMonth;
 let currentYear;
 let selectedDate = null;
+let calendarInitialized = false;
 
 function buildCalendar(year, month) {
   const daysContainer = $("calendarDays");
@@ -67,12 +67,11 @@ function buildCalendar(year, month) {
   titleEl.textContent =
     monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + year;
 
-  const firstDayIndex = (date.getDay() + 6) % 7; // 0 = lundi
+  const firstDayIndex = (date.getDay() + 6) % 7; // lundi=0
   const lastDay = new Date(year, month + 1, 0).getDate();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // cases vides avant le 1er
   for (let i = 0; i < firstDayIndex; i++) {
     const empty = document.createElement("div");
     daysContainer.appendChild(empty);
@@ -87,7 +86,7 @@ function buildCalendar(year, month) {
     dayEl.className = "calendar-day";
     dayEl.textContent = d.toString();
 
-    const dayOfWeek = (cellDate.getDay() + 6) % 7; // 0 lundi, 1 mardi, etc.
+    const dayOfWeek = (cellDate.getDay() + 6) % 7; // 0 lundi, 1 mardi...
 
     // dates passées
     if (cellDate < today) {
@@ -95,7 +94,7 @@ function buildCalendar(year, month) {
       dayEl.disabled = true;
     }
 
-    // lundi (0) et mardi (1) fermés
+    // lundi / mardi fermés
     if (dayOfWeek === 0 || dayOfWeek === 1) {
       dayEl.classList.add("ferme");
       dayEl.disabled = true;
@@ -124,6 +123,9 @@ function buildCalendar(year, month) {
 }
 
 function initCalendar() {
+  if (calendarInitialized) return;
+  calendarInitialized = true;
+
   const now = new Date();
   currentMonth = now.getMonth();
   currentYear = now.getFullYear();
@@ -159,78 +161,94 @@ function initCalendar() {
 // ================================
 //  Popup réservation
 // ================================
-function initReservationOverlay() {
+function setupReservationOverlay() {
   const overlay = $("reservation-block");
   const card = overlay ? overlay.querySelector(".reservation-card") : null;
   const btnOpen = $("btnShowReservation");
   const btnClose = $("btnCloseReservation");
   const dateInput = $("resDateDisplay");
+  const calendarCard = $("calendarCard");
 
   if (!overlay || !card || !btnOpen) {
     console.warn("[SITE] éléments overlay réservation manquants.");
     return;
   }
 
-  function openReservation() {
+  // sécurité : s'assurer que c'est caché au chargement
+  overlay.style.display = "none";
+  overlay.classList.remove("visible");
+  card.classList.remove("visible");
+
+  function openOverlay() {
     overlay.style.display = "flex";
+    // léger délai pour déclencher la transition
     requestAnimationFrame(() => {
       overlay.classList.add("visible");
       card.classList.add("visible");
     });
   }
 
-  function closeReservation() {
+  function closeOverlay() {
     overlay.classList.remove("visible");
     card.classList.remove("visible");
 
-    const onTransitionEnd = () => {
+    const onEnd = () => {
       overlay.style.display = "none";
-      overlay.removeEventListener("transitionend", onTransitionEnd);
+      overlay.removeEventListener("transitionend", onEnd);
+      // on remet le calendrier caché
+      if (calendarCard) {
+        calendarCard.classList.remove("visible");
+      }
     };
-    overlay.addEventListener("transitionend", onTransitionEnd);
+    overlay.addEventListener("transitionend", onEnd);
   }
 
   btnOpen.addEventListener("click", () => {
-    openReservation();
+    openOverlay();
   });
 
   if (btnClose) {
     btnClose.addEventListener("click", () => {
-      closeReservation();
+      closeOverlay();
     });
   }
 
-  // clic en dehors de la carte
+  // clic hors de la carte pour fermer
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
-      closeReservation();
+      closeOverlay();
     }
   });
 
   // touche ESC
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && overlay.style.display === "flex") {
-      closeReservation();
+      closeOverlay();
     }
   });
 
-  // ouvrir le calendrier au clic sur le champ date
+  // ouverture du calendrier au clic sur le champ date
   if (dateInput) {
     dateInput.addEventListener("click", () => {
-      // rien à faire ici, le calendrier est déjà visible dans la popup
-      // on peut éventuellement scroller jusqu’à lui
-      const cal = $("calendarCard");
-      if (cal) {
-        cal.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (calendarCard) {
+        calendarCard.classList.add("visible");
+      }
+      initCalendar();
+      // recentrer visuellement le calendrier
+      if (calendarCard) {
+        calendarCard.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     });
   }
+
+  // on expose la fonction de fermeture pour la réutiliser après succès
+  window.__closeReservationOverlay = closeOverlay;
 }
 
 // ================================
-//  Envoi de la réservation
+//  Formulaire de réservation
 // ================================
-function initReservationForm() {
+function setupReservationForm() {
   const form = $("reservationForm");
   const msg = $("reservationMessage");
 
@@ -259,7 +277,7 @@ function initReservationForm() {
     msg.style.display = "block";
 
     try {
-      // on compte les réservations du même mois pour le numéro
+      // compter les réservations du même mois
       const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
       const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
@@ -296,10 +314,21 @@ function initReservationForm() {
       msg.className = "message message-success";
       msg.style.display = "block";
 
+      // reset formulaire & calendrier
       form.reset();
       selectedDate = null;
-      buildCalendar(currentYear, currentMonth);
-      $("resDateDisplay").value = "";
+      if (typeof currentYear !== "undefined" && typeof currentMonth !== "undefined") {
+        buildCalendar(currentYear, currentMonth);
+      }
+      const dateInput = $("resDateDisplay");
+      if (dateInput) dateInput.value = "";
+
+      // fermer la popup après une petite seconde pour laisser lire le message
+      setTimeout(() => {
+        if (window.__closeReservationOverlay) {
+          window.__closeReservationOverlay();
+        }
+      }, 1000);
     } catch (err) {
       console.error("[SITE] Erreur enregistrement réservation :", err);
       msg.textContent =
@@ -315,8 +344,6 @@ function initReservationForm() {
 // ================================
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[SITE] DOMContentLoaded – init réservation");
-
-  initCalendar();
-  initReservationOverlay();
-  initReservationForm();
+  setupReservationOverlay();
+  setupReservationForm();
 });
