@@ -623,105 +623,107 @@
     </div>
   </section>
 
-  <!-- SECTION RESERVATION (popup flottante, cachée au départ) -->
-  <section id="reservation-block" class="reservation-overlay">
-    <div class="card reservation-card">
-      <!-- Bouton fermer -->
-      <button type="button" class="reservation-close" id="btnCloseReservation">×</button>
+ <!-- SECTION RESERVATION (POPUP FLOTTANTE, CACHÉE AU DÉPART) -->
+<section id="reservation-block" class="reservation-overlay">
+  <div id="reservationCard" class="card reservation-card">
+    <!-- Bouton fermer (croix) -->
+    <button type="button" id="btnCloseReservation" class="reservation-close">
+      ×
+    </button>
 
-      <h2>Réserver votre expérience</h2>
+    <h2>Réserver votre expérience</h2>
 
-      <div class="reservation-grid">
-        <!-- Formulaire -->
-        <form id="reservationForm">
-          <div class="form-row">
-            <label for="resNom">Nom *</label>
-            <input type="text" id="resNom" placeholder="Votre nom" required />
+    <div class="reservation-grid">
+      <!-- Formulaire -->
+      <form id="reservationForm">
+        <div class="form-row">
+          <label for="resNom">Nom *</label>
+          <input type="text" id="resNom" placeholder="Votre nom" required />
+        </div>
+
+        <div class="form-row">
+          <label for="resPrenom">Prénom *</label>
+          <input type="text" id="resPrenom" placeholder="Votre prénom" required />
+        </div>
+
+        <div class="form-row">
+          <label for="resTelephone">Téléphone *</label>
+          <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
+        </div>
+
+        <div class="form-row">
+          <label for="resEmail">E-mail</label>
+          <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
+        </div>
+
+        <div class="form-row">
+          <label for="resDateDisplay">Date de réservation *</label>
+          <input
+            type="text"
+            id="resDateDisplay"
+            class="date-display-input"
+            placeholder="Cliquez pour choisir une date"
+            readonly
+            required
+          />
+        </div>
+
+        <div class="form-row">
+          <label for="resActivite">Activité à réserver *</label>
+          <select id="resActivite" required>
+            <option value="">Choisir une activité...</option>
+            <option value="Entree Parc babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
+            <option value="Entree Parc piscine">Entrée Parc accès piscine</option>
+            <option value="Entree VIP">Entrée VIP</option>
+            <option value="Anniversaire">Réserver pour un anniversaire</option>
+          </select>
+        </div>
+
+        <button id="btnSubmitReservation" type="submit" class="btn-primary">
+          ✅ Valider la réservation
+        </button>
+
+        <p id="reservationMessage" class="message" style="display:none;"></p>
+      </form>
+
+      <!-- Calendrier -->
+      <div id="calendarCard" class="calendar-card">
+        <div class="calendar-header">
+          <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
+          <div class="calendar-month-title" id="calMonthTitle">Mois</div>
+          <button type="button" id="calNext" class="calendar-nav-btn">›</button>
+        </div>
+
+        <div class="calendar-weekdays">
+          <span class="lundi-ferme">lu</span>
+          <span class="mardi-ferme">ma</span>
+          <span>me</span>
+          <span>je</span>
+          <span>ve</span>
+          <span>sa</span>
+          <span>di</span>
+        </div>
+
+        <div class="calendar-days" id="calendarDays"></div>
+
+        <div class="calendar-legend">
+          <div class="legend-item">
+            <span class="legend-dot legend-dispo"></span> Dates disponibles
           </div>
-
-          <div class="form-row">
-            <label for="resPrenom">Prénom *</label>
-            <input type="text" id="resPrenom" placeholder="Votre prénom" required />
+          <div class="legend-item">
+            <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
           </div>
-
-          <div class="form-row">
-            <label for="resTelephone">Téléphone *</label>
-            <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
+          <div class="legend-item">
+            <span class="legend-dot legend-passee"></span> Dates passées
           </div>
-
-          <div class="form-row">
-            <label for="resEmail">E-mail</label>
-            <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
-          </div>
-
-          <div class="form-row">
-            <label for="resDateDisplay">Date de réservation *</label>
-            <input
-              type="text"
-              id="resDateDisplay"
-              class="date-display-input"
-              placeholder="Cliquez pour choisir une date"
-              readonly
-              required
-            />
-          </div>
-
-          <div class="form-row">
-            <label for="resActivite">Activité à réserver *</label>
-            <select id="resActivite" required>
-              <option value="">Choisir une activité...</option>
-              <option value="Entree Parc babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
-              <option value="Entree Parc piscine">Entrée Parc accès piscine</option>
-              <option value="Entree VIP">Entrée VIP</option>
-              <option value="Anniversaire">Réserver pour un anniversaire</option>
-            </select>
-          </div>
-
-          <button id="btnSubmitReservation" type="submit" class="btn-primary">
-            ✅ Valider la réservation
-          </button>
-
-          <p id="reservationMessage" class="message" style="display:none;"></p>
-        </form>
-
-        <!-- Calendrier -->
-        <div id="calendarCard" class="calendar-card">
-          <div class="calendar-header">
-            <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
-            <div class="calendar-month-title" id="calMonthTitle">Mois</div>
-            <button type="button" id="calNext" class="calendar-nav-btn">›</button>
-          </div>
-
-          <div class="calendar-weekdays">
-            <span class="lundi-ferme">lu</span>
-            <span class="mardi-ferme">ma</span>
-            <span>me</span>
-            <span>je</span>
-            <span>ve</span>
-            <span>sa</span>
-            <span>di</span>
-          </div>
-
-          <div class="calendar-days" id="calendarDays"></div>
-
-          <div class="calendar-legend">
-            <div class="legend-item">
-              <span class="legend-dot legend-dispo"></span> Dates disponibles
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot legend-passee"></span> Dates passées
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot legend-select"></span> Date sélectionnée
-            </div>
+          <div class="legend-item">
+            <span class="legend-dot legend-select"></span> Date sélectionnée
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
   <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
 
