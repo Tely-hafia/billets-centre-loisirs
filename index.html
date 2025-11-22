@@ -341,42 +341,6 @@
       transform: scale(1.2);
     }
 
-    /* Contact WhatsApp */
-    .whatsapp-contact {
-      background: linear-gradient(135deg, #25D366, #128C7E);
-      color: white;
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      text-align: center;
-      margin: 2rem 0;
-      box-shadow: var(--shadow-soft);
-    }
-
-    .whatsapp-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
-
-    .whatsapp-btn {
-      background: white;
-      color: #25D366;
-      border: none;
-      padding: 1rem 2rem;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: var(--transition-fast);
-    }
-
-    .whatsapp-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    }
-
     /* Map */
     .map-section {
       background: var(--bg-card);
@@ -406,7 +370,6 @@
     }
 
     .gps-btn-google { background: #4285F4; color: white; }
-    .gps-btn-waze { background: #33CCFF; color: white; }
     .gps-btn-apple { background: #000000; color: white; }
 
     /* Accès pro discret */
@@ -475,6 +438,72 @@
         max-width: 360px;
       }
     }
+
+    /* =======================================================
+       AJOUTS DEMANDÉS (logo + images services + WhatsApp mini + note GPS)
+       ======================================================= */
+
+    /* Logo header */
+    .site-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .site-logo { width: 40px; height: 40px; }
+    }
+
+    /* Images cartes services */
+    .feature-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    /* Mini bloc WhatsApp */
+    .contact-mini {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 2rem 0;
+    }
+    .contact-whatsapp-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.8rem;
+      text-decoration: none;
+      box-shadow: var(--shadow-soft);
+      transition: var(--transition-fast);
+    }
+    .contact-whatsapp-btn:hover {
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: var(--shadow-hover);
+    }
+    .contact-mini-text {
+      font-weight: 600;
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    /* Note GPS */
+    .gps-note {
+      margin-top: 1rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 
@@ -483,7 +512,13 @@
   <!-- Header -->
   <header>
     <div class="header-inner">
-      <div class="logo-badge">C</div>
+      <div class="logo-badge">
+        <img
+          src="https://fra.cloud.appwrite.io/v1/storage/buckets/69222b6c00245678b63c/files/69222bff0018c389218b/view?project=6919c99200348d6d8afe&mode=admin"
+          alt="Logo Calypço"
+          class="site-logo"
+        />
+      </div>
       <div>
         <h1>Calypço</h1>
         <p>Centre de Loisirs - Gaming, détente et aventure</p>
@@ -612,8 +647,13 @@
       </p>
 
       <div class="features-grid">
+        <!-- Gaming & E-sport -->
         <div class="feature-card">
-          <span class="feature-icon">🎮</span>
+          <img
+            src="https://fra.cloud.appwrite.io/v1/storage/buckets/69222b6c00245678b63c/files/6922317400051a7a0a8b/view?project=6919c99200348d6d8afe&mode=admin"
+            alt="Gaming & E-sport"
+            class="feature-image"
+          />
           <h3 class="feature-title">Gaming & E-sport</h3>
           <p>Plongez dans l'univers du gaming nouvelle génération avec nos équipements high-tech.</p>
           <div style="margin-top: 1rem;">
@@ -627,8 +667,13 @@
           </div>
         </div>
 
+        <!-- Jeux de Force -->
         <div class="feature-card">
-          <span class="feature-icon">💪</span>
+          <img
+            src="https://fra.cloud.appwrite.io/v1/storage/buckets/69222b6c00245678b63c/files/69222e05003983425144/view?project=6919c99200348d6d8afe&mode=admin"
+            alt="Jeux de Force & Défis"
+            class="feature-image"
+          />
           <h3 class="feature-title">Jeux de Force & Défis</h3>
           <p>Testez vos limites et défiez vos amis dans nos activités physiques fun et sécurisées.</p>
           <div style="margin-top: 1rem;">
@@ -642,8 +687,13 @@
           </div>
         </div>
 
+        <!-- Tir de Précision -->
         <div class="feature-card">
-          <span class="feature-icon">🎯</span>
+          <img
+            src="https://fra.cloud.appwrite.io/v1/storage/buckets/69222b6c00245678b63c/files/69222eea003134afbd46/view?project=6919c99200348d6d8afe&mode=admin"
+            alt="Tir de Précision"
+            class="feature-image"
+          />
           <h3 class="feature-title">Tir de Précision</h3>
           <p>Développez votre adresse et concentration avec nos activités de tir sécurisées.</p>
           <div style="margin-top: 1rem;">
@@ -657,6 +707,7 @@
           </div>
         </div>
 
+        <!-- Jeux de Groupe (inchangé) -->
         <div class="feature-card">
           <span class="feature-icon">👥</span>
           <h3 class="feature-title">Jeux de Groupe</h3>
@@ -672,6 +723,7 @@
           </div>
         </div>
 
+        <!-- Piscine & Aquatique (inchangé) -->
         <div class="feature-card">
           <span class="feature-icon">🏊</span>
           <h3 class="feature-title">Espace Aquatique</h3>
@@ -687,6 +739,7 @@
           </div>
         </div>
 
+        <!-- Détente & Restauration (inchangé) -->
         <div class="feature-card">
           <span class="feature-icon">🍹</span>
           <h3 class="feature-title">Détente & Restauration</h3>
@@ -724,7 +777,7 @@
 
         <div class="stat-card">
           <div class="stat-number">WiFi</div>
-          <div class="stat-label">Wifi gratuit</div>
+          <div class="stat-label">Haut débit gratuit</div>
         </div>
 
         <div class="stat-card">
@@ -734,18 +787,17 @@
       </div>
     </section>
 
-    <!-- Contact WhatsApp -->
-    <section id="contact" class="whatsapp-contact">
-      <span class="whatsapp-icon">📱</span>
-      <h2 style="margin-bottom: 1rem;">Contactez-nous sur WhatsApp</h2>
-      <p style="margin-bottom: 2rem; opacity: 0.9;">
-        Réponse rapide garantie ! Cliquez pour nous envoyer un message
-      </p>
-      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
-         class="whatsapp-btn"
-         target="_blank">
-        💬 Nous écrire sur WhatsApp
+    <!-- Mini WhatsApp (remplacement du gros bloc) -->
+    <section id="contact" class="contact-mini">
+      <a
+        href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
+        class="contact-whatsapp-btn"
+        target="_blank"
+        aria-label="Contacter Calypço sur WhatsApp"
+      >
+        💬
       </a>
+      <p class="contact-mini-text">Contactez-nous</p>
     </section>
 
     <!-- Map avec GPS -->
@@ -767,16 +819,12 @@
         </iframe>
       </div>
 
+      <!-- Boutons GPS -->
       <div class="gps-buttons">
         <a href="https://maps.google.com/?q=11.223501,-12.385032"
            class="gps-btn gps-btn-google"
            target="_blank">
           🗺️ Google Maps
-        </a>
-        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes"
-           class="gps-btn gps-btn-waze"
-           target="_blank">
-          🚗 Waze
         </a>
         <a href="https://maps.apple.com/?q=11.223501,-12.385032"
            class="gps-btn gps-btn-apple"
@@ -784,6 +832,10 @@
           🍎 Apple Plans
         </a>
       </div>
+
+      <p class="gps-note">
+        Rejoignez-nous facilement : cliquez sur Google Maps ou Apple Plans pour lancer le trajet.
+      </p>
 
       <div style="margin-top: 1.5rem; text-align: center;">
         <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
