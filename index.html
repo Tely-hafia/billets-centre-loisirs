@@ -225,6 +225,60 @@
     .date-display-input::placeholder {
       color: var(--text-muted);
     }
+/* Overlay popup */
+#reservation-block.reservation-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(15,23,42,0.25), rgba(15,23,42,0.75));
+  z-index: 50;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+
+#reservation-block.reservation-overlay.visible {
+  opacity: 1;
+}
+
+/* Carte centrale */
+#reservation-block .reservation-card {
+  max-width: 1100px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(0.92);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+#reservation-block .reservation-card.visible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Bouton X */
+.reservation-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #4b5563;
+  box-shadow: 0 6px 14px rgba(15,23,42,0.16);
+}
+
+/* pour éviter de casser ton style global, on ne touche pas aux autres classes */
 
     /* --- STYLES PAGE D'ACCUEIL --- */
     .hero-section {
