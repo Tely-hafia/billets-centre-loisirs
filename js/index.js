@@ -40,6 +40,9 @@ let pendingPayload = null;
 let pendingNumero = null;
 let pendingTicketDataURL = null;
 
+// ✅ AJOUT : on garde les infos nécessaires pour régénérer le ticket
+let pendingTicketMeta = null;
+
 function openReservationPopup() {
   const overlay = $("reservation-block");
   const card = overlay?.querySelector(".reservation-card");
@@ -64,6 +67,7 @@ function closeReservationPopup(withWarningIfPending = true) {
     pendingPayload = null;
     pendingNumero = null;
     pendingTicketDataURL = null;
+    pendingTicketMeta = null;
     resetTicketUI();
     return; // on laisse ouvert pour que le client voie le message
   }
@@ -139,6 +143,46 @@ async function generateReservationNumber(dateIso) {
   }
 
   return `${prefix}${String(maxIndex + 1).padStart(4, "0")}`;
+}
+
+// ===============================
+//  ✅ RETRY POUR INDEX UNIQUE
+// ===============================
+async function createReservationWithRetry(data, dateIso) {
+  const MAX_RETRIES = 5;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const numero = await generateReservationNumber(dateIso);
+
+    try {
+      const doc = await db.createDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_RESERVATION_COLLECTION_ID,
+        Appwrite.ID.unique(),
+        {
+          ...data,
+          numero_reservation: numero
+        }
+      );
+      return { doc, numero };
+    } catch (err) {
+      const isDuplicate =
+        err?.code === 409 ||
+        err?.type === "document_already_exists" ||
+        String(err?.message || "").toLowerCase().includes("unique");
+
+      if (isDuplicate && attempt < MAX_RETRIES) {
+        console.warn(
+          `[SITE] Doublon numero_reservation (${numero}). Retry ${attempt}/${MAX_RETRIES}...`
+        );
+        continue;
+      }
+
+      throw err;
+    }
+  }
+
+  throw new Error("Impossible de générer un numéro unique après plusieurs essais.");
 }
 
 // ===============================
@@ -224,34 +268,53 @@ function ensureTicketUI() {
   form.appendChild(zone);
 
   zone.querySelector("#btnDownloadTicket").addEventListener("click", async () => {
-    if (!hasPendingReservation) {
+    if (!hasPendingReservation || !pendingPayload || !pendingTicketMeta) {
       showReservationMessage("Aucune réservation en attente.", "error");
       return;
     }
 
-    await downloadDataURL(pendingTicketDataURL, `ticket-${pendingNumero}.png`);
+    try {
+      // ✅ 1) on sauvegarde d’abord avec retry (index UNIQUE)
+      const dateIso = pendingPayload.date_reservation;
+      const { numero } = await createReservationWithRetry(pendingPayload, dateIso);
 
-    await db.createDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_RESERVATION_COLLECTION_ID,
-      Appwrite.ID.unique(),
-      { ...pendingPayload, numero_reservation: pendingNumero }
-    );
+      // ✅ 2) on régénère le ticket avec le numéro FINAL enregistré
+      pendingNumero = numero;
+      pendingTicketDataURL = createTicketPreview({
+        numero: pendingNumero,
+        nom: pendingTicketMeta.nom,
+        prenom: pendingTicketMeta.prenom,
+        telephone: pendingTicketMeta.telephone,
+        activite: pendingTicketMeta.activite,
+        dateStr: pendingTicketMeta.dateStr
+      });
 
-    showReservationMessage(`Réservation confirmée ! Numéro : ${pendingNumero}`, "success");
+      // ✅ 3) on télécharge le ticket correspondant à la base
+      await downloadDataURL(pendingTicketDataURL, `ticket-${pendingNumero}.png`);
 
-    // reset puis fermeture
-    hasPendingReservation = false;
-    pendingPayload = pendingNumero = pendingTicketDataURL = null;
+      showReservationMessage(`Réservation confirmée ! Numéro : ${pendingNumero}`, "success");
 
-    form.reset();
-    resetTicketUI();
-    closeReservationPopup(false);
+      // reset puis fermeture
+      hasPendingReservation = false;
+      pendingPayload = pendingNumero = pendingTicketDataURL = null;
+      pendingTicketMeta = null;
+
+      form.reset();
+      resetTicketUI();
+      closeReservationPopup(false);
+    } catch (err) {
+      console.error("[SITE] Erreur confirmation reservation :", err);
+      showReservationMessage(
+        "Erreur lors de la confirmation. Merci de réessayer.",
+        "error"
+      );
+    }
   });
 
   zone.querySelector("#btnEditReservation").addEventListener("click", () => {
     hasPendingReservation = false;
     pendingPayload = pendingNumero = pendingTicketDataURL = null;
+    pendingTicketMeta = null;
     resetTicketUI();
   });
 }
@@ -296,6 +359,7 @@ async function submitReservation(e) {
     return;
   }
 
+  // aperçu numéro (peut changer à la confirmation si collision)
   const numero = await generateReservationNumber(dateIso);
 
   pendingNumero = numero;
@@ -308,6 +372,9 @@ async function submitReservation(e) {
     activite,
     actif: true
   };
+
+  // ✅ AJOUT : stocke meta ticket (sans numéro) pour regen plus tard
+  pendingTicketMeta = { nom, prenom, telephone, activite, dateStr };
 
   pendingTicketDataURL = createTicketPreview({
     numero, nom, prenom, telephone, activite, dateStr
