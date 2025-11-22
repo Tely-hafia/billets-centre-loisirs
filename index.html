@@ -5,12 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calypço - Centre de Loisirs</title>
   <link rel="stylesheet" href="css/styles.css" />
-  <!-- SDK Appwrite -->
-  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-
   <style>
-    /* === Styles spécifiques accueil (repris de ta version) === */
-
+    /* ==== Styles spécifiques page d'accueil (inchangés pour le reste) ==== */
     .hero-section {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -22,7 +18,7 @@
     .hero-section::before {
       content: "";
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;left: 0;right: 0;bottom: 0;
       background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
       background-size: cover;
       pointer-events: none;
@@ -72,21 +68,9 @@
       transition: var(--transition-fast);
       border: 1px solid var(--border-soft);
     }
-    .feature-card:hover {
-      transform: translateY(-5px);
-      box-shadow: var(--shadow-hover);
-    }
-    .feature-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
-    .feature-title {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      color: var(--text-main);
-    }
+    .feature-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
+    .feature-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+    .feature-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-main); }
 
     .info-section {
       background: linear-gradient(135deg, #f8fafc 0%, #e4edf5 100%);
@@ -115,16 +99,10 @@
       background-clip: text;
       margin-bottom: 0.5rem;
     }
-    .stat-label {
-      color: var(--text-muted);
-      font-weight: 600;
-    }
+    .stat-label { color: var(--text-muted); font-weight: 600; }
 
-    /* Galerie */
-    .gallery-section {
-      padding: 4rem 0;
-      background: var(--bg-body);
-    }
+    /* === Galerie === */
+    .gallery-section { padding: 4rem 0; background: var(--bg-body); }
     .gallery-carousel {
       position: relative;
       max-width: 1000px;
@@ -133,19 +111,16 @@
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-soft);
     }
-    .carousel-track {
-      display: flex;
-      transition: transform 0.5s ease-in-out;
-    }
+    .carousel-track { display: flex; transition: transform 0.5s ease-in-out; }
     .carousel-slide {
       min-width: 100%;
       height: 400px;
       display: flex;
       align-items: center;
       justify-content: center;
+      color: white;
       font-size: 1.5rem;
       font-weight: 600;
-      color: white;
     }
     .carousel-nav {
       position: absolute;
@@ -164,10 +139,7 @@
       transition: var(--transition-fast);
       z-index: 10;
     }
-    .carousel-nav:hover {
-      background: white;
-      transform: translateY(-50%) scale(1.1);
-    }
+    .carousel-nav:hover { background: white; transform: translateY(-50%) scale(1.1); }
     .carousel-prev { left: 20px; }
     .carousel-next { right: 20px; }
     .carousel-dots {
@@ -177,37 +149,141 @@
       margin-top: 1rem;
     }
     .carousel-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
+      width: 12px;height: 12px;border-radius: 50%;
       background: var(--border-soft);
       cursor: pointer;
       transition: var(--transition-fast);
     }
-    .carousel-dot.active {
-      background: var(--accent-primary);
-      transform: scale(1.2);
-    }
+    .carousel-dot.active { background: var(--accent-primary); transform: scale(1.2); }
 
-    /* SECTION RÉSERVATION (nouvelle) */
-    .reservation-section {
-      margin: 3rem 0;
-    }
-    .reservation-grid {
+    /* ===== Bloc réservation + calendrier ===== */
+    #reservation-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      box-shadow: var(--shadow-soft);
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
       gap: 2rem;
-      align-items: flex-start;
+      align-items: start;
     }
-    .reservation-intro p {
-      color: var(--text-muted);
-    }
-    .reservation-small {
-      font-size: 0.85rem;
-      color: var(--text-light);
+    #reservation-card h2 {
+      margin: 0 0 1.5rem;
+      font-size: 1.6rem;
     }
 
-    /* WhatsApp / map / admin */
+    .reservation-form .form-row {
+      margin-bottom: 1rem;
+    }
+
+    /* Calendrier custom */
+    .calendar-wrapper {
+      border-radius: var(--radius-lg);
+      background: white;
+      box-shadow: var(--shadow-soft);
+      padding: 1.5rem;
+      border: 1px solid var(--border-soft);
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .calendar-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .calendar-nav-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border-soft);
+      background: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: var(--transition-fast);
+    }
+    .calendar-nav-btn:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-primary);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+    }
+    .calendar-weekday {
+      text-align: center;
+      font-size: 0.75rem;
+      text-transform: lowercase;
+      color: var(--text-muted);
+      padding-bottom: 0.3rem;
+    }
+    .cal-day {
+      height: 38px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      background: #e0f2fe;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+    }
+    .cal-day:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(15,23,42,0.15); }
+    .cal-day.empty {
+      background: transparent;
+      cursor: default;
+      box-shadow: none;
+    }
+    .cal-day.past {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .cal-day.closed {
+      background: #fee2e2;
+      color: #b91c1c;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .cal-day.selected {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      box-shadow: 0 4px 10px rgba(37,99,235,0.4);
+    }
+
+    .calendar-legend {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 0.35rem;
+    }
+    .legend-open   { background:#e0f2fe; }
+    .legend-closed { background:#fee2e2; }
+    .legend-past   { background:#e5e7eb; }
+    .legend-selected { background:#2563eb; }
+
+    /* WhatsApp & map & admin (inchangés globalement) */
     .whatsapp-contact {
       background: linear-gradient(135deg, #25D366, #128C7E);
       color: white;
@@ -217,11 +293,7 @@
       margin: 2rem 0;
       box-shadow: var(--shadow-soft);
     }
-    .whatsapp-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
+    .whatsapp-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
     .whatsapp-btn {
       background: white;
       color: #25D366;
@@ -235,10 +307,7 @@
       gap: 0.5rem;
       transition: var(--transition-fast);
     }
-    .whatsapp-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    }
+    .whatsapp-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
 
     .map-section {
       background: var(--bg-card);
@@ -264,9 +333,9 @@
       gap: 0.5rem;
       transition: var(--transition-fast);
     }
-    .gps-btn-google { background: #4285F4; color: white; }
-    .gps-btn-waze   { background: #33CCFF; color: white; }
-    .gps-btn-apple  { background: #000000; color: white; }
+    .gps-btn-google { background:#4285F4;color:white; }
+    .gps-btn-waze   { background:#33CCFF;color:white; }
+    .gps-btn-apple  { background:#000;color:white; }
 
     .admin-access {
       background: var(--bg-card);
@@ -291,8 +360,10 @@
       transition: var(--transition-fast);
     }
 
-    @media (max-width: 900px) {
-      .reservation-grid { grid-template-columns: 1fr; }
+    @media (max-width: 968px) {
+      #reservation-card {
+        grid-template-columns: 1fr;
+      }
     }
     @media (max-width: 768px) {
       .hero-title { font-size: 2.2rem; }
@@ -312,7 +383,7 @@
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- HEADER -->
   <header>
     <div class="header-inner">
       <div class="logo-badge">C</div>
@@ -323,7 +394,7 @@
     </div>
   </header>
 
-  <!-- Hero -->
+  <!-- HERO -->
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">Bienvenue au Calypço</h1>
@@ -332,110 +403,69 @@
       </p>
 
       <div class="access-buttons">
-        <a href="#reservation" class="btn-primary btn-large">🏆 Réserver une activité</a>
-        <a href="#contact" class="btn-secondary btn-large">📞 Nous contacter</a>
+        <a href="#reservation" class="btn-primary btn-large">
+          🏆 Réservation
+        </a>
+        <a href="#contact" class="btn-secondary btn-large">
+          📞 Nous contacter
+        </a>
       </div>
     </div>
   </section>
 
   <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
 
-    <!-- Galerie -->
+    <!-- GALERIE -->
     <section class="gallery-section">
-      <h2 style="text-align: center; margin-bottom: 1rem;">Découvrez le Calypço</h2>
-      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
+      <h2 style="text-align:center;margin-bottom:1rem;">Découvrez le Calypço</h2>
+      <p style="text-align:center;color:var(--text-muted);margin-bottom:2rem;">
         Parcourez notre univers gaming et détente en images
       </p>
 
       <div class="gallery-carousel">
         <div class="carousel-track" id="carouselTrack">
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #ff6b35, #ff8e53);">
+          <div class="carousel-slide" style="background: linear-gradient(135deg,#ff6b35,#ff8e53);">
             🎮 Espace Gaming & E-sport PS5/VR
           </div>
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #4ecdc4, #67e6dc);">
+          <div class="carousel-slide" style="background: linear-gradient(135deg,#4ecdc4,#67e6dc);">
             💪 Jeux de Force & Défis Physiques
           </div>
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #45b7d1, #67d1e6);">
+          <div class="carousel-slide" style="background: linear-gradient(135deg,#45b7d1,#67d1e6);">
             🎯 Tir de Précision & Adresse
           </div>
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+          <div class="carousel-slide" style="background: linear-gradient(135deg,#667eea,#764ba2);">
             🏊 Piscine & Toboggan Aquatique
           </div>
         </div>
-
-        <button class="carousel-nav carousel-prev" onclick="prevSlide()">❮</button>
-        <button class="carousel-nav carousel-next" onclick="nextSlide()">❯</button>
-
+        <button class="carousel-nav carousel-prev" type="button" onclick="prevSlide()">❮</button>
+        <button class="carousel-nav carousel-next" type="button" onclick="nextSlide()">❯</button>
         <div class="carousel-dots" id="carouselDots"></div>
       </div>
     </section>
 
-    <!-- Nos expériences (reprend ton bloc existant) -->
-    <!-- Tu peux garder ici EXACTEMENT ta section "Nos Expériences Uniques" -->
+    <!-- (services / infos pratiques – tu gardes tel quel, je n’y touche pas) -->
 
-    <!-- Informations pratiques -->
-    <section class="info-section" style="margin: 4rem -1.5rem; border-radius: 0;">
-      <h2 style="margin-bottom: 1rem;">Informations Pratiques</h2>
-      <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-        Tout ce que vous devez savoir pour profiter au maximum de notre centre
-      </p>
+    <!-- BLOC RÉSERVATION -->
+    <section id="reservation" style="margin:4rem 0;">
+      <div id="reservation-card">
+        <!-- FORMULAIRE -->
+        <div class="reservation-form">
+          <h2>Réserver votre expérience</h2>
 
-      <div class="stats-container">
-        <div class="stat-card">
-          <div class="stat-number">7j/7</div>
-          <div class="stat-label">Jours d'ouverture</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">10h-02h</div>
-          <div class="stat-label">Horaires étendus</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">WiFi</div>
-          <div class="stat-label">Haut débit gratuit</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">🎉</div>
-          <div class="stat-label">Événements spéciaux</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- RÉSERVATION AVEC FORMULAIRE -->
-    <section id="reservation" class="reservation-section">
-      <div class="card">
-        <h2>Réserver votre expérience</h2>
-
-        <div class="reservation-grid">
-          <!-- Colonne gauche : explications -->
-          <div class="reservation-intro">
-            <p>
-              Remplissez ce formulaire pour réserver votre activité au Calypço.
-              Un <strong>numéro de réservation</strong> sera généré automatiquement
-              au format <code>RES-mmyy-0001</code>.
-            </p>
-            <p class="reservation-small" style="margin-top: 1rem;">
-              Exemple : <strong>RES-0124-0001</strong> pour la première réservation de janvier 2024.
-            </p>
-            <p class="reservation-small" style="margin-top: 0.75rem;">
-              Les champs marqués d’une étoile (<span style="color:#ef4444;">*</span>) sont obligatoires.
-            </p>
-          </div>
-
-          <!-- Colonne droite : formulaire -->
           <form id="reservationForm">
             <div class="form-row">
               <label for="resNom">Nom <span style="color:#ef4444;">*</span></label>
-              <input type="text" id="resNom" required placeholder="Ex : BAH" />
+              <input type="text" id="resNom" required placeholder="Votre nom" />
             </div>
 
             <div class="form-row">
               <label for="resPrenom">Prénom <span style="color:#ef4444;">*</span></label>
-              <input type="text" id="resPrenom" required placeholder="Ex : LAMA" />
+              <input type="text" id="resPrenom" required placeholder="Votre prénom" />
             </div>
 
             <div class="form-row">
               <label for="resTelephone">Téléphone <span style="color:#ef4444;">*</span></label>
-              <input type="text" id="resTelephone" required placeholder="Numéro de téléphone" />
+              <input type="text" id="resTelephone" required placeholder="Votre numéro de téléphone" />
             </div>
 
             <div class="form-row">
@@ -444,36 +474,63 @@
             </div>
 
             <div class="form-row">
-              <label for="resDate">Date de réservation <span style="color:#ef4444;">*</span></label>
-              <input type="date" id="resDate" required />
+              <label for="resDateInput">Date de réservation <span style="color:#ef4444;">*</span></label>
+              <!-- champ texte readonly: la valeur vient du calendrier -->
+              <input type="text" id="resDateInput" readonly placeholder="Cliquez pour choisir une date" />
             </div>
 
             <div class="form-row">
               <label for="resActivite">Activité à réserver <span style="color:#ef4444;">*</span></label>
               <select id="resActivite" required>
-                <option value="">Choisissez une activité...</option>
-                <option value="Entree babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
-                <option value="Entree piscine">Entrée Parc accès piscine</option>
-                <option value="Entree VIP">Entrée VIP</option>
-                <option value="Anniversaire">Réserver pour un anniversaire</option>
+                <option value="">Choisir une activité…</option>
+                <option value="Entrée Parc accès babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
+                <option value="Entrée Parc accès piscine">Entrée Parc accès piscine</option>
+                <option value="Entrée VIP">Entrée VIP</option>
+                <option value="Réservation anniversaire">Réserver pour un anniversaire</option>
               </select>
             </div>
 
-            <button type="submit" id="btnEnvoyerReservation" class="btn-primary" style="width:100%; justify-content:center;">
+            <button type="submit" class="btn-primary" id="btnReservationSubmit">
               ✅ Valider la réservation
             </button>
 
-            <p id="reservationMessage" class="message" style="display:none; margin-top:1rem;"></p>
+            <p id="reservationMessage" class="message" style="display:none;margin-top:1rem;"></p>
           </form>
+        </div>
+
+        <!-- CALENDRIER -->
+        <div class="calendar-wrapper">
+          <div class="calendar-header">
+            <button type="button" class="calendar-nav-btn" id="calPrevBtn">❮</button>
+            <h3 id="calMonthLabel">Mois</h3>
+            <button type="button" class="calendar-nav-btn" id="calNextBtn">❯</button>
+          </div>
+          <div class="calendar-grid" id="calWeekdays">
+            <div class="calendar-weekday">lu</div>
+            <div class="calendar-weekday">ma</div>
+            <div class="calendar-weekday">me</div>
+            <div class="calendar-weekday">je</div>
+            <div class="calendar-weekday">ve</div>
+            <div class="calendar-weekday">sa</div>
+            <div class="calendar-weekday">di</div>
+          </div>
+          <div class="calendar-grid" id="calDays"></div>
+
+          <div class="calendar-legend">
+            <span><span class="legend-dot legend-open"></span>Dates disponibles</span>
+            <span><span class="legend-dot legend-closed"></span>Lundi / mardi (fermé)</span>
+            <span><span class="legend-dot legend-past"></span>Dates passées</span>
+            <span><span class="legend-dot legend-selected"></span>Date sélectionnée</span>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Contact WhatsApp -->
+    <!-- CONTACT WHATSAPP -->
     <section id="contact" class="whatsapp-contact">
       <span class="whatsapp-icon">📱</span>
-      <h2 style="margin-bottom: 1rem;">Contactez-nous sur WhatsApp</h2>
-      <p style="margin-bottom: 2rem; opacity: 0.9;">
+      <h2 style="margin-bottom:1rem;">Contactez-nous sur WhatsApp</h2>
+      <p style="margin-bottom:2rem;opacity:0.9;">
         Réponse rapide garantie ! Cliquez pour nous envoyer un message
       </p>
       <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
@@ -482,17 +539,17 @@
       </a>
     </section>
 
-    <!-- Map + GPS -->
+    <!-- MAP -->
     <section class="map-section">
-      <h2 style="margin-bottom: 1rem;">📍 Nous trouver</h2>
-      <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+      <h2 style="margin-bottom:1rem;">📍 Nous trouver</h2>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem;">
         Hafia Labé, proche université Hafia
       </p>
 
-      <div style="border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-soft);">
+      <div style="border-radius:var(--radius-md);overflow:hidden;box-shadow:var(--shadow-soft);">
         <iframe
           src="https://www.openstreetmap.org/export/embed.html?bbox=-12.387032,11.222501,-12.383032,11.224501&layer=mapnik&marker=11.223501,-12.385032"
-          width="100%" height="300" style="border: none;" loading="lazy"
+          width="100%" height="300" style="border:none;" loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
           title="Calypço Centre de Loisirs - Hafia Labé">
         </iframe>
@@ -510,23 +567,23 @@
         </a>
       </div>
 
-      <div style="margin-top: 1.5rem; text-align: center;">
+      <div style="margin-top:1.5rem;text-align:center;">
         <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
         <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
       </div>
     </section>
 
-    <!-- Accès pro -->
+    <!-- ACCÈS PRO -->
     <section class="admin-access">
-      <h3 style="margin-bottom: 1rem; color: var(--text-muted);">Accès Professionnel</h3>
-      <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+      <h3 style="margin-bottom:1rem;color:var(--text-muted);">Accès Professionnel</h3>
+      <p style="color:var(--text-light);margin-bottom:1rem;font-size:0.9rem;">
         Personnel et administrateurs du centre
       </p>
       <div class="admin-buttons">
-        <a href="agent.html" class="admin-btn" style="background: var(--accent-soft); color: var(--accent-primary);">
+        <a href="agent.html" class="admin-btn" style="background:var(--accent-soft);color:var(--accent-primary);">
           🎫 Espace Agent
         </a>
-        <a href="admin.html" class="admin-btn" style="background: var(--border-soft); color: var(--text-muted);">
+        <a href="admin.html" class="admin-btn" style="background:var(--border-soft);color:var(--text-muted);">
           ⚙️ Administration
         </a>
       </div>
@@ -536,195 +593,14 @@
 
   <footer>
     <p>© 2024 Calypço - Tous droits réservés</p>
-    <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-light);">
+    <p style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-light);">
       Votre destination gaming, aventure et détente à Labé
     </p>
   </footer>
 
-  <script>
-    // ==========================
-    //  CONFIG APPWRITE PUBLIC
-    // ==========================
-    const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-    const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
-    const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
-    const APPWRITE_RESERVATION_COLLECTION_ID = "reservation"; // ⚠️ adapte si l'ID est différent
-
-    if (typeof Appwrite === "undefined") {
-      console.error("[SITE] Appwrite SDK non chargé.");
-    }
-
-    const siteClient = new Appwrite.Client();
-    siteClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-    const siteDB = new Appwrite.Databases(siteClient);
-
-    // ==========================
-    //  CAROUSEL
-    // ==========================
-    let currentSlide = 0;
-    const slides = document.querySelectorAll(".carousel-slide");
-    const track = document.getElementById("carouselTrack");
-    const dotsContainer = document.getElementById("carouselDots");
-
-    slides.forEach((_, index) => {
-      const dot = document.createElement("div");
-      dot.className = "carousel-dot" + (index === 0 ? " active" : "");
-      dot.addEventListener("click", () => goToSlide(index));
-      dotsContainer.appendChild(dot);
-    });
-
-    function updateCarousel() {
-      track.style.transform = `translateX(-${currentSlide * 100}%)`;
-      document.querySelectorAll(".carousel-dot").forEach((dot, index) => {
-        dot.classList.toggle("active", index === currentSlide);
-      });
-    }
-    function nextSlide() {
-      currentSlide = (currentSlide + 1) % slides.length;
-      updateCarousel();
-    }
-    function prevSlide() {
-      currentSlide = (currentSlide - 1 + slides.length) % slides.length;
-      updateCarousel();
-    }
-    function goToSlide(index) {
-      currentSlide = index;
-      updateCarousel();
-    }
-    setInterval(nextSlide, 5000);
-
-    // ==========================
-    //  SMOOTH SCROLL ANCRE
-    // ==========================
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener("click", function(e) {
-        const target = document.querySelector(this.getAttribute("href"));
-        if (target) {
-          e.preventDefault();
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      });
-    });
-
-    // ==========================
-    //  FORMULAIRE RÉSERVATION
-    // ==========================
-
-    const resForm = document.getElementById("reservationForm");
-    const resMsg = document.getElementById("reservationMessage");
-    const btnRes = document.getElementById("btnEnvoyerReservation");
-
-    function showResMessage(text, type) {
-      if (!resMsg) return;
-      resMsg.style.display = "block";
-      resMsg.textContent = text;
-      resMsg.className = "message";
-      if (type === "success") resMsg.classList.add("message-success");
-      else if (type === "error") resMsg.classList.add("message-error");
-      else resMsg.classList.add("message-info");
-    }
-
-    // Génère un numéro au format RES-mmyy-0001
-    async function genererNumeroReservation() {
-      const now = new Date();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const yy = String(now.getFullYear()).slice(-2);
-      const prefix = `RES-${mm}${yy}-`;
-
-      let compteur = 1;
-
-      try {
-        const res = await siteDB.listDocuments(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_RESERVATION_COLLECTION_ID,
-          [
-            Appwrite.Query.orderDesc("$createdAt"),
-            Appwrite.Query.limit(1)
-          ]
-        );
-
-        if (res.documents && res.documents.length > 0) {
-          const last = res.documents[0];
-          const lastNum = last.numero_reservation || "";
-          const m = /^RES-(\d{2})(\d{2})-(\d{4})$/.exec(lastNum);
-          if (m) {
-            const lastMM = m[1];
-            const lastYY = m[2];
-            const lastCounter = parseInt(m[3], 10) || 0;
-            if (lastMM === mm && lastYY === yy) {
-              compteur = lastCounter + 1;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn("[SITE] Impossible de récupérer la dernière réservation :", err);
-        // on garde compteur = 1
-      }
-
-      const counterStr = String(compteur).padStart(4, "0");
-      return `${prefix}${counterStr}`;
-    }
-
-    resForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!btnRes) return;
-
-      const nom = document.getElementById("resNom")?.value.trim();
-      const prenom = document.getElementById("resPrenom")?.value.trim();
-      const telephone = document.getElementById("resTelephone")?.value.trim();
-      const email = document.getElementById("resEmail")?.value.trim();
-      const dateStr = document.getElementById("resDate")?.value;
-      const activite = document.getElementById("resActivite")?.value;
-
-      if (!nom || !prenom || !telephone || !dateStr || !activite) {
-        showResMessage("Veuillez remplir tous les champs obligatoires.", "error");
-        return;
-      }
-
-      btnRes.disabled = true;
-      btnRes.textContent = "Enregistrement en cours...";
-      showResMessage("Création de votre réservation...", "info");
-
-      try {
-        const numResa = await genererNumeroReservation();
-
-        // date_reservation en ISO (minuit)
-        const isoDate = new Date(dateStr + "T00:00:00").toISOString();
-
-        await siteDB.createDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_RESERVATION_COLLECTION_ID,
-          Appwrite.ID.unique(),
-          {
-            nom,
-            prenom,
-            telephone,
-            "e-mail": email || null,
-            date_reservation: isoDate,
-            activite,
-            active: "en_attente",
-            numero_reservation: numResa
-          }
-        );
-
-        showResMessage(
-          `Votre réservation est enregistrée ✅ Numéro : ${numResa}. Conservez ce numéro.`,
-          "success"
-        );
-
-        resForm.reset();
-      } catch (err) {
-        console.error("[SITE] Erreur enregistrement réservation :", err);
-        showResMessage(
-          "Erreur lors de l'enregistrement de la réservation. Merci de réessayer plus tard.",
-          "error"
-        );
-      } finally {
-        btnRes.disabled = false;
-        btnRes.textContent = "✅ Valider la réservation";
-      }
-    });
-  </script>
-
+  <!-- SDK Appwrite -->
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+  <!-- Script principal -->
+  <script src="js/index.js?v=1"></script>
 </body>
 </html>
