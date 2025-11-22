@@ -7,7 +7,7 @@ console.log("[SITE] index.js chargé - Réservation Calypço");
 const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
-const APPWRITE_RESERVATIONS_COLLECTION_ID = "reservations"; // nom de ta collection
+const APPWRITE_RESERVATIONS_COLLECTION_ID = "reservations"; // ID de ta collection Appwrite
 
 if (typeof Appwrite === "undefined") {
   console.error(
@@ -50,7 +50,8 @@ function initReservationPopup() {
   btnOpen.addEventListener("click", (e) => {
     e.preventDefault();
     overlay.style.display = "flex";
-    // petite anim (zoom / fade)
+
+    // Laisser le temps au browser d'appliquer display:flex avant l'animation
     requestAnimationFrame(() => {
       overlay.classList.add("visible");
       card.classList.add("visible");
@@ -73,7 +74,7 @@ function initReservationPopup() {
     });
   }
 
-  // clic sur le fond
+  // clic sur le fond (fermeture)
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
       closePopup();
@@ -127,7 +128,7 @@ function initCalendar() {
 
     daysContainer.innerHTML = "";
 
-    // Décalage pour que lun = colonne 1, mar = col 2, ... dim = col 7
+    // Décalage pour aligner lundi = première colonne
     let startDay = firstOfMonth.getDay(); // 0=dim, 1=lun, ...
     let offset = startDay === 0 ? 6 : startDay - 1; // 0=lu, 6=di
     for (let i = 0; i < offset; i++) {
@@ -181,8 +182,9 @@ function initCalendar() {
           month: "long",
           day: "numeric",
         });
-        dateInput.value =
+        const formatted =
           label.charAt(0).toUpperCase() + label.slice(1);
+        dateInput.value = formatted;
 
         // Fermer le calendrier
         calendarCard.style.display = "none";
@@ -197,7 +199,8 @@ function initCalendar() {
 
   // Navigation mois précédent / suivant
   if (btnPrev) {
-    btnPrev.addEventListener("click", () => {
+    btnPrev.addEventListener("click", (e) => {
+      e.preventDefault();
       calMonth--;
       if (calMonth < 0) {
         calMonth = 11;
@@ -208,7 +211,8 @@ function initCalendar() {
   }
 
   if (btnNext) {
-    btnNext.addEventListener("click", () => {
+    btnNext.addEventListener("click", (e) => {
+      e.preventDefault();
       calMonth++;
       if (calMonth > 11) {
         calMonth = 0;
@@ -277,7 +281,7 @@ async function genererNumeroReservation() {
     return `${prefix}${String(seq).padStart(4, "0")}`;
   } catch (err) {
     console.error("[SITE] Erreur génération numéro réservation :", err);
-    // Fallback : numéro aléatoire (évite de bloquer la réservation)
+    // Fallback : numéro aléatoire pour ne pas bloquer
     const rand = Math.floor(1000 + Math.random() * 9000);
     return `${prefix}${String(rand).padStart(4, "0")}`;
   }
@@ -341,7 +345,8 @@ function initReservationForm() {
 
     if (!nom || !prenom || !telephone || !activite || !selectedDateISO) {
       msg.className = "message message-error";
-      msg.textContent = "Veuillez remplir tous les champs obligatoires et choisir une date.";
+      msg.textContent =
+        "Veuillez remplir tous les champs obligatoires et choisir une date.";
       return;
     }
 
@@ -355,7 +360,7 @@ function initReservationForm() {
         date_reservation: selectedDateISO,
       });
 
-      // Reset du formulaire mais on laisse la popup ouverte
+      // Reset du formulaire, mais on laisse la popup ouverte
       form.reset();
       selectedDateISO = null;
       const dateInput = $("resDateDisplay");
