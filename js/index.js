@@ -159,7 +159,7 @@ function initCalendar() {
 }
 
 // ================================
-//  Popup réservation
+//  Popup réservation - CORRIGÉ
 // ================================
 function setupReservationOverlay() {
   const overlay = $("reservation-block");
@@ -167,7 +167,6 @@ function setupReservationOverlay() {
   const btnOpen = $("btnShowReservation");
   const btnClose = $("btnCloseReservation");
   const dateInput = $("resDateDisplay");
-  const calendarCard = $("calendarCard");
 
   if (!overlay || !card || !btnOpen) {
     console.warn("[SITE] éléments overlay réservation manquants.");
@@ -181,34 +180,37 @@ function setupReservationOverlay() {
 
   function openOverlay() {
     overlay.style.display = "flex";
+    document.body.style.overflow = "hidden"; // Empêche le scroll de la page
     // léger délai pour déclencher la transition
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       overlay.classList.add("visible");
       card.classList.add("visible");
-    });
+    }, 10);
+    
+    // Initialiser le calendrier si pas déjà fait
+    if (!calendarInitialized) {
+      initCalendar();
+    }
   }
 
   function closeOverlay() {
     overlay.classList.remove("visible");
     card.classList.remove("visible");
+    document.body.style.overflow = ""; // Réactive le scroll
 
-    const onEnd = () => {
+    setTimeout(() => {
       overlay.style.display = "none";
-      overlay.removeEventListener("transitionend", onEnd);
-      // on remet le calendrier caché
-      if (calendarCard) {
-        calendarCard.classList.remove("visible");
-      }
-    };
-    overlay.addEventListener("transitionend", onEnd);
+    }, 300);
   }
 
-  btnOpen.addEventListener("click", () => {
+  btnOpen.addEventListener("click", (e) => {
+    e.stopPropagation();
     openOverlay();
   });
 
   if (btnClose) {
-    btnClose.addEventListener("click", () => {
+    btnClose.addEventListener("click", (e) => {
+      e.stopPropagation();
       closeOverlay();
     });
   }
@@ -222,21 +224,22 @@ function setupReservationOverlay() {
 
   // touche ESC
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && overlay.style.display === "flex") {
+    if (e.key === "Escape" && overlay.classList.contains("visible")) {
       closeOverlay();
     }
   });
 
+  // Empêcher la propagation des clics dans la carte
+  card.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
   // ouverture du calendrier au clic sur le champ date
   if (dateInput) {
-    dateInput.addEventListener("click", () => {
-      if (calendarCard) {
-        calendarCard.classList.add("visible");
-      }
-      initCalendar();
-      // recentrer visuellement le calendrier
-      if (calendarCard) {
-        calendarCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    dateInput.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!calendarInitialized) {
+        initCalendar();
       }
     });
   }
@@ -328,7 +331,7 @@ function setupReservationForm() {
         if (window.__closeReservationOverlay) {
           window.__closeReservationOverlay();
         }
-      }, 1000);
+      }, 2000);
     } catch (err) {
       console.error("[SITE] Erreur enregistrement réservation :", err);
       msg.textContent =
