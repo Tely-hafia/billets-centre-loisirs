@@ -590,6 +590,42 @@
       }
     }
   </style>
+
+  <style>
+  /* ... tous tes styles actuels ... */
+
+  /* Ticket preview */
+  .ticket-preview-zone {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border: 1px dashed var(--border-soft);
+    border-radius: var(--radius-md);
+    background: #f8fafc;
+  }
+
+  .ticket-preview-img {
+    width: 100%;
+    max-width: 520px;
+    display: block;
+    margin: 0 auto;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Mobile popup centrée proprement */
+  @media (max-width: 768px) {
+    #reservation-block .reservation-card {
+      width: 95%;
+      margin: 1rem auto;
+      padding: 1.25rem;
+    }
+
+    .reservation-grid {
+      grid-template-columns: 1fr !important; /* calendrier en dessous */
+    }
+  }
+</style>
+
 </head>
 <body>
 
