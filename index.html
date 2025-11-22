@@ -633,7 +633,8 @@
   </section>
 
   <!-- SECTION RESERVATION (popup flottante, cachée au départ) -->
-  <section id="reservation-block" class="reservation-overlay">
+<div id="reservationCard" class="card reservation-card">
+
     <div class="card reservation-card">
       <!-- Bouton fermer -->
       <button type="button" class="reservation-close" id="btnCloseReservation">×</button>
@@ -988,11 +989,20 @@
   </footer>
 
   <!-- SDK Appwrite -->
-  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-  <!-- Script page d'accueil / réservation -->
-  <script src="js/index.js?v=4"></script>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 
-  <script>
+<script>
+  window.APPWRITE_CONFIG = {
+    endpoint: "https://fra.cloud.appwrite.io/v1",
+    projectId: "TON_PROJECT_ID",
+    databaseId: "TON_DATABASE_ID",
+    reservationCollectionId: "TON_COLLECTION_ID_RESERVATION"
+  };
+</script>
+
+<!-- Script page d'accueil / réservation -->
+<script src="js/index.js?v=4"></script>
+
     // Script pour la galerie carousel
     let currentSlide = 0;
     const slides = document.querySelectorAll('.carousel-slide');
