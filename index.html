@@ -95,7 +95,7 @@
       color: white;
     }
 
-    /* Calendrier masqué par défaut, visible quand on clique sur date */
+    /* Calendrier visible par défaut dans le popup */
     .calendar-card {
       background: var(--bg-card);
       border-radius: var(--radius-lg);
@@ -103,16 +103,7 @@
       box-shadow: var(--shadow-soft);
       border: 1px solid rgba(226, 232, 240, 0.9);
       position: relative;
-      display: none; /* Caché par défaut */
-      opacity: 0;
-      transform: translateY(-10px);
-      transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-
-    .calendar-card.visible {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
+      display: block !important;
     }
 
     .calendar-header {
@@ -633,8 +624,7 @@
   </section>
 
   <!-- SECTION RESERVATION (popup flottante, cachée au départ) -->
-<div id="reservationCard" class="card reservation-card">
-
+  <section id="reservation-block" class="reservation-overlay">
     <div class="card reservation-card">
       <!-- Bouton fermer -->
       <button type="button" class="reservation-close" id="btnCloseReservation">×</button>
@@ -733,7 +723,6 @@
     </div>
   </section>
 
-  <!-- Le reste du code HTML reste identique -->
   <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
 
     <!-- Galerie Carousel -->
@@ -989,20 +978,11 @@
   </footer>
 
   <!-- SDK Appwrite -->
-<script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+  <!-- Script page d'accueil / réservation -->
+  <script src="js/index.js?v=3"></script>
 
-<script>
-  window.APPWRITE_CONFIG = {
-    endpoint: "https://fra.cloud.appwrite.io/v1",
-    projectId: "TON_PROJECT_ID",
-    databaseId: "TON_DATABASE_ID",
-    reservationCollectionId: "TON_COLLECTION_ID_RESERVATION"
-  };
-</script>
-
-<!-- Script page d'accueil / réservation -->
-<script src="js/index.js?v=4"></script>
-
+  <script>
     // Script pour la galerie carousel
     let currentSlide = 0;
     const slides = document.querySelectorAll('.carousel-slide');
