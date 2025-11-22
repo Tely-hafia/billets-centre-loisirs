@@ -43,12 +43,12 @@ function clearReservationMessage() {
 }
 
 // ===============================
-//  POPUP RESERVATION
+//  POPUP + ETAT RESERVATION
 // ===============================
-let hasPendingReservation = false;   // vrai si ticket généré mais pas téléchargé
-let pendingPayload = null;           // données prêtes à être envoyées
-let pendingNumero = null;            // numéro généré
-let pendingTicketDataURL = null;     // image ticket en dataURL
+let hasPendingReservation = false;
+let pendingPayload = null;
+let pendingNumero = null;
+let pendingTicketDataURL = null;
 
 function openReservationPopup() {
   const overlay = $("reservation-block");
@@ -60,8 +60,6 @@ function openReservationPopup() {
   document.body.style.overflow = "hidden";
 
   clearReservationMessage();
-
-  // reset UI ticket si on rouvre
   resetTicketUI();
 }
 
@@ -71,14 +69,13 @@ function closeReservationPopup(withWarningIfPending = true) {
       "Attention : si vous ne téléchargez pas votre preuve de réservation, la réservation sera annulée.",
       "error"
     );
-    // on annule la réservation en attente
+    // annule la réservation en attente
     hasPendingReservation = false;
     pendingPayload = null;
     pendingNumero = null;
     pendingTicketDataURL = null;
-
     resetTicketUI();
-    return; // on laisse la popup ouverte pour que le client voie le message
+    return; // on laisse ouvert pour que le client voie le message
   }
 
   const overlay = $("reservation-block");
@@ -89,132 +86,51 @@ function closeReservationPopup(withWarningIfPending = true) {
   card.classList.remove("visible");
   document.body.style.overflow = "";
 
-  // refermer calendrier
-  const calendarCard = $("calendarCard");
-  if (calendarCard) calendarCard.style.display = "none";
-
   clearReservationMessage();
   resetTicketUI();
 }
 
 // ===============================
-//  CALENDRIER
+//  FLATPICKR (CALENDRIER)
 // ===============================
-let calCurrentMonth;
-let calCurrentYear;
-let calSelectedDate = null;
+let fpInstance = null;
 
-function initCalendar() {
-  const today = new Date();
-  calCurrentMonth = today.getMonth();
-  calCurrentYear = today.getFullYear();
-  renderCalendar();
-
-  const btnPrev = $("calPrev");
-  const btnNext = $("calNext");
-
-  if (btnPrev) {
-    btnPrev.addEventListener("click", (e) => {
-      e.stopPropagation();
-      calCurrentMonth--;
-      if (calCurrentMonth < 0) {
-        calCurrentMonth = 11;
-        calCurrentYear--;
-      }
-      renderCalendar();
-    });
+function initFlatpickr() {
+  const input = $("resDateDisplay");
+  if (!input || typeof flatpickr === "undefined") {
+    console.error("[SITE] Flatpickr non chargé.");
+    return;
   }
 
-  if (btnNext) {
-    btnNext.addEventListener("click", (e) => {
-      e.stopPropagation();
-      calCurrentMonth++;
-      if (calCurrentMonth > 11) {
-        calCurrentMonth = 0;
-        calCurrentYear++;
+  // si ton ancien bloc calendrier existe, on le cache définitivement
+  const oldCalendar = $("calendarCard");
+  if (oldCalendar) oldCalendar.style.display = "none";
+
+  fpInstance = flatpickr(input, {
+    locale: "fr",
+    dateFormat: "d/m/Y",
+    minDate: "today",
+    disableMobile: true, // force dropdown même sur mobile
+    disable: [
+      (date) => date.getDay() === 1 || date.getDay() === 2 // lundi 1, mardi 2
+    ],
+    onDayCreate: function(dObj, dStr, fp, dayElem) {
+      const day = dayElem.dateObj.getDay();
+      if (day === 1 || day === 2) {
+        dayElem.classList.add("fp-ferme"); // style rouge/gris via CSS
       }
-      renderCalendar();
-    });
-  }
+    },
+    onChange: function(selectedDates, dateStr, instance) {
+      // dès qu'on choisit une date => champ rempli + calendrier se ferme
+      instance.close();
+    }
+    // Flatpickr ferme déjà si on clique ailleurs
+  });
 }
 
-function renderCalendar() {
-  const daysContainer = $("calendarDays");
-  const titleEl = $("calMonthTitle");
-  if (!daysContainer || !titleEl) return;
-
-  const monthNames = [
-    "Janvier","Février","Mars","Avril","Mai","Juin",
-    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
-  ];
-  titleEl.textContent = `${monthNames[calCurrentMonth]} ${calCurrentYear}`;
-  daysContainer.innerHTML = "";
-
-  const firstDayOfMonth = new Date(calCurrentYear, calCurrentMonth, 1);
-  const startingWeekDay = (firstDayOfMonth.getDay() + 6) % 7; // 0=lu..6=di
-  const daysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  for (let i = 0; i < startingWeekDay; i++) {
-    daysContainer.appendChild(document.createElement("div"));
-  }
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    const cell = document.createElement("button");
-    cell.type = "button";
-    cell.className = "calendar-day";
-    cell.textContent = String(day);
-
-    const dateObj = new Date(calCurrentYear, calCurrentMonth, day);
-    dateObj.setHours(0, 0, 0, 0);
-
-    const weekday = (dateObj.getDay() + 6) % 7;
-    let isDisabled = false;
-
-    if (weekday === 0 || weekday === 1) {
-      cell.classList.add("ferme");
-      isDisabled = true;
-    }
-    if (dateObj < today) {
-      cell.classList.add("passee");
-      isDisabled = true;
-    }
-    if (calSelectedDate && dateObj.getTime() === calSelectedDate.getTime()) {
-      cell.classList.add("selected");
-    }
-
-    if (!isDisabled) {
-      cell.addEventListener("click", (e) => {
-        e.stopPropagation();
-        calSelectedDate = dateObj;
-
-        const input = $("resDateDisplay");
-        if (input) {
-          const dd = String(day).padStart(2, "0");
-          const mm = String(calCurrentMonth + 1).padStart(2, "0");
-          input.value = `${dd}/${mm}/${calCurrentYear}`;
-        }
-
-        renderCalendar();
-
-        // fermeture auto du calendrier après choix
-        const calendarCard = $("calendarCard");
-        if (calendarCard) calendarCard.style.display = "none";
-      });
-    } else {
-      cell.disabled = true;
-    }
-
-    daysContainer.appendChild(cell);
-  }
-}
-
-// ===============================
-//  FORMAT DATE & NUMÉRO
-// ===============================
+// Pour convertir la date Flatpickr -> ISO UTC
 function parseDateFrToISO(dateStr) {
+  // "dd/mm/yyyy"
   const parts = dateStr.split("/");
   if (parts.length !== 3) return null;
   const [ddStr, mmStr, yyyyStr] = parts;
@@ -227,6 +143,9 @@ function parseDateFrToISO(dateStr) {
   return d.toISOString();
 }
 
+// ===============================
+//  NUMERO RESERVATION
+// ===============================
 async function generateReservationNumber(dateIso) {
   const d = new Date(dateIso);
   const month = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -261,7 +180,7 @@ async function generateReservationNumber(dateIso) {
 }
 
 // ===============================
-//  TICKET (APERÇU + PNG)
+//  TICKET PNG (APERÇU + DOWNLOAD)
 // ===============================
 function buildTicketCanvas({ numero, nom, prenom, telephone, activite, dateStr }) {
   const canvas = document.createElement("canvas");
@@ -270,25 +189,20 @@ function buildTicketCanvas({ numero, nom, prenom, telephone, activite, dateStr }
   canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  // fond
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
-  // bordure
   ctx.strokeStyle = "#0f172a";
   ctx.lineWidth = 4;
   ctx.strokeRect(20, 20, W - 40, H - 40);
 
-  // bandeau
   ctx.fillStyle = "#2563eb";
   ctx.fillRect(20, 20, W - 40, 90);
 
-  // titre
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 32px Arial";
   ctx.fillText("Calypço - Ticket de Réservation", 50, 75);
 
-  // contenu
   ctx.fillStyle = "#0f172a";
   ctx.font = "bold 26px Arial";
   ctx.fillText(`N° ${numero}`, 50, 155);
@@ -309,10 +223,9 @@ function buildTicketCanvas({ numero, nom, prenom, telephone, activite, dateStr }
 function createTicketPreview(data) {
   const canvas = buildTicketCanvas(data);
   const dataURL = canvas.toDataURL("image/png");
-  return { canvas, dataURL };
+  return { dataURL };
 }
 
-// Téléchargement manuel + retour Promise quand fini
 function downloadDataURL(dataURL, filename) {
   return new Promise((resolve) => {
     const a = document.createElement("a");
@@ -326,13 +239,13 @@ function downloadDataURL(dataURL, filename) {
 }
 
 // ===============================
-//  UI TICKET (injectée dynamiquement)
+//  UI Ticket (injectée)
 // ===============================
 function ensureTicketUI() {
   const form = $("reservationForm");
   if (!form) return;
 
-  if ($("ticketPreviewZone")) return; // déjà injecté
+  if ($("ticketPreviewZone")) return;
 
   const zone = document.createElement("div");
   zone.id = "ticketPreviewZone";
@@ -357,17 +270,16 @@ function ensureTicketUI() {
 
   form.appendChild(zone);
 
-  // Bouton Télécharger
   zone.querySelector("#btnDownloadTicket").addEventListener("click", async () => {
     if (!hasPendingReservation || !pendingPayload || !pendingNumero || !pendingTicketDataURL) {
       showReservationMessage("Aucune réservation en attente.", "error");
       return;
     }
 
-    // 1) Télécharger
+    // 1) Télécharger le ticket
     await downloadDataURL(pendingTicketDataURL, `ticket-${pendingNumero}.png`);
 
-    // 2) ENREGISTRER SEULEMENT ICI
+    // 2) Enregistrer SEULEMENT APRES téléchargement
     try {
       await db.createDocument(
         APPWRITE_DATABASE_ID,
@@ -379,12 +291,9 @@ function ensureTicketUI() {
         }
       );
 
-      showReservationMessage(
-        `Réservation confirmée ! Numéro : ${pendingNumero}`,
-        "success"
-      );
+      showReservationMessage(`Réservation confirmée ! Numéro : ${pendingNumero}`, "success");
 
-      // reset + fermer popup
+      // reset
       hasPendingReservation = false;
       pendingPayload = null;
       pendingNumero = null;
@@ -392,22 +301,21 @@ function ensureTicketUI() {
 
       const formEl = $("reservationForm");
       if (formEl) formEl.reset();
-      calSelectedDate = null;
-      renderCalendar();
 
-      // ferme automatiquement après téléchargement
+      resetTicketUI();
+
+      // ferme popup automatiquement
       closeReservationPopup(false);
 
     } catch (err) {
-      console.error("[SITE] Erreur Appwrite (confirmation) :", err);
+      console.error("[SITE] Erreur Appwrite confirmation :", err);
       showReservationMessage(
-        "Téléchargement OK, mais erreur lors de la confirmation. Merci de réessayer.",
+        "Téléchargement OK, mais erreur lors de la confirmation. Réessayez.",
         "error"
       );
     }
   });
 
-  // Bouton Modifier -> on revient au formulaire normal sans sauvegarder
   zone.querySelector("#btnEditReservation").addEventListener("click", () => {
     hasPendingReservation = false;
     pendingPayload = null;
@@ -421,12 +329,10 @@ function showTicketUI(dataURL) {
   const zone = $("ticketPreviewZone");
   const img = $("ticketPreviewImg");
   const submitBtn = $("btnSubmitReservation");
-
   if (!zone || !img) return;
 
   img.src = dataURL;
   zone.style.display = "block";
-
   if (submitBtn) submitBtn.style.display = "none";
 }
 
@@ -434,14 +340,13 @@ function resetTicketUI() {
   const zone = $("ticketPreviewZone");
   const img = $("ticketPreviewImg");
   const submitBtn = $("btnSubmitReservation");
-
   if (zone) zone.style.display = "none";
   if (img) img.src = "";
   if (submitBtn) submitBtn.style.display = "inline-flex";
 }
 
 // ===============================
-//  SUBMIT = Générer ticket (PAS de save)
+//  SUBMIT => génère ticket, PAS de save
 // ===============================
 async function submitReservation(e) {
   e.preventDefault();
@@ -468,7 +373,6 @@ async function submitReservation(e) {
   try {
     const numero = await generateReservationNumber(dateIso);
 
-    // on met en attente, sans enregistrer
     pendingNumero = numero;
     pendingPayload = {
       nom,
@@ -481,12 +385,7 @@ async function submitReservation(e) {
     };
 
     const { dataURL } = createTicketPreview({
-      numero,
-      nom,
-      prenom,
-      telephone,
-      activite,
-      dateStr
+      numero, nom, prenom, telephone, activite, dateStr
     });
 
     pendingTicketDataURL = dataURL;
@@ -501,10 +400,7 @@ async function submitReservation(e) {
 
   } catch (err) {
     console.error("[SITE] Erreur génération ticket :", err);
-    showReservationMessage(
-      "Erreur lors de la génération du ticket. Merci de réessayer.",
-      "error"
-    );
+    showReservationMessage("Erreur lors de la génération du ticket. Réessayez.", "error");
   }
 }
 
@@ -515,13 +411,13 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("[SITE] DOMContentLoaded – init Calypço");
 
   ensureTicketUI();
+  initFlatpickr();
 
   const btnShowReservation = $("btnShowReservation");
   const btnCloseReservation = $("btnCloseReservation");
   const reservationBlock = $("reservation-block");
   const reservationCard = reservationBlock?.querySelector(".reservation-card");
 
-  // Ouvrir popup
   if (btnShowReservation) {
     btnShowReservation.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -529,7 +425,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Fermer via croix
   if (btnCloseReservation) {
     btnCloseReservation.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -537,52 +432,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Fermer si clic overlay
   if (reservationBlock && reservationCard) {
     reservationBlock.addEventListener("click", () => closeReservationPopup(true));
-    reservationCard.addEventListener("click", (e) => {
-      e.stopPropagation();
-      // si clic dans popup mais hors calendrier -> ferme calendrier
-      const calendarCard = $("calendarCard");
-      if (calendarCard && !calendarCard.contains(e.target)) {
-        calendarCard.style.display = "none";
-      }
-    });
+    reservationCard.addEventListener("click", (e) => e.stopPropagation());
   }
 
-  // Fermer avec Escape
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeReservationPopup(true);
   });
 
-  // ===== Calendrier =====
-  const dateInput = $("resDateDisplay");
-  const calendarCard = $("calendarCard");
-
-  if (calendarCard) {
-    calendarCard.style.display = "none"; // pas visible par défaut
-    calendarCard.addEventListener("click", (e) => e.stopPropagation());
-  }
-
-  if (dateInput) {
-    dateInput.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (calendarCard) {
-        const visible = calendarCard.style.display === "block";
-        calendarCard.style.display = visible ? "none" : "block";
-        if (!visible) renderCalendar(); // sécurité
-      }
-    });
-  }
-
-  // Clic ailleurs dans popup ou page ferme le calendrier
-  document.addEventListener("click", () => {
-    if (calendarCard) calendarCard.style.display = "none";
-  });
-
-  // Submit
   const form = $("reservationForm");
   if (form) form.addEventListener("submit", submitReservation);
-
-  initCalendar();
 });
