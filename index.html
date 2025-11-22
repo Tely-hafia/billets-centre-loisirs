@@ -5,62 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calypço - Centre de Loisirs</title>
   <link rel="stylesheet" href="css/styles.css" />
+
   <style>
-    /* --- petits styles spécifiques à la page d'accueil / calendrier --- */
+    /* --- CALENDRIER RESERVATION --- */
 
-    .hero-section {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 4rem 2rem;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero-section::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
-      background-size: cover;
-      pointer-events: none;
-    }
-    .hero-content {
-      max-width: 800px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 2;
-    }
-    .hero-title {
-      font-size: 3rem;
-      font-weight: 800;
-      margin-bottom: 1rem;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-    .hero-subtitle {
-      font-size: 1.3rem;
-      margin-bottom: 2rem;
-      opacity: 0.9;
-    }
-    .access-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin: 2rem 0;
-    }
-    .btn-large {
-      padding: 1.2rem 2.5rem;
-      font-size: 1.1rem;
-      min-width: 200px;
+    .reservation-section {
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
     }
 
-    /* calendrier */
-
-    .reservation-wrapper {
+    .reservation-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
       gap: 2rem;
       align-items: flex-start;
+    }
+
+    @media (max-width: 900px) {
+      .reservation-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .calendar-card {
@@ -68,7 +33,8 @@
       border-radius: var(--radius-lg);
       padding: 1.5rem 1.75rem;
       box-shadow: var(--shadow-soft);
-      border: 1px solid rgba(226,232,240,0.9);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      position: relative;
     }
 
     .calendar-header {
@@ -78,150 +44,135 @@
       margin-bottom: 1rem;
     }
 
-    .calendar-month-label {
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-
     .calendar-nav-btn {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 999px;
       border: 1px solid var(--border-soft);
-      background: white;
+      background: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: var(--transition-fast);
+      font-weight: 700;
     }
 
     .calendar-nav-btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(15,23,42,0.15);
-      border-color: var(--accent-primary);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .calendar-month-title {
+      font-weight: 700;
+      font-size: 1rem;
     }
 
     .calendar-weekdays {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      font-size: 0.8rem;
       text-align: center;
-      text-transform: lowercase;
+      font-size: 0.8rem;
       color: var(--text-muted);
+      text-transform: lowercase;
       margin-bottom: 0.5rem;
     }
 
-    .calendar-weekday.closed {
-      color: #ef4444; /* lundi / mardi fermés */
+    .calendar-weekdays span.lundi-ferme,
+    .calendar-weekdays span.mardi-ferme {
+      color: #ef4444;
       font-weight: 600;
     }
 
-    .calendar-grid {
+    .calendar-days {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 0.25rem;
-      margin-bottom: 0.75rem;
     }
 
     .calendar-day {
       height: 40px;
-      border-radius: 12px;
+      border-radius: 999px;
       font-size: 0.85rem;
       border: 1px solid transparent;
+      background: #e0f2fe;
+      color: #0f172a;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      background: white;
-      color: var(--text-main);
       transition: var(--transition-fast);
     }
 
     .calendar-day:hover {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 2px rgba(255,107,53,0.15);
+      background: #bfdbfe;
     }
 
-    .calendar-day.empty {
-      cursor: default;
-      background: transparent;
-      border: none;
-    }
-
-    .calendar-day.past {
-      color: var(--text-light);
+    .calendar-day.passee {
       background: #f3f4f6;
+      color: #9ca3af;
       cursor: not-allowed;
     }
 
-    .calendar-day.closed {
+    .calendar-day.ferme {
       background: #fee2e2;
       color: #b91c1c;
       border-color: #fecaca;
       cursor: not-allowed;
-      font-weight: 600;
     }
 
     .calendar-day.selected {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      border-color: #2563eb;
-      box-shadow: 0 10px 25px rgba(37,99,235,0.4);
+      background: #2563eb;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(37,99,235,0.35);
     }
 
     .calendar-legend {
       display: flex;
       flex-wrap: wrap;
       gap: 0.75rem;
+      margin-top: 1rem;
       font-size: 0.8rem;
       color: var(--text-muted);
     }
 
-    .calendar-legend-item {
+    .legend-item {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
     }
-    .calendar-dot {
+
+    .legend-dot {
       width: 10px;
       height: 10px;
       border-radius: 999px;
-      background: #bfdbfe;
-    }
-    .calendar-dot.closed {
-      background: #fecaca;
-    }
-    .calendar-dot.selected {
-      background: #2563eb;
-    }
-    .calendar-dot.past {
-      background: #e5e7eb;
     }
 
-    .reservation-status {
-      margin-top: 1rem;
+    .legend-dispo   { background:#bfdbfe; }
+    .legend-ferme   { background:#fecaca; }
+    .legend-passee  { background:#d1d5db; }
+    .legend-select  { background:#2563eb; }
+
+    /* Champ date "clickable" */
+    .date-display-input {
+      cursor: pointer;
+      background: #f8fafc;
     }
 
-    /* affichage conditionnel */
-    #reservation-section {
-      display: none; /* caché par défaut, affiché après clic sur bouton Réservation */
+    .date-display-input::placeholder {
+      color: var(--text-muted);
     }
 
-    #reservation-date-picker-card {
-      display: none; /* le calendrier ne s’affiche qu’après clic sur l’input date */
-    }
-
-    @media (max-width: 992px) {
-      .reservation-wrapper {
-        grid-template-columns: 1fr;
-      }
+    /* Cacher le card de réservation au chargement de la page */
+    #reservation-block {
+      display: none;
     }
   </style>
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Header / Hero -->
   <header>
     <div class="header-inner">
       <div class="logo-badge">C</div>
@@ -232,7 +183,6 @@
     </div>
   </header>
 
-  <!-- Hero -->
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">Bienvenue au Calypço</h1>
@@ -241,7 +191,7 @@
       </p>
 
       <div class="access-buttons">
-        <button id="btnOpenReservation" class="btn-primary btn-large" type="button">
+        <button id="btnShowReservation" class="btn-primary btn-large" type="button">
           🏆 Réservation
         </button>
         <a href="#contact" class="btn-secondary btn-large">
@@ -251,138 +201,122 @@
     </div>
   </section>
 
-  <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
+  <main style="max-width: 1200px; margin: 0 auto 3rem; padding: 0 1.5rem;">
 
-    <!-- (je laisse ici la galerie, les features, etc. – inchangés pour ne pas tout recopier)
-         ... 
-         ... -->
+    <!-- ✅ BLOC RESERVATION (caché tant qu'on n'a pas cliqué sur le bouton) -->
+    <section id="reservation-block" class="reservation-section">
+      <div class="card">
+        <h2>Réserver votre expérience</h2>
 
-    <!-- SECTION RÉSERVATION (cachée au départ) -->
-    <section id="reservation-section" class="card" style="margin-top: 3rem;">
-      <h2>Réserver votre expérience</h2>
+        <div class="reservation-grid">
+          <!-- Formulaire -->
+          <form id="reservationForm">
+            <div class="form-row">
+              <label for="resNom">Nom *</label>
+              <input type="text" id="resNom" placeholder="Votre nom" required />
+            </div>
 
-      <div class="reservation-wrapper">
-        <!-- Formulaire -->
-        <form id="reservation-form">
-          <div class="form-row">
-            <label for="res-nom">Nom <span style="color:#ef4444;">*</span></label>
-            <input id="res-nom" type="text" placeholder="Votre nom" required />
-          </div>
+            <div class="form-row">
+              <label for="resPrenom">Prénom *</label>
+              <input type="text" id="resPrenom" placeholder="Votre prénom" required />
+            </div>
 
-          <div class="form-row">
-            <label for="res-prenom">Prénom <span style="color:#ef4444;">*</span></label>
-            <input id="res-prenom" type="text" placeholder="Votre prénom" required />
-          </div>
+            <div class="form-row">
+              <label for="resTelephone">Téléphone *</label>
+              <input type="text" id="resTelephone" placeholder="Votre numéro de téléphone" required />
+            </div>
 
-          <div class="form-row">
-            <label for="res-telephone">Téléphone <span style="color:#ef4444;">*</span></label>
-            <input id="res-telephone" type="text" placeholder="Votre numéro de téléphone" required />
-          </div>
+            <div class="form-row">
+              <label for="resEmail">E-mail</label>
+              <input type="email" id="resEmail" placeholder="exemple@domaine.com" />
+            </div>
 
-          <div class="form-row">
-            <label for="res-email">E-mail</label>
-            <input id="res-email" type="email" placeholder="exemple@domaine.com" />
-          </div>
+            <div class="form-row">
+              <label for="resDateDisplay">Date de réservation *</label>
+              <input
+                type="text"
+                id="resDateDisplay"
+                class="date-display-input"
+                placeholder="Cliquez pour choisir une date"
+                readonly
+                required
+              />
+            </div>
 
-          <div class="form-row">
-            <label for="res-date-affiche">Date de réservation <span style="color:#ef4444;">*</span></label>
-            <input
-              id="res-date-affiche"
-              type="text"
-              placeholder="Cliquez pour choisir une date"
-              readonly
-              required
-            />
-            <!-- valeur ISO pour Appwrite -->
-            <input id="res-date-iso" type="hidden" />
-          </div>
+            <div class="form-row">
+              <label for="resActivite">Activité à réserver *</label>
+              <select id="resActivite" required>
+                <option value="">Choisir une activité...</option>
+                <option value="Entree Parc babyfoot/billard">Entrée Parc accès babyfoot/billard</option>
+                <option value="Entree Parc piscine">Entrée Parc accès piscine</option>
+                <option value="Entree VIP">Entrée VIP</option>
+                <option value="Anniversaire">Réserver pour un anniversaire</option>
+              </select>
+            </div>
 
-          <div class="form-row">
-            <label for="res-activite">Activité à réserver <span style="color:#ef4444;">*</span></label>
-            <select id="res-activite" required>
-              <option value="">Choisir une activité...</option>
-              <option value="Entrée Parc accès babyfoot/billard">
-                Entrée Parc accès babyfoot/billard
-              </option>
-              <option value="Entrée Parc accès piscine">
-                Entrée Parc accès piscine
-              </option>
-              <option value="Entrée pack VIP/jeux">
-                Entrée pack VIP/jeux
-              </option>
-              <option value="Anniversaire">
-                Réserver pour un anniversaire
-              </option>
-            </select>
-          </div>
-
-          <button id="btnSubmitReservation" type="submit" class="btn-primary">
-            ✅ Valider la réservation
-          </button>
-
-          <p id="reservation-message" class="message reservation-status" style="display:none;"></p>
-        </form>
-
-        <!-- Calendrier -->
-        <div id="reservation-date-picker-card" class="calendar-card">
-          <div class="calendar-header">
-            <button
-              type="button"
-              class="calendar-nav-btn"
-              id="cal-prev-month"
-              aria-label="Mois précédent"
-            >
-              ‹
+            <button id="btnSubmitReservation" type="submit" class="btn-primary">
+              ✅ Valider la réservation
             </button>
-            <div class="calendar-month-label" id="cal-month-label">Mois</div>
-            <button
-              type="button"
-              class="calendar-nav-btn"
-              id="cal-next-month"
-              aria-label="Mois suivant"
-            >
-              ›
-            </button>
-          </div>
 
-          <div class="calendar-weekdays">
-            <div class="calendar-weekday closed">lu</div>
-            <div class="calendar-weekday closed">ma</div>
-            <div class="calendar-weekday">me</div>
-            <div class="calendar-weekday">je</div>
-            <div class="calendar-weekday">ve</div>
-            <div class="calendar-weekday">sa</div>
-            <div class="calendar-weekday">di</div>
-          </div>
+            <p id="reservationMessage" class="message" style="display:none;"></p>
+          </form>
 
-          <div id="calendar-grid" class="calendar-grid">
-            <!-- rempli par JS -->
-          </div>
+          <!-- Calendrier -->
+          <div id="calendarCard" class="calendar-card">
+            <div class="calendar-header">
+              <button type="button" id="calPrev" class="calendar-nav-btn">‹</button>
+              <div class="calendar-month-title" id="calMonthTitle">Mois</div>
+              <button type="button" id="calNext" class="calendar-nav-btn">›</button>
+            </div>
 
-          <div class="calendar-legend">
-            <span class="calendar-legend-item">
-              <span class="calendar-dot"></span> Dates disponibles
-            </span>
-            <span class="calendar-legend-item">
-              <span class="calendar-dot closed"></span> Lundi / mardi (fermé)
-            </span>
-            <span class="calendar-legend-item">
-              <span class="calendar-dot past"></span> Dates passées
-            </span>
-            <span class="calendar-legend-item">
-              <span class="calendar-dot selected"></span> Date sélectionnée
-            </span>
+            <div class="calendar-weekdays">
+              <span class="lundi-ferme">lu</span>
+              <span class="mardi-ferme">ma</span>
+              <span>me</span>
+              <span>je</span>
+              <span>ve</span>
+              <span>sa</span>
+              <span>di</span>
+            </div>
+
+            <div class="calendar-days" id="calendarDays"></div>
+
+            <div class="calendar-legend">
+              <div class="legend-item">
+                <span class="legend-dot legend-dispo"></span> Dates disponibles
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot legend-ferme"></span> Lundi / mardi (fermé)
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot legend-passee"></span> Dates passées
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot legend-select"></span> Date sélectionnée
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Contact WhatsApp, map, accès pro, etc. (inchangés) -->
-    <!-- ... -->
+    <!-- Tu peux remettre ici toutes tes autres sections : galerie, services, infos pratiques,
+         WhatsApp, carte, accès admin, comme dans ta version précédente. -->
 
+    <!-- Contact WhatsApp (exemple simple, à adapter si tu veux remettre ton bloc complet) -->
     <section id="contact" class="whatsapp-contact">
-      <!-- contenu existant -->
-      <!-- ... -->
+      <span class="whatsapp-icon">📱</span>
+      <h2 style="margin-bottom: 1rem;">Contactez-nous sur WhatsApp</h2>
+      <p style="margin-bottom: 2rem; opacity: 0.9;">
+        Réponse rapide garantie ! Cliquez pour nous envoyer un message
+      </p>
+      <a
+        href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
+        class="whatsapp-btn"
+        target="_blank"
+      >
+        💬 Nous écrire sur WhatsApp
+      </a>
     </section>
 
   </main>
@@ -396,7 +330,7 @@
 
   <!-- SDK Appwrite -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-  <!-- Script page d'accueil -->
+  <!-- Script page d'accueil / réservation -->
   <script src="js/index.js?v=2"></script>
 </body>
 </html>
