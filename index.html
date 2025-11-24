@@ -12,468 +12,382 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
   <style>
-    /* --- RESERVATION / POPUP --- */
-    .reservation-section {
+    /* --- STYLES MOBILE FIRST --- */
+    
+    /* Header mobile */
+    header {
+      padding: 1rem;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
       max-width: 1200px;
       margin: 0 auto;
-      padding: 0;
     }
 
-    .reservation-grid {
-      display: grid;
-      grid-template-columns: 1fr; /* plus de colonne calendrier */
-      gap: 1.5rem;
-      align-items: flex-start;
-    }
-
-    /* OVERLAY */
-    #reservation-block.reservation-overlay {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top, rgba(15,23,42,0.25), rgba(15,23,42,0.75));
-      z-index: 9999;
-      transition: opacity 0.3s ease;
-      opacity: 0;
-    }
-
-    #reservation-block.reservation-overlay.visible {
-      opacity: 1;
-      display: flex;
-    }
-
-    /* Carte centrale */
-    #reservation-block .reservation-card {
-      max-width: 900px;
-      width: 90%;
-      max-height: 85vh;
-      overflow-y: auto;
-      transform: scale(0.92);
-      opacity: 0;
-      transition: transform 0.3s ease, opacity 0.3s ease;
-      background: white;
-      border-radius: var(--radius-lg);
-      padding: 2rem;
-      position: relative;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      margin: 2rem;
-    }
-
-    #reservation-block .reservation-card.visible {
-      transform: scale(1);
-      opacity: 1;
-    }
-
-    /* Bouton fermeture */
-    .reservation-close {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      border: 1px solid var(--border-soft);
-      background: #fff;
-      cursor: pointer;
+    .logo-badge {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #4b5563;
-      box-shadow: 0 4px 10px rgba(15,23,42,0.15);
-      transition: var(--transition-fast);
-      z-index: 10;
-    }
-
-    .reservation-close:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-soft);
-      background: #ef4444;
       color: white;
+      font-weight: 800;
+      font-size: 1.5rem;
+      flex-shrink: 0;
     }
 
-    .date-display-input {
-      cursor: pointer;
-      background: #f8fafc;
+    .header-inner h1 {
+      font-size: 1.4rem;
+      margin: 0;
+      color: #1f2937;
     }
 
-    .date-display-input::placeholder {
-      color: var(--text-muted);
+    .header-inner p {
+      font-size: 0.85rem;
+      margin: 0;
+      color: #6b7280;
     }
 
-    /* --- FLATPICKR --- */
-    .flatpickr-calendar {
-      z-index: 100000 !important;
-      box-shadow: var(--shadow-soft);
-      border-radius: var(--radius-md);
-    }
-
-    /* Lundi/Mardi fermés */
-    .fp-ferme {
-      background: #fee2e2 !important;
-      color: #b91c1c !important;
-    }
-
-    /* --- TICKET PREVIEW --- */
-    .ticket-preview-zone {
-      margin-top: 1.25rem;
-      padding: 1rem;
-      border: 1px dashed var(--border-soft);
-      border-radius: var(--radius-md);
-      background: #f8fafc;
-    }
-
-    .ticket-preview-img {
-      width: 100%;
-      max-width: 520px;
-      display: block;
-      margin: 0 auto;
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-soft);
-    }
-
-    /* --- STYLES PAGE D'ACCUEIL --- */
+    /* Hero section mobile */
     .hero-section {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 4rem 2rem;
+      padding: 3rem 1.5rem;
       text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-section::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
-      background-size: cover;
-      pointer-events: none;
-    }
-
-    .hero-content {
-      max-width: 800px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 2;
     }
 
     .hero-title {
-      font-size: 3rem;
+      font-size: 2.2rem;
       font-weight: 800;
       margin-bottom: 1rem;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      line-height: 1.2;
     }
 
     .hero-subtitle {
-      font-size: 1.3rem;
+      font-size: 1.1rem;
       margin-bottom: 2rem;
-      opacity: 0.9;
+      line-height: 1.4;
     }
 
+    /* Boutons mobile */
+    .access-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .btn-large {
+      width: 100%;
+      max-width: 300px;
+      padding: 1.2rem 1.5rem;
+      font-size: 1.1rem;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+
+    /* Features grid mobile */
     .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin: 3rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin: 2rem 0;
     }
 
     .feature-card {
-      background: var(--bg-card);
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      text-align: center;
-      box-shadow: var(--shadow-soft);
-      transition: var(--transition-fast);
-      border: 1px solid var(--border-soft);
-    }
-
-    .feature-card:hover {
-      transform: translateY(-5px);
-      box-shadow: var(--shadow-hover);
+      background: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      border: 1px solid #e5e7eb;
     }
 
     .feature-icon {
-      font-size: 3rem;
+      font-size: 2.5rem;
       margin-bottom: 1rem;
-      display: block;
     }
 
     .feature-title {
       font-size: 1.3rem;
       font-weight: 700;
       margin-bottom: 1rem;
-      color: var(--text-main);
     }
 
-    .access-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin: 2rem 0;
-    }
-
-    .btn-large {
-      padding: 1.2rem 2.5rem;
-      font-size: 1.1rem;
-      min-width: 200px;
-    }
-
-    .info-section {
-      background: linear-gradient(135deg, #f8fafc 0%, #e4edf5 100%);
-      padding: 4rem 2rem;
-      text-align: center;
-    }
-
-    .stats-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 2rem;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .stat-card {
-      background: white;
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .stat-number {
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-label {
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    /* Galerie carousel */
+    /* Carousel mobile */
     .gallery-section {
-      padding: 4rem 0;
-      background: var(--bg-body);
-    }
-
-    .gallery-carousel {
-      position: relative;
-      max-width: 1000px;
-      margin: 0 auto;
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .carousel-track {
-      display: flex;
-      transition: transform 0.5s ease-in-out;
+      padding: 2rem 0;
     }
 
     .carousel-slide {
-      min-width: 100%;
-      height: 400px;
-      background: linear-gradient(135deg, var(--accent-soft), var(--border-soft));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-main);
-      font-size: 1.5rem;
-      font-weight: 600;
+      height: 250px;
+      font-size: 1.2rem;
     }
 
     .carousel-nav {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.9);
-      border: none;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      transition: var(--transition-fast);
-      z-index: 10;
+      width: 40px;
+      height: 40px;
+      font-size: 1.2rem;
     }
 
-    .carousel-nav:hover {
-      background: white;
-      transform: translateY(-50%) scale(1.1);
+    /* Stats mobile */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
     }
 
-    .carousel-prev { left: 20px; }
-    .carousel-next { right: 20px; }
-
-    .carousel-dots {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 1rem;
+    .stat-card {
+      padding: 1.5rem 1rem;
     }
 
-    .carousel-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--border-soft);
-      cursor: pointer;
-      transition: var(--transition-fast);
+    .stat-number {
+      font-size: 2rem;
     }
 
-    .carousel-dot.active {
-      background: var(--accent-primary);
-      transform: scale(1.2);
-    }
-
-    /* Contact WhatsApp */
+    /* Contact mobile */
     .whatsapp-contact {
-      background: linear-gradient(135deg, #25D366, #128C7E);
-      color: white;
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      text-align: center;
-      margin: 2rem 0;
-      box-shadow: var(--shadow-soft);
+      padding: 1.5rem;
+      margin: 1.5rem 0;
     }
 
     .whatsapp-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
+      font-size: 2.5rem;
     }
 
-    .whatsapp-btn {
-      background: white;
-      color: #25D366;
-      border: none;
-      padding: 1rem 2rem;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: var(--transition-fast);
-    }
-
-    .whatsapp-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    }
-
-    /* Map */
+    /* Map section mobile */
     .map-section {
-      background: var(--bg-card);
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      margin: 2rem 0;
-      box-shadow: var(--shadow-soft);
+      padding: 1.5rem;
+      margin: 1.5rem 0;
     }
 
     .gps-buttons {
       display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 1.5rem;
+      flex-direction: column;
+      gap: 0.8rem;
     }
 
     .gps-btn {
-      padding: 0.8rem 1.5rem;
-      border-radius: var(--radius-md);
+      width: 100%;
+      justify-content: center;
+      padding: 1rem;
+      border-radius: 10px;
       text-decoration: none;
       font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: var(--transition-fast);
     }
 
-    .gps-btn-google { background: #4285F4; color: white; }
-    .gps-btn-waze { background: #33CCFF; color: white; }
-    .gps-btn-apple { background: #000000; color: white; }
-
-    /* Accès pro discret */
+    /* Admin access mobile */
     .admin-access {
-      background: var(--bg-card);
       padding: 1.5rem;
-      border-radius: var(--radius-lg);
-      margin: 2rem 0;
-      text-align: center;
-      border: 1px solid var(--border-soft);
+      margin: 1.5rem 0;
     }
 
     .admin-buttons {
       display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 1rem;
+      flex-direction: column;
+      gap: 0.8rem;
     }
 
     .admin-btn {
-      padding: 0.8rem 1.5rem;
-      font-size: 0.9rem;
+      width: 100%;
+      justify-content: center;
+      padding: 1rem;
+      border-radius: 10px;
       text-decoration: none;
-      border-radius: var(--radius-md);
-      transition: var(--transition-fast);
     }
 
-    /* Mobile */
-    @media (max-width: 768px) {
-      .hero-title { font-size: 2.2rem; }
+    /* --- RESERVATION MOBILE --- */
+    .reservation-section {
+      padding: 0;
+    }
+
+    #reservation-block.reservation-overlay {
+      padding: 1rem;
+    }
+
+    #reservation-block .reservation-card {
+      width: 95%;
+      margin: 0 auto;
+      padding: 1.5rem;
+      max-height: 90vh;
+      border-radius: 16px;
+    }
+
+    .reservation-close {
+      top: 0.8rem;
+      right: 0.8rem;
+      width: 36px;
+      height: 36px;
+    }
+
+    .form-row {
+      margin-bottom: 1.2rem;
+    }
+
+    .form-row label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-row input,
+    .form-row select {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-row input:focus,
+    .form-row select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    /* Flatpickr mobile */
+    .flatpickr-calendar.open {
+      width: calc(100vw - 2rem);
+      max-width: none;
+      left: 50% !important;
+      transform: translateX(-50%);
+    }
+
+    /* Ticket preview mobile */
+    .ticket-preview-zone {
+      margin-top: 1rem;
+      padding: 1rem;
+    }
+
+    /* --- MEDIA QUERIES TABLETTE --- */
+    @media (min-width: 768px) {
+      .hero-title {
+        font-size: 2.8rem;
+      }
 
       .access-buttons {
-        flex-direction: column;
-        align-items: center;
+        flex-direction: row;
+        justify-content: center;
       }
 
       .btn-large {
-        width: 100%;
-        max-width: 300px;
+        width: auto;
+        min-width: 200px;
       }
 
-      .carousel-slide {
-        height: 300px;
-        font-size: 1.2rem;
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
       }
 
-      .admin-buttons, .gps-buttons {
-        flex-direction: column;
-        align-items: center;
+      .stats-container {
+        grid-template-columns: repeat(4, 1fr);
       }
 
-      .admin-btn, .gps-btn {
-        width: 100%;
-        max-width: 250px;
+      .gps-buttons,
+      .admin-buttons {
+        flex-direction: row;
+        justify-content: center;
+      }
+
+      .gps-btn,
+      .admin-btn {
+        width: auto;
+        min-width: 150px;
+      }
+    }
+
+    /* --- MEDIA QUERIES DESKTOP --- */
+    @media (min-width: 1024px) {
+      .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .hero-title {
+        font-size: 3.2rem;
       }
 
       #reservation-block .reservation-card {
-        width: 95%;
-        margin: 1rem auto;
-        padding: 1.25rem;
+        max-width: 600px;
+      }
+    }
+
+    /* Améliorations de lisibilité */
+    main {
+      padding: 0 1rem;
+    }
+
+    section {
+      margin-bottom: 3rem;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Améliorations des interactions tactiles */
+    @media (hover: none) and (pointer: coarse) {
+      .btn-large,
+      .gps-btn,
+      .admin-btn,
+      .reservation-close {
+        min-height: 44px;
       }
 
-      .flatpickr-calendar.open {
-        width: calc(100vw - 2.5rem);
-        max-width: 360px;
+      .form-row input,
+      .form-row select {
+        font-size: 16px; /* Évite le zoom sur iOS */
+        min-height: 44px;
       }
+
+      .carousel-nav {
+        width: 44px;
+        height: 44px;
+      }
+    }
+
+    /* Animation de chargement améliorée pour mobile */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .feature-card,
+    .stat-card,
+    .map-section {
+      animation: fadeInUp 0.6s ease-out;
     }
   </style>
 </head>
@@ -562,7 +476,7 @@
             </select>
           </div>
 
-          <button id="btnSubmitReservation" type="submit" class="btn-primary">
+          <button id="btnSubmitReservation" type="submit" class="btn-primary btn-large">
             ✅ Valider la réservation
           </button>
 
@@ -572,7 +486,7 @@
     </div>
   </section>
 
-  <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
+  <main style="max-width: 1200px; margin: 0 auto;">
 
     <!-- Galerie Carousel -->
     <section class="gallery-section">
@@ -705,7 +619,7 @@
     </section>
 
     <!-- Informations pratiques -->
-    <section class="info-section" style="margin: 4rem -1.5rem; border-radius: 0;">
+    <section class="info-section" style="margin: 4rem -1rem; border-radius: 0;">
       <h2 style="margin-bottom: 1rem;">Informations Pratiques</h2>
       <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
         Tout ce que vous devez savoir pour profiter au maximum de notre centre
