@@ -12,10 +12,17 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
   <style>
-    /* Empêche les débordements horizontaux sur mobile */
+    /* Empêche les débordements horizontaux */
     html, body {
       max-width: 100%;
       overflow-x: hidden;
+    }
+
+    /* Wrapper principal */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-inline: 1.5rem;
     }
 
     /* --- RESERVATION / POPUP --- */
@@ -27,7 +34,7 @@
 
     .reservation-grid {
       display: grid;
-      grid-template-columns: 1fr; /* plus de colonne calendrier */
+      grid-template-columns: 1fr;
       gap: 1.5rem;
       align-items: flex-start;
     }
@@ -236,6 +243,7 @@
       background: linear-gradient(135deg, #f8fafc 0%, #e4edf5 100%);
       padding: 4rem 2rem;
       text-align: center;
+      margin: 4rem 0;
     }
 
     .stats-container {
@@ -356,6 +364,8 @@
       text-align: center;
       margin: 2rem 0;
       box-shadow: var(--shadow-soft);
+      max-width: 900px;
+      margin-inline: auto;
     }
 
     .whatsapp-icon {
@@ -390,6 +400,8 @@
       border-radius: var(--radius-lg);
       margin: 2rem 0;
       box-shadow: var(--shadow-soft);
+      max-width: 1000px;
+      margin-inline: auto;
     }
 
     .gps-buttons {
@@ -423,6 +435,8 @@
       margin: 2rem 0;
       text-align: center;
       border: 1px solid var(--border-soft);
+      max-width: 900px;
+      margin-inline: auto;
     }
 
     .admin-buttons {
@@ -441,11 +455,7 @@
       transition: var(--transition-fast);
     }
 
-    /* ===============================
-       ✅ HEADER & ERGONOMIE MOBILE
-    =============================== */
-
-    /* Header plus souple, sans changement de structure */
+    /* HEADER plus souple sans changer la structure */
     header .header-inner {
       display: flex;
       align-items: center;
@@ -474,15 +484,31 @@
     }
 
     /* ===============================
-       ✅ MOBILE (smartphone)
+       ✅ MOBILE
     =============================== */
     @media (max-width: 768px) {
+      body {
+        font-size: 16px;
+      }
+
+      main {
+        padding-inline: 1rem;
+      }
+
+      .hero-section {
+        padding: 3rem 1.25rem;
+      }
+
       .hero-title {
         font-size: 2.1rem;
       }
 
       .hero-subtitle {
         font-size: 1.05rem;
+      }
+
+      .hero-content {
+        max-width: 100%;
       }
 
       .access-buttons {
@@ -519,9 +545,68 @@
         font-size: 0.85rem;
       }
 
+      /* Cartes et sections centrées */
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        margin: 2.5rem 0;
+      }
+
+      .feature-card {
+        max-width: 480px;
+        margin-inline: auto;
+        padding: 1.5rem;
+      }
+
+      .gallery-section {
+        padding: 3rem 0;
+      }
+
+      .gallery-carousel {
+        border-radius: var(--radius-md);
+        max-width: 100%;
+        margin-inline: auto;
+      }
+
       .carousel-slide {
-        height: 300px;
+        height: 260px;
         font-size: 1.2rem;
+        padding: 1.5rem;
+        text-align: center;
+      }
+
+      .info-section {
+        padding: 3rem 1.5rem;
+        margin: 3rem 0 !important;
+      }
+
+      .stats-container {
+        grid-template-columns: 1fr;
+        max-width: 480px;
+        margin-inline: auto;
+      }
+
+      .stat-card {
+        padding: 1.5rem;
+      }
+
+      .whatsapp-contact {
+        margin: 2.5rem 0;
+        padding: 1.75rem 1.25rem;
+        max-width: 480px;
+        margin-inline: auto;
+      }
+
+      .map-section {
+        padding: 1.75rem 1.25rem;
+        max-width: 480px;
+        margin-inline: auto;
+      }
+
+      .admin-access {
+        padding: 1.5rem 1.25rem;
+        max-width: 480px;
+        margin-inline: auto;
       }
 
       .admin-buttons, .gps-buttons {
@@ -534,7 +619,7 @@
         max-width: 250px;
       }
 
-      /* Popup plus confortable sur mobile */
+      /* Popup de réservation type "app" */
       #reservation-block.reservation-overlay {
         padding: 0.75rem;
         align-items: center;
@@ -554,12 +639,11 @@
         gap: 1rem;
       }
 
-      /* Champs plus faciles à cliquer, évite le zoom iOS */
       #reservationForm .form-row input,
       #reservationForm .form-row select,
       #reservationForm button {
         width: 100%;
-        font-size: 16px;
+        font-size: 16px; /* évite le zoom auto iOS */
       }
 
       .ticket-preview-img {
@@ -687,7 +771,7 @@
     </div>
   </section>
 
-  <main style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;">
+  <main>
 
     <!-- Galerie Carousel -->
     <section class="gallery-section">
@@ -820,7 +904,7 @@
     </section>
 
     <!-- Informations pratiques -->
-    <section class="info-section" style="margin: 4rem -1.5rem; border-radius: 0;">
+    <section class="info-section">
       <h2 style="margin-bottom: 1rem;">Informations Pratiques</h2>
       <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
         Tout ce que vous devez savoir pour profiter au maximum de notre centre
