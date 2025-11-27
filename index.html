@@ -306,6 +306,8 @@
       color: var(--text-main);
       font-size: 1.5rem;
       font-weight: 600;
+      text-align: center;
+      padding: 2rem;
     }
 
     .carousel-nav {
@@ -545,17 +547,20 @@
         font-size: 0.85rem;
       }
 
-      /* Cartes et sections centrées */
+      /* Cartes et sections vraiment centrées et plus étroites */
       .features-grid {
         grid-template-columns: 1fr;
         gap: 1.25rem;
         margin: 2.5rem 0;
       }
 
-      .feature-card {
-        max-width: 480px;
-        margin-inline: auto;
-        padding: 1.5rem;
+      .feature-card,
+      .whatsapp-contact,
+      .map-section,
+      .admin-access {
+        max-width: 380px;
+        margin-inline: auto;   /* <== centre toutes les cartes/services */
+        padding: 1.5rem 1.25rem;
       }
 
       .gallery-section {
@@ -564,7 +569,7 @@
 
       .gallery-carousel {
         border-radius: var(--radius-md);
-        max-width: 100%;
+        max-width: 380px;
         margin-inline: auto;
       }
 
@@ -572,41 +577,21 @@
         height: 260px;
         font-size: 1.2rem;
         padding: 1.5rem;
-        text-align: center;
       }
 
       .info-section {
         padding: 3rem 1.5rem;
-        margin: 3rem 0 !important;
+        margin: 3rem 0;
       }
 
       .stats-container {
         grid-template-columns: 1fr;
-        max-width: 480px;
+        max-width: 380px;
         margin-inline: auto;
       }
 
       .stat-card {
         padding: 1.5rem;
-      }
-
-      .whatsapp-contact {
-        margin: 2.5rem 0;
-        padding: 1.75rem 1.25rem;
-        max-width: 480px;
-        margin-inline: auto;
-      }
-
-      .map-section {
-        padding: 1.75rem 1.25rem;
-        max-width: 480px;
-        margin-inline: auto;
-      }
-
-      .admin-access {
-        padding: 1.5rem 1.25rem;
-        max-width: 480px;
-        margin-inline: auto;
       }
 
       .admin-buttons, .gps-buttons {
