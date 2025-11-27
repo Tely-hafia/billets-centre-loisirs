@@ -12,6 +12,12 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
   <style>
+    /* Empêche les débordements horizontaux sur mobile */
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
     /* --- RESERVATION / POPUP --- */
     .reservation-section {
       max-width: 1200px;
@@ -436,10 +442,10 @@
     }
 
     /* ===============================
-       ✅ AJOUTS RESPONSIVE HEADER / HERO / BOUTONS
-       (structure HTML inchangée)
+       ✅ HEADER & ERGONOMIE MOBILE
     =============================== */
 
+    /* Header plus souple, sans changement de structure */
     header .header-inner {
       display: flex;
       align-items: center;
@@ -462,14 +468,22 @@
       margin: 0;
       line-height: 1.1;
     }
+
     header p {
       margin: 0.15rem 0 0 0;
     }
 
-    /* Mobile */
+    /* ===============================
+       ✅ MOBILE (smartphone)
+    =============================== */
     @media (max-width: 768px) {
-      .hero-title { font-size: 2.1rem; }
-      .hero-subtitle { font-size: 1.05rem; }
+      .hero-title {
+        font-size: 2.1rem;
+      }
+
+      .hero-subtitle {
+        font-size: 1.05rem;
+      }
 
       .access-buttons {
         flex-direction: column;
@@ -520,10 +534,36 @@
         max-width: 250px;
       }
 
+      /* Popup plus confortable sur mobile */
+      #reservation-block.reservation-overlay {
+        padding: 0.75rem;
+        align-items: center;
+        justify-content: center;
+      }
+
       #reservation-block .reservation-card {
-        width: 95%;
-        margin: 1rem auto;
-        padding: 1.25rem;
+        width: 100%;
+        max-width: 480px;
+        margin: 0;
+        padding: 1.25rem 1rem;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .reservation-grid {
+        gap: 1rem;
+      }
+
+      /* Champs plus faciles à cliquer, évite le zoom iOS */
+      #reservationForm .form-row input,
+      #reservationForm .form-row select,
+      #reservationForm button {
+        width: 100%;
+        font-size: 16px;
+      }
+
+      .ticket-preview-img {
+        max-width: 100%;
       }
 
       .flatpickr-calendar.open {
@@ -534,10 +574,21 @@
 
     /* Très petits écrans */
     @media (max-width: 480px) {
-      .hero-section { padding: 3rem 1rem; }
-      .hero-title { font-size: 1.9rem; }
-      .hero-subtitle { font-size: 1rem; }
-      header h1 { font-size: 1.35rem; }
+      .hero-section {
+        padding: 3rem 1rem;
+      }
+
+      .hero-title {
+        font-size: 1.9rem;
+      }
+
+      .hero-subtitle {
+        font-size: 1rem;
+      }
+
+      header h1 {
+        font-size: 1.35rem;
+      }
     }
   </style>
 </head>
