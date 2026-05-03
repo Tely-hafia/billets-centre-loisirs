@@ -8,8 +8,13 @@ const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
 
+if (typeof Appwrite === "undefined") {
+  console.error("[SITE] Appwrite SDK non chargé.");
+}
+
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
+
 const db = new Appwrite.Databases(client);
 
 // ===============================
@@ -20,32 +25,53 @@ const $ = (id) => document.getElementById(id);
 function showReservationMessage(text, type = "info") {
   const zone = $("reservationMessage");
   if (!zone) return;
+
   zone.style.display = "block";
   zone.textContent = text;
   zone.className = "message message-" + type;
 }
+
 function clearReservationMessage() {
   const zone = $("reservationMessage");
   if (!zone) return;
+
   zone.style.display = "none";
   zone.textContent = "";
   zone.className = "message";
 }
 
-// ===============================
-//  POPUP + ETAT
-// ===============================
-let hasPendingReservation = false;
-let pendingPayload = null;
-let pendingNumero = null;
-let pendingTicketDataURL = null;
+function setButtonLoading(button, loadingText) {
+  if (!button) return;
 
-// ✅ AJOUT : on garde les infos nécessaires pour régénérer le ticket
-let pendingTicketMeta = null;
+  button.dataset.originalText = button.dataset.originalText || button.textContent;
+  button.disabled = true;
+  button.textContent = loadingText;
+}
 
+function resetButtonLoading(button) {
+  if (!button) return;
+
+  button.disabled = false;
+  button.textContent = button.dataset.originalText || "✅ Confirmer la réservation";
+}
+
+// ===============================
+//  ETAT RESERVATION
+// ===============================
+let formDirty = false;
+let reservationConfirmed = false;
+
+let confirmedNumero = null;
+let confirmedTicketDataURL = null;
+let confirmedTicketMeta = null;
+
+// ===============================
+//  POPUP
+// ===============================
 function openReservationPopup() {
   const overlay = $("reservation-block");
   const card = overlay?.querySelector(".reservation-card");
+
   if (!overlay || !card) return;
 
   overlay.classList.add("visible");
@@ -53,34 +79,34 @@ function openReservationPopup() {
   document.body.style.overflow = "hidden";
 
   clearReservationMessage();
-  resetTicketUI();
+
+  showReservationMessage(
+    "Attention : votre réservation n’est pas confirmée tant que vous n’avez pas cliqué sur Confirmer la réservation.",
+    "info"
+  );
 }
 
 function closeReservationPopup(withWarningIfPending = true) {
-  if (withWarningIfPending && hasPendingReservation) {
+  if (withWarningIfPending && formDirty && !reservationConfirmed) {
     showReservationMessage(
-      "Attention : si vous ne téléchargez pas votre preuve de réservation, la réservation sera annulée.",
-      "error"
+      "Attention : votre réservation n’est pas confirmée tant que vous n’avez pas cliqué sur Confirmer la réservation. Aucune donnée n’a été enregistrée.",
+      "warning"
     );
-    // annule ce qui est en attente
-    hasPendingReservation = false;
-    pendingPayload = null;
-    pendingNumero = null;
-    pendingTicketDataURL = null;
-    pendingTicketMeta = null;
-    resetTicketUI();
-    return; // on laisse ouvert pour que le client voie le message
+
+    formDirty = false;
+    return;
   }
 
   const overlay = $("reservation-block");
   const card = overlay?.querySelector(".reservation-card");
+
   if (!overlay || !card) return;
 
   overlay.classList.remove("visible");
   card.classList.remove("visible");
   document.body.style.overflow = "";
-  clearReservationMessage();
-  resetTicketUI();
+
+  resetReservationState();
 }
 
 // ===============================
@@ -90,6 +116,7 @@ let fpInstance = null;
 
 function initFlatpickr() {
   const input = $("resDateDisplay");
+
   if (!input || typeof flatpickr === "undefined") {
     console.error("[SITE] Flatpickr non chargé.");
     return;
@@ -100,20 +127,32 @@ function initFlatpickr() {
     dateFormat: "d/m/Y",
     minDate: "today",
     disableMobile: true,
-    disable: [(date) => date.getDay() === 1 || date.getDay() === 2],
+    disable: [
+      (date) => date.getDay() === 1 || date.getDay() === 2
+    ],
     onDayCreate(_, __, ___, dayElem) {
-      const d = dayElem.dateObj.getDay();
-      if (d === 1 || d === 2) dayElem.classList.add("fp-ferme");
+      const day = dayElem.dateObj.getDay();
+
+      if (day === 1 || day === 2) {
+        dayElem.classList.add("fp-ferme");
+      }
     },
     onChange(_, __, instance) {
-      instance.close(); // ferme direct après sélection
+      formDirty = true;
+      instance.close();
     }
   });
 }
 
 function parseDateFrToISO(dateStr) {
-  const [dd, mm, yyyy] = dateStr.split("/").map(Number);
+  const parts = dateStr.split("/").map(Number);
+
+  if (parts.length !== 3) return null;
+
+  const [dd, mm, yyyy] = parts;
+
   if (!dd || !mm || !yyyy) return null;
+
   return new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0)).toISOString();
 }
 
@@ -122,6 +161,7 @@ function parseDateFrToISO(dateStr) {
 // ===============================
 async function generateReservationNumber(dateIso) {
   const d = new Date(dateIso);
+
   const month = String(d.getUTCMonth() + 1).padStart(2, "0");
   const year = String(d.getUTCFullYear()).slice(-2);
   const prefix = `RES-${month}${year}-`;
@@ -136,17 +176,21 @@ async function generateReservationNumber(dateIso) {
   );
 
   let maxIndex = 0;
-  for (const doc of res.documents) {
+
+  for (const doc of res.documents || []) {
     const num = doc.numero_reservation || "";
     const idx = parseInt(num.split("-")[2] || "0", 10);
-    if (!isNaN(idx) && idx > maxIndex) maxIndex = idx;
+
+    if (!Number.isNaN(idx) && idx > maxIndex) {
+      maxIndex = idx;
+    }
   }
 
   return `${prefix}${String(maxIndex + 1).padStart(4, "0")}`;
 }
 
 // ===============================
-//  ✅ RETRY POUR INDEX UNIQUE
+//  RETRY ANTI-DOUBLON
 // ===============================
 async function createReservationWithRetry(data, dateIso) {
   const MAX_RETRIES = 5;
@@ -164,6 +208,7 @@ async function createReservationWithRetry(data, dateIso) {
           numero_reservation: numero
         }
       );
+
       return { doc, numero };
     } catch (err) {
       const isDuplicate =
@@ -173,7 +218,7 @@ async function createReservationWithRetry(data, dateIso) {
 
       if (isDuplicate && attempt < MAX_RETRIES) {
         console.warn(
-          `[SITE] Doublon numero_reservation (${numero}). Retry ${attempt}/${MAX_RETRIES}...`
+          `[SITE] Doublon numero_reservation (${numero}). Nouvel essai ${attempt}/${MAX_RETRIES}...`
         );
         continue;
       }
@@ -186,41 +231,57 @@ async function createReservationWithRetry(data, dateIso) {
 }
 
 // ===============================
-//  TICKET PNG (APERÇU)
+//  TICKET PNG
 // ===============================
 function buildTicketCanvas({ numero, nom, prenom, telephone, activite, dateStr }) {
   const canvas = document.createElement("canvas");
   canvas.width = 900;
-  canvas.height = 520;
+  canvas.height = 560;
+
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#fff";
+  // Fond
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Bordure
   ctx.strokeStyle = "#0f172a";
   ctx.lineWidth = 4;
   ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
-  ctx.fillStyle = "#2563eb";
-  ctx.fillRect(20, 20, canvas.width - 40, 90);
+  // Bandeau
+  const gradient = ctx.createLinearGradient(20, 20, canvas.width - 20, 110);
+  gradient.addColorStop(0, "#667eea");
+  gradient.addColorStop(0.55, "#764ba2");
+  gradient.addColorStop(1, "#ff6b35");
 
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 32px Arial";
-  ctx.fillText("Calypço - Ticket de Réservation", 50, 75);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(20, 20, canvas.width - 40, 100);
 
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 34px Arial";
+  ctx.fillText("Calypço - Ticket de Réservation", 50, 82);
+
+  // Numéro
   ctx.fillStyle = "#0f172a";
-  ctx.font = "bold 26px Arial";
-  ctx.fillText(`N° ${numero}`, 50, 155);
+  ctx.font = "bold 28px Arial";
+  ctx.fillText(`N° ${numero}`, 50, 165);
 
-  ctx.font = "20px Arial";
-  ctx.fillText(`Nom / Prénom : ${nom} ${prenom}`, 50, 215);
-  ctx.fillText(`Téléphone : ${telephone}`, 50, 255);
-  ctx.fillText(`Activité : ${activite}`, 50, 295);
-  ctx.fillText(`Date de réservation : ${dateStr}`, 50, 335);
+  // Infos
+  ctx.font = "22px Arial";
+  ctx.fillText(`Nom / Prénom : ${nom} ${prenom}`, 50, 230);
+  ctx.fillText(`Téléphone : ${telephone}`, 50, 275);
+  ctx.fillText(`Activité : ${activite}`, 50, 320);
+  ctx.fillText(`Date de réservation : ${dateStr}`, 50, 365);
 
-  ctx.font = "italic 16px Arial";
+  // Note
   ctx.fillStyle = "#475569";
-  ctx.fillText("Merci de présenter ce ticket à l’accueil.", 50, 410);
+  ctx.font = "italic 18px Arial";
+  ctx.fillText("Merci de présenter ce ticket à l’accueil.", 50, 445);
+
+  ctx.font = "bold 16px Arial";
+  ctx.fillStyle = "#ef4444";
+  ctx.fillText("Ce ticket doit être affilié à un billet par un agent à l’arrivée.", 50, 480);
 
   return canvas;
 }
@@ -231,22 +292,22 @@ function createTicketPreview(data) {
 }
 
 function downloadDataURL(dataURL, filename) {
-  return new Promise((resolve) => {
-    const a = document.createElement("a");
-    a.href = dataURL;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    resolve();
-  });
+  const a = document.createElement("a");
+
+  a.href = dataURL;
+  a.download = filename;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // ===============================
-//  UI Ticket (inject)
+//  UI TICKET
 // ===============================
 function ensureTicketUI() {
   const form = $("reservationForm");
+
   if (!form || $("ticketPreviewZone")) return;
 
   const zone = document.createElement("div");
@@ -255,98 +316,105 @@ function ensureTicketUI() {
   zone.style.display = "none";
 
   zone.innerHTML = `
-    <h3 style="margin-top:1rem;">Aperçu de votre ticket</h3>
-    <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.75rem;">
-      Téléchargez ce ticket pour confirmer votre réservation.
+    <h3>Aperçu de votre ticket</h3>
+
+    <p class="ticket-help">
+      Votre réservation est confirmée. Vous pouvez télécharger votre ticket comme preuve.
     </p>
-    <img id="ticketPreviewImg" class="ticket-preview-img" alt="Aperçu ticket"/>
-    <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap;">
-      <button type="button" id="btnDownloadTicket" class="btn-primary">📥 Télécharger la réservation</button>
-      <button type="button" id="btnEditReservation" class="btn-secondary">✏️ Modifier</button>
+
+    <img id="ticketPreviewImg" class="ticket-preview-img" alt="Aperçu du ticket de réservation" />
+
+    <div class="ticket-actions">
+      <button type="button" id="btnDownloadTicket" class="btn-secondary">
+        📥 Télécharger le ticket
+      </button>
+
+      <button type="button" id="btnNewReservation" class="btn-primary">
+        🆕 Nouvelle réservation
+      </button>
     </div>
   `;
+
   form.appendChild(zone);
 
-  zone.querySelector("#btnDownloadTicket").addEventListener("click", async () => {
-    if (!hasPendingReservation || !pendingPayload || !pendingTicketMeta) {
-      showReservationMessage("Aucune réservation en attente.", "error");
+  const btnDownload = zone.querySelector("#btnDownloadTicket");
+  const btnNew = zone.querySelector("#btnNewReservation");
+
+  btnDownload.addEventListener("click", () => {
+    if (!confirmedTicketDataURL || !confirmedNumero) {
+      showReservationMessage("Aucun ticket disponible à télécharger.", "error");
       return;
     }
 
-    try {
-      // ✅ 1) on sauvegarde d’abord avec retry (index UNIQUE)
-      const dateIso = pendingPayload.date_reservation;
-      const { numero } = await createReservationWithRetry(pendingPayload, dateIso);
-
-      // ✅ 2) on régénère le ticket avec le numéro FINAL enregistré
-      pendingNumero = numero;
-      pendingTicketDataURL = createTicketPreview({
-        numero: pendingNumero,
-        nom: pendingTicketMeta.nom,
-        prenom: pendingTicketMeta.prenom,
-        telephone: pendingTicketMeta.telephone,
-        activite: pendingTicketMeta.activite,
-        dateStr: pendingTicketMeta.dateStr
-      });
-
-      // ✅ 3) on télécharge le ticket correspondant à la base
-      await downloadDataURL(pendingTicketDataURL, `ticket-${pendingNumero}.png`);
-
-      showReservationMessage(`Réservation confirmée ! Numéro : ${pendingNumero}`, "success");
-
-      // reset puis fermeture
-      hasPendingReservation = false;
-      pendingPayload = pendingNumero = pendingTicketDataURL = null;
-      pendingTicketMeta = null;
-
-      form.reset();
-      resetTicketUI();
-      closeReservationPopup(false);
-    } catch (err) {
-      console.error("[SITE] Erreur confirmation reservation :", err);
-      showReservationMessage(
-        "Erreur lors de la confirmation. Merci de réessayer.",
-        "error"
-      );
-    }
+    downloadDataURL(confirmedTicketDataURL, `ticket-${confirmedNumero}.png`);
   });
 
-  zone.querySelector("#btnEditReservation").addEventListener("click", () => {
-    hasPendingReservation = false;
-    pendingPayload = pendingNumero = pendingTicketDataURL = null;
-    pendingTicketMeta = null;
-    resetTicketUI();
+  btnNew.addEventListener("click", () => {
+    const formEl = $("reservationForm");
+
+    if (formEl) formEl.reset();
+
+    resetReservationState();
+    clearReservationMessage();
+
+    showReservationMessage(
+      "Vous pouvez saisir une nouvelle réservation.",
+      "info"
+    );
   });
 }
 
 function showTicketUI(dataURL) {
-  $("ticketPreviewImg").src = dataURL;
-  $("ticketPreviewZone").style.display = "block";
-  $("btnSubmitReservation").style.display = "none";
+  const img = $("ticketPreviewImg");
+  const zone = $("ticketPreviewZone");
+  const submitBtn = $("btnSubmitReservation");
+
+  if (img) img.src = dataURL;
+  if (zone) zone.style.display = "block";
+  if (submitBtn) submitBtn.style.display = "none";
 }
 
 function resetTicketUI() {
-  const z = $("ticketPreviewZone");
-  if (z) z.style.display = "none";
+  const zone = $("ticketPreviewZone");
   const img = $("ticketPreviewImg");
+  const submitBtn = $("btnSubmitReservation");
+
+  if (zone) zone.style.display = "none";
   if (img) img.src = "";
-  const btn = $("btnSubmitReservation");
-  if (btn) btn.style.display = "inline-flex";
+  if (submitBtn) submitBtn.style.display = "inline-flex";
+}
+
+function resetReservationState() {
+  formDirty = false;
+  reservationConfirmed = false;
+
+  confirmedNumero = null;
+  confirmedTicketDataURL = null;
+  confirmedTicketMeta = null;
+
+  resetTicketUI();
+  clearReservationMessage();
+
+  const submitBtn = $("btnSubmitReservation");
+  resetButtonLoading(submitBtn);
 }
 
 // ===============================
-//  SUBMIT => Génère ticket, PAS de save
+//  CONFIRMATION RESERVATION
 // ===============================
 async function submitReservation(e) {
   e.preventDefault();
+
   clearReservationMessage();
 
-  const nom = $("resNom").value.trim();
-  const prenom = $("resPrenom").value.trim();
-  const telephone = $("resTelephone").value.trim();
-  const email = $("resEmail").value.trim();
-  const dateStr = $("resDateDisplay").value.trim();
-  const activite = $("resActivite").value.trim();
+  const submitBtn = $("btnSubmitReservation");
+
+  const nom = $("resNom")?.value.trim();
+  const prenom = $("resPrenom")?.value.trim();
+  const telephone = $("resTelephone")?.value.trim();
+  const email = $("resEmail")?.value.trim();
+  const dateStr = $("resDateDisplay")?.value.trim();
+  const activite = $("resActivite")?.value.trim();
 
   if (!nom || !prenom || !telephone || !dateStr || !activite) {
     showReservationMessage("Merci de remplir tous les champs obligatoires.", "error");
@@ -354,16 +422,13 @@ async function submitReservation(e) {
   }
 
   const dateIso = parseDateFrToISO(dateStr);
+
   if (!dateIso) {
     showReservationMessage("Date invalide.", "error");
     return;
   }
 
-  // aperçu numéro (peut changer à la confirmation si collision)
-  const numero = await generateReservationNumber(dateIso);
-
-  pendingNumero = numero;
-  pendingPayload = {
+  const payload = {
     nom,
     prenom,
     telephone,
@@ -373,21 +438,65 @@ async function submitReservation(e) {
     actif: true
   };
 
-  // ✅ AJOUT : stocke meta ticket (sans numéro) pour regen plus tard
-  pendingTicketMeta = { nom, prenom, telephone, activite, dateStr };
+  try {
+    setButtonLoading(submitBtn, "Confirmation en cours...");
 
-  pendingTicketDataURL = createTicketPreview({
-    numero, nom, prenom, telephone, activite, dateStr
+    const { numero } = await createReservationWithRetry(payload, dateIso);
+
+    confirmedNumero = numero;
+    confirmedTicketMeta = {
+      numero,
+      nom,
+      prenom,
+      telephone,
+      activite,
+      dateStr
+    };
+
+    confirmedTicketDataURL = createTicketPreview(confirmedTicketMeta);
+
+    reservationConfirmed = true;
+    formDirty = false;
+
+    showReservationMessage(
+      `Réservation confirmée avec succès. Numéro : ${confirmedNumero}`,
+      "success"
+    );
+
+    showTicketUI(confirmedTicketDataURL);
+  } catch (err) {
+    console.error("[SITE] Erreur confirmation réservation :", err);
+
+    showReservationMessage(
+      "Erreur lors de la confirmation de la réservation. Merci de réessayer.",
+      "error"
+    );
+
+    resetButtonLoading(submitBtn);
+  }
+}
+
+// ===============================
+//  TRACK FORM MODIFIE
+// ===============================
+function initFormDirtyTracking() {
+  const form = $("reservationForm");
+
+  if (!form) return;
+
+  form.querySelectorAll("input, select").forEach((field) => {
+    field.addEventListener("input", () => {
+      if (!reservationConfirmed) {
+        formDirty = true;
+      }
+    });
+
+    field.addEventListener("change", () => {
+      if (!reservationConfirmed) {
+        formDirty = true;
+      }
+    });
   });
-
-  hasPendingReservation = true;
-
-  showReservationMessage(
-    `Ticket généré. Cliquez sur “Télécharger la réservation” pour confirmer.`,
-    "success"
-  );
-
-  showTicketUI(pendingTicketDataURL);
 }
 
 // ===============================
@@ -396,18 +505,44 @@ async function submitReservation(e) {
 document.addEventListener("DOMContentLoaded", () => {
   ensureTicketUI();
   initFlatpickr();
+  initFormDirtyTracking();
 
-  $("btnShowReservation").addEventListener("click", openReservationPopup);
-  $("btnCloseReservation").addEventListener("click", () => closeReservationPopup(true));
+  const btnShowReservation = $("btnShowReservation");
+  const btnCloseReservation = $("btnCloseReservation");
+  const form = $("reservationForm");
 
   const overlay = $("reservation-block");
-  const card = overlay.querySelector(".reservation-card");
-  overlay.addEventListener("click", () => closeReservationPopup(true));
-  card.addEventListener("click", (e) => e.stopPropagation());
+  const card = overlay?.querySelector(".reservation-card");
+
+  if (btnShowReservation) {
+    btnShowReservation.addEventListener("click", openReservationPopup);
+  }
+
+  if (btnCloseReservation) {
+    btnCloseReservation.addEventListener("click", () => {
+      closeReservationPopup(true);
+    });
+  }
+
+  if (overlay) {
+    overlay.addEventListener("click", () => {
+      closeReservationPopup(true);
+    });
+  }
+
+  if (card) {
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeReservationPopup(true);
+    if (e.key === "Escape") {
+      closeReservationPopup(true);
+    }
   });
 
-  $("reservationForm").addEventListener("submit", submitReservation);
+  if (form) {
+    form.addEventListener("submit", submitReservation);
+  }
 });
