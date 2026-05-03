@@ -1,4 +1,4 @@
-console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETTE");
+console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETE + RESERVATIONS");
 
 // ===============================
 //  CONFIG APPWRITE
@@ -15,6 +15,9 @@ const APPWRITE_AGENTS_TABLE_ID = "agents";
 const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
 const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
 const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
+
+// ✅ AJOUT : collection des réservations
+const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
 
 // ===============================
 //  CLIENT APPWRITE
@@ -83,6 +86,20 @@ function getTarifChoisi() {
   return "normal";
 }
 
+function formatDateFR(dateIso) {
+  if (!dateIso) return "Date non renseignée";
+
+  try {
+    return new Date(dateIso).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  } catch (err) {
+    return "Date invalide";
+  }
+}
+
 // ===============================
 //  ETAT GLOBAL
 // ===============================
@@ -95,7 +112,7 @@ let currentMode = "billets";
 let currentBilletsSubMode = "ENTREE";
 let lastVenteNumber = 0;
 
-// >>> AJOUT : dernier numéro étudiant vérifié
+// dernier numéro étudiant vérifié
 let lastVerifiedEtudiant = null;
 
 // ===============================
@@ -107,11 +124,9 @@ function updateTarifEtudiantVisibility() {
   const tarifZone = $("tarif-zone");
   const radioEtu  = $("tarif-etudiant");
 
-  // Zone tarif visible uniquement pour les billets d'entrée
   if (currentBilletsSubMode === "ENTREE") {
     if (tarifZone) tarifZone.style.display = "block";
 
-    // Bloc numéro étudiant visible seulement si "Étudiant" coché
     if (etuZone) {
       if (radioEtu && radioEtu.checked) {
         etuZone.style.display = "block";
@@ -163,7 +178,7 @@ function switchBilletsSubMode(mode) {
   if (hint) {
     if (mode === "ENTREE") {
       hint.textContent =
-        "Mode : billets d'entrée (bracelets). Saisir le numéro imprimé sur le bracelet.";
+        "Mode : billets d'entrée, réservations ou bracelets. Saisir le numéro imprimé.";
     } else {
       hint.textContent =
         "Mode : billets JEUX internes. Saisir le numéro imprimé sur le ticket de jeu (ex : J-0001).";
@@ -197,7 +212,9 @@ function appliquerEtatConnexion(agent) {
       roleStr.includes("entrée") ||
       roleStr.includes("gardien") ||
       roleStr.includes("jeux") ||
-      roleStr.includes("interne");
+      roleStr.includes("interne") ||
+      roleStr.includes("reservation") ||
+      roleStr.includes("réservation");
 
     let canResto =
       roleStr.includes("resto") ||
@@ -317,6 +334,76 @@ async function chargerNombreBillets() {
   }
 }
 
+// ===============================
+//  ✅ VALIDATION RESERVATION
+// ===============================
+
+async function verifierReservation(numeroReservation) {
+  clearResult();
+
+  if (!currentAgent) {
+    showResult("Veuillez d'abord vous connecter.", "error");
+    return;
+  }
+
+  if (!numeroReservation) {
+    showResult("Veuillez saisir un numéro de réservation.", "error");
+    return;
+  }
+
+  try {
+    const res = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_RESERVATION_COLLECTION_ID,
+      [
+        Appwrite.Query.equal("numero_reservation", numeroReservation),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!res.documents || res.documents.length === 0) {
+      showResult(`Réservation ${numeroReservation} introuvable.`, "error");
+      return;
+    }
+
+    const reservation = res.documents[0];
+
+    if (reservation.actif === false) {
+      showResult(`Réservation ${numeroReservation} déjà utilisée ou annulée ❌`, "error");
+      return;
+    }
+
+    const dateReservation = formatDateFR(reservation.date_reservation);
+
+    await db.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_RESERVATION_COLLECTION_ID,
+      reservation.$id,
+      {
+        actif: false
+      }
+    );
+
+    showResult(
+      `Réservation VALIDÉE ✅
+N° : ${reservation.numero_reservation || numeroReservation}
+Nom : ${reservation.nom || ""}
+Prénom : ${reservation.prenom || ""}
+Téléphone : ${reservation.telephone || ""}
+Activité : ${reservation.activite || ""}
+Date : ${dateReservation}`,
+      "success"
+    );
+
+    const ticketInput = $("ticketNumber");
+    if (ticketInput) ticketInput.value = "";
+
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification réservation :", err);
+    showResult("Erreur lors de la vérification de la réservation (voir console).", "error");
+  }
+}
+
 async function verifierBillet() {
   clearResult();
 
@@ -330,7 +417,15 @@ async function verifierBillet() {
   const tarifChoisi  = getTarifChoisi();
 
   if (!numeroBillet) {
-    showResult("Veuillez saisir un numéro de billet.", "error");
+    showResult("Veuillez saisir un numéro de billet ou de réservation.", "error");
+    return;
+  }
+
+  // ✅ AJOUT : si le numéro commence par RES-, on valide dans la collection reservation
+  const numeroNormalise = numeroBillet.toUpperCase();
+
+  if (numeroNormalise.startsWith("RES-")) {
+    await verifierReservation(numeroNormalise);
     return;
   }
 
@@ -360,10 +455,7 @@ async function verifierBillet() {
         return;
       }
 
-      // Tarif étudiant → vérification obligatoire + contrôle du bouton
       if (tarifChoisi === "etudiant") {
-
-        // 1) numéro obligatoire
         if (!numeroEtu) {
           showResult(
             "Pour le tarif étudiant, le numéro étudiant est obligatoire.",
@@ -372,7 +464,6 @@ async function verifierBillet() {
           return;
         }
 
-        // 2) l'agent doit avoir cliqué sur "Vérifier l'étudiant"
         if (!lastVerifiedEtudiant || lastVerifiedEtudiant !== numeroEtu) {
           showResult(
             "Veuillez d'abord cliquer sur « Vérifier l'étudiant » pour ce numéro, puis valider le billet.",
@@ -381,7 +472,6 @@ async function verifierBillet() {
           return;
         }
 
-        // 3) on revérifie côté Appwrite (sécurité)
         try {
           const etuRes = await db.listDocuments(
             APPWRITE_DATABASE_ID,
@@ -410,7 +500,6 @@ async function verifierBillet() {
         }
       }
 
-      // Met à jour le billet : statut = Validé
       await db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_TABLE_ID,
@@ -428,7 +517,6 @@ async function verifierBillet() {
       const ticketInput = $("ticketNumber");
       if (ticketInput) ticketInput.value = "";
 
-      // une fois validé, on réinitialise la vérif étudiante
       lastVerifiedEtudiant = null;
 
       chargerNombreBillets();
@@ -438,7 +526,6 @@ async function verifierBillet() {
       return;
     }
 
-    // Journalisation (non bloquant)
     try {
       const nowIso = new Date().toISOString();
 
@@ -498,7 +585,6 @@ async function verifierBillet() {
 
       const billet = res.documents[0];
 
-      // Vérifier s'il existe déjà une validation INTERNE pour ce billet
       const valRes = await db.listDocuments(
         APPWRITE_DATABASE_ID,
         APPWRITE_VALIDATIONS_TABLE_ID,
@@ -583,7 +669,6 @@ async function verifierEtudiant() {
   zoneInfo.className = "result";
   zoneInfo.textContent = "";
 
-  // on réinitialise à chaque tentative
   lastVerifiedEtudiant = null;
 
   if (!numeroEtu) {
@@ -612,7 +697,6 @@ async function verifierEtudiant() {
 
     const etu = res.documents[0];
 
-    // mémoriser ce numéro comme "vérifié"
     lastVerifiedEtudiant = numeroEtu;
 
     zoneInfo.classList.add("ok");
@@ -632,7 +716,6 @@ async function verifierEtudiant() {
 //  RESTO - VERSION SIMPLIFIÉE
 // ===============================
 
-// Créer les onglets de catégories
 function creerOngletsCategories() {
   const categoriesTabs = $("restoCategoriesTabs");
   if (!categoriesTabs) return;
@@ -643,7 +726,6 @@ function creerOngletsCategories() {
 
   categoriesTabs.innerHTML = "";
 
-  // Bouton "Tous les plats"
   const allButton = document.createElement("button");
   allButton.type = "button";
   allButton.className = "resto-category-tab active";
@@ -657,7 +739,6 @@ function creerOngletsCategories() {
   };
   categoriesTabs.appendChild(allButton);
 
-  // Boutons par catégorie
   categories.forEach((categorie) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -754,7 +835,6 @@ async function chargerProduitsResto() {
   }
 }
 
-// Dernier numéro de vente (V-001, V-002, ...)
 async function initialiserDernierNumeroVente() {
   try {
     const res = await db.listDocuments(
@@ -783,8 +863,6 @@ function genererNumeroVente() {
   lastVenteNumber += 1;
   return `V-${lastVenteNumber.toString().padStart(3, "0")}`;
 }
-
-// --------- Gestion du panier ---------
 
 function ajouterProduitAuPanier(codeProduit) {
   const produit = restoProduitsCache.find(
@@ -905,8 +983,6 @@ function viderPanier() {
   }
 }
 
-// --------- Enregistrement vente ---------
-
 async function enregistrerVenteResto() {
   const msg = $("restoResult");
 
@@ -934,7 +1010,6 @@ async function enregistrerVenteResto() {
       const montant = item.prix_unitaire * item.quantite;
       totalGlobal += montant;
 
-      // On n'envoie QUE les colonnes existantes dans ventes_resto
       await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VENTES_RESTO_COLLECTION_ID,
@@ -1034,7 +1109,7 @@ function nouvelleCommandeResto() {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[AGENT] DOMContentLoaded - VERSION CORRIGÉE");
+  console.log("[AGENT] DOMContentLoaded - VERSION RESERVATIONS");
 
   appliquerEtatConnexion(null);
   updateTarifEtudiantVisibility();
@@ -1105,13 +1180,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Réagir au changement de tarif (Normal / Étudiant)
   const radioNormal = $("tarif-normal");
   const radioEtu    = $("tarif-etudiant");
 
   if (radioNormal) {
     radioNormal.addEventListener("change", () => {
-      lastVerifiedEtudiant = null; // la vérif étudiante ne sert plus
+      lastVerifiedEtudiant = null;
       updateTarifEtudiantVisibility();
     });
   }
@@ -1122,7 +1196,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Si on modifie le numéro étudiant → on annule la vérif
   const etuInput = $("etuNumber");
   if (etuInput) {
     etuInput.addEventListener("input", () => {
@@ -1165,7 +1238,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnRestoImprimer) {
     btnRestoImprimer.addEventListener("click", (e) => {
       e.preventDefault();
-      window.print(); // imprime la page avec le reçu visible
+      window.print();
     });
   }
 });
