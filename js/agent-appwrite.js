@@ -1,4 +1,4 @@
-console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETE + RESERVATIONS");
+console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETE AVEC AFFILIATION RESERVATION");
 
 // ===============================
 //  CONFIG APPWRITE
@@ -15,8 +15,6 @@ const APPWRITE_AGENTS_TABLE_ID = "agents";
 const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
 const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
 const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
-
-// ✅ AJOUT : collection des réservations
 const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
 
 // ===============================
@@ -52,6 +50,7 @@ function showResult(text, type) {
   zone.style.display = "block";
   zone.textContent = text;
   zone.className = "result";
+
   if (type === "success") zone.classList.add("ok");
   else if (type === "error") zone.classList.add("error");
   else if (type === "warn") zone.classList.add("warn");
@@ -68,6 +67,7 @@ function clearResult() {
 function showLoginMessage(text, type) {
   const zone = $("login-message");
   if (!zone) return;
+
   zone.textContent = text || "";
   zone.style.color =
     type === "success" ? "#16a34a" :
@@ -86,20 +86,6 @@ function getTarifChoisi() {
   return "normal";
 }
 
-function formatDateFR(dateIso) {
-  if (!dateIso) return "Date non renseignée";
-
-  try {
-    return new Date(dateIso).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    });
-  } catch (err) {
-    return "Date invalide";
-  }
-}
-
 // ===============================
 //  ETAT GLOBAL
 // ===============================
@@ -111,8 +97,6 @@ let restoLoaded = false;
 let currentMode = "billets";
 let currentBilletsSubMode = "ENTREE";
 let lastVenteNumber = 0;
-
-// dernier numéro étudiant vérifié
 let lastVerifiedEtudiant = null;
 
 // ===============================
@@ -128,15 +112,12 @@ function updateTarifEtudiantVisibility() {
     if (tarifZone) tarifZone.style.display = "block";
 
     if (etuZone) {
-      if (radioEtu && radioEtu.checked) {
-        etuZone.style.display = "block";
-      } else {
-        etuZone.style.display = "none";
-      }
+      etuZone.style.display =
+        radioEtu && radioEtu.checked ? "block" : "none";
     }
   } else {
     if (tarifZone) tarifZone.style.display = "none";
-    if (etuZone)   etuZone.style.display   = "none";
+    if (etuZone) etuZone.style.display = "none";
   }
 }
 
@@ -148,7 +129,7 @@ function switchMode(mode) {
   const modeLabel   = $("mode-label");
 
   if (modeBillets) modeBillets.style.display = mode === "billets" ? "block" : "none";
-  if (modeResto)   modeResto.style.display   = mode === "resto"   ? "block" : "none";
+  if (modeResto) modeResto.style.display = mode === "resto" ? "block" : "none";
 
   if (modeLabel) {
     modeLabel.textContent =
@@ -171,6 +152,7 @@ function switchBilletsSubMode(mode) {
   if (btnEntree) {
     btnEntree.classList.toggle("active-submode", mode === "ENTREE");
   }
+
   if (btnJeux) {
     btnJeux.classList.toggle("active-submode", mode === "JEU");
   }
@@ -178,10 +160,10 @@ function switchBilletsSubMode(mode) {
   if (hint) {
     if (mode === "ENTREE") {
       hint.textContent =
-        "Mode : billets d'entrée, réservations ou bracelets. Saisir le numéro imprimé.";
+        "Mode : billets d'entrée. Saisir le numéro du billet attribué au client.";
     } else {
       hint.textContent =
-        "Mode : billets JEUX internes. Saisir le numéro imprimé sur le ticket de jeu (ex : J-0001).";
+        "Mode : billets jeux internes. Saisir le numéro du ticket de jeu attribué au client.";
     }
   }
 
@@ -228,14 +210,15 @@ function appliquerEtatConnexion(agent) {
     }
 
     if (loginCard) loginCard.style.display = "none";
-    if (appZone)   appZone.style.display   = "block";
+    if (appZone) appZone.style.display = "block";
 
     if (nameEl) nameEl.textContent = agent.login || "";
-    if (roleEl) roleEl.textContent = agent.role  || "";
+    if (roleEl) roleEl.textContent = agent.role || "";
 
     if (btnModeBillets) {
       btnModeBillets.style.display = canBillets ? "inline-flex" : "none";
     }
+
     if (btnModeResto) {
       btnModeResto.style.display = canResto ? "inline-flex" : "none";
     }
@@ -248,10 +231,10 @@ function appliquerEtatConnexion(agent) {
     }
   } else {
     if (loginCard) loginCard.style.display = "block";
-    if (appZone)   appZone.style.display   = "none";
+    if (appZone) appZone.style.display = "none";
 
     if (btnModeBillets) btnModeBillets.style.display = "inline-flex";
-    if (btnModeResto)   btnModeResto.style.display   = "inline-flex";
+    if (btnModeResto) btnModeResto.style.display = "inline-flex";
 
     setTicketCount(0);
     clearResult();
@@ -289,7 +272,6 @@ async function connecterAgent() {
     const agent = res.documents[0];
     showLoginMessage("Connexion réussie.", "success");
     appliquerEtatConnexion(agent);
-
   } catch (err) {
     console.error("[AGENT] Erreur connexion agent :", err);
     showLoginMessage("Erreur lors de la connexion (voir console).", "error");
@@ -302,12 +284,13 @@ function deconnexionAgent() {
 }
 
 // ===============================
-//  BILLETS : COMPTE & VALIDATION
+//  BILLETS : COMPTE
 // ===============================
 
 async function chargerNombreBillets() {
   try {
     let res;
+
     if (currentBilletsSubMode === "JEU") {
       res = await db.listDocuments(
         APPWRITE_DATABASE_ID,
@@ -327,6 +310,7 @@ async function chargerNombreBillets() {
         ]
       );
     }
+
     const nb = res.documents ? res.documents.length : 0;
     setTicketCount(nb);
   } catch (err) {
@@ -335,20 +319,29 @@ async function chargerNombreBillets() {
 }
 
 // ===============================
-//  ✅ VALIDATION RESERVATION
+//  RESERVATION : HELPERS
 // ===============================
 
-async function verifierReservation(numeroReservation) {
-  clearResult();
+function getReservationInfoFromForm() {
+  const useReservation = $("useReservation")?.checked || false;
+  const numeroReservation =
+    $("reservationNumber")?.value.trim().toUpperCase() || "";
 
-  if (!currentAgent) {
-    showResult("Veuillez d'abord vous connecter.", "error");
-    return;
+  return {
+    useReservation,
+    numeroReservation
+  };
+}
+
+async function verifierReservationActive(numeroReservation) {
+  if (!numeroReservation) {
+    showResult("Veuillez saisir le numéro de réservation.", "error");
+    return null;
   }
 
-  if (!numeroReservation) {
-    showResult("Veuillez saisir un numéro de réservation.", "error");
-    return;
+  if (!numeroReservation.startsWith("RES-")) {
+    showResult("Le numéro de réservation doit commencer par RES-.", "error");
+    return null;
   }
 
   try {
@@ -363,46 +356,82 @@ async function verifierReservation(numeroReservation) {
 
     if (!res.documents || res.documents.length === 0) {
       showResult(`Réservation ${numeroReservation} introuvable.`, "error");
-      return;
+      return null;
     }
 
     const reservation = res.documents[0];
 
     if (reservation.actif === false) {
-      showResult(`Réservation ${numeroReservation} déjà utilisée ou annulée ❌`, "error");
-      return;
+      showResult(`Réservation ${numeroReservation} déjà utilisée ou annulée.`, "error");
+      return null;
     }
 
-    const dateReservation = formatDateFR(reservation.date_reservation);
-
-    await db.updateDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_RESERVATION_COLLECTION_ID,
-      reservation.$id,
-      {
-        actif: false
-      }
-    );
-
-    showResult(
-      `Réservation VALIDÉE ✅
-N° : ${reservation.numero_reservation || numeroReservation}
-Nom : ${reservation.nom || ""}
-Prénom : ${reservation.prenom || ""}
-Téléphone : ${reservation.telephone || ""}
-Activité : ${reservation.activite || ""}
-Date : ${dateReservation}`,
-      "success"
-    );
-
-    const ticketInput = $("ticketNumber");
-    if (ticketInput) ticketInput.value = "";
-
+    return reservation;
   } catch (err) {
     console.error("[AGENT] Erreur vérification réservation :", err);
-    showResult("Erreur lors de la vérification de la réservation (voir console).", "error");
+    showResult("Erreur lors de la vérification de la réservation.", "error");
+    return null;
   }
 }
+
+async function verifierReservationDejaLiee(numeroReservation) {
+  try {
+    const resEntree = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [
+        Appwrite.Query.equal("reservation", numeroReservation),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (resEntree.documents && resEntree.documents.length > 0) {
+      return {
+        collection: "billets",
+        billet: resEntree.documents[0]
+      };
+    }
+
+    const resInterne = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_INTERNE_TABLE_ID,
+      [
+        Appwrite.Query.equal("reservation", numeroReservation),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (resInterne.documents && resInterne.documents.length > 0) {
+      return {
+        collection: "billets_interne",
+        billet: resInterne.documents[0]
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.error("[AGENT] Erreur contrôle réservation déjà liée :", err);
+    showResult(
+      "Erreur : impossible de vérifier si cette réservation est déjà affiliée.",
+      "error"
+    );
+    return "ERROR";
+  }
+}
+
+function resetReservationForm() {
+  const useReservation = $("useReservation");
+  const reservationNumber = $("reservationNumber");
+  const reservationZone = $("reservation-number-zone");
+
+  if (useReservation) useReservation.checked = false;
+  if (reservationNumber) reservationNumber.value = "";
+  if (reservationZone) reservationZone.style.display = "none";
+}
+
+// ===============================
+//  VALIDATION BILLETS + RESERVATION
+// ===============================
 
 async function verifierBillet() {
   clearResult();
@@ -416,17 +445,29 @@ async function verifierBillet() {
   const numeroEtu    = $("etuNumber")?.value.trim();
   const tarifChoisi  = getTarifChoisi();
 
+  const { useReservation, numeroReservation } = getReservationInfoFromForm();
+
   if (!numeroBillet) {
-    showResult("Veuillez saisir un numéro de billet ou de réservation.", "error");
+    showResult("Veuillez saisir un numéro de billet.", "error");
     return;
   }
 
-  // ✅ AJOUT : si le numéro commence par RES-, on valide dans la collection reservation
-  const numeroNormalise = numeroBillet.toUpperCase();
+  let reservationDoc = null;
 
-  if (numeroNormalise.startsWith("RES-")) {
-    await verifierReservation(numeroNormalise);
-    return;
+  if (useReservation) {
+    reservationDoc = await verifierReservationActive(numeroReservation);
+    if (!reservationDoc) return;
+
+    const dejaLiee = await verifierReservationDejaLiee(numeroReservation);
+    if (dejaLiee === "ERROR") return;
+
+    if (dejaLiee) {
+      showResult(
+        `Cette réservation est déjà affiliée au billet ${dejaLiee.billet.numero_billet || ""}.`,
+        "error"
+      );
+      return;
+    }
   }
 
   // ======== MODE ENTREE ========
@@ -500,22 +541,44 @@ async function verifierBillet() {
         }
       }
 
+      const updateBilletData = {
+        statut: "Validé"
+      };
+
+      if (useReservation) {
+        updateBilletData.reservation = numeroReservation;
+      }
+
       await db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_TABLE_ID,
         billet.$id,
-        { statut: "Validé" }
+        updateBilletData
       );
+
+      if (useReservation && reservationDoc) {
+        await db.updateDocument(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_RESERVATION_COLLECTION_ID,
+          reservationDoc.$id,
+          { actif: false }
+        );
+      }
 
       const typeAcces = billet.type_acces || "";
       const dateAcces = billet.date_acces || "";
+
       showResult(
-        `Billet ${numeroBillet} VALIDÉ ✅ (${typeAcces} – ${dateAcces})`,
+        useReservation
+          ? `Billet ${numeroBillet} VALIDÉ ✅ et affilié à la réservation ${numeroReservation}`
+          : `Billet ${numeroBillet} VALIDÉ ✅ (${typeAcces} – ${dateAcces})`,
         "success"
       );
 
       const ticketInput = $("ticketNumber");
       if (ticketInput) ticketInput.value = "";
+
+      if (useReservation) resetReservationForm();
 
       lastVerifiedEtudiant = null;
 
@@ -550,6 +613,10 @@ async function verifierBillet() {
         numero_etudiant: numeroEtu || ""
       };
 
+      if (useReservation) {
+        validationDoc.reservation = numeroReservation;
+      }
+
       await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VALIDATIONS_TABLE_ID,
@@ -566,7 +633,7 @@ async function verifierBillet() {
     return;
   }
 
-  // ======== MODE JEU (billets internes) ========
+  // ======== MODE JEU ========
   if (currentBilletsSubMode === "JEU") {
     try {
       const res = await db.listDocuments(
@@ -596,10 +663,7 @@ async function verifierBillet() {
       );
 
       if (valRes.documents && valRes.documents.length > 0) {
-        showResult(
-          `Billet jeu ${numeroBillet} déjà utilisé ❌`,
-          "error"
-        );
+        showResult(`Billet jeu ${numeroBillet} déjà utilisé ❌`, "error");
         return;
       }
 
@@ -623,24 +687,46 @@ async function verifierBillet() {
           montant_paye: montant,
           agent_id: currentAgent.$id || "",
           poste_id: "INTERNE",
-          numero_etudiant: ""
+          numero_etudiant: "",
+          reservation: useReservation ? numeroReservation : ""
         }
       );
+
+      const updateBilletInterneData = {
+        statut: "Validé"
+      };
+
+      if (useReservation) {
+        updateBilletInterneData.reservation = numeroReservation;
+      }
 
       await db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_INTERNE_TABLE_ID,
         billet.$id,
-        { statut: "Validé" }
+        updateBilletInterneData
       );
 
+      if (useReservation && reservationDoc) {
+        await db.updateDocument(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_RESERVATION_COLLECTION_ID,
+          reservationDoc.$id,
+          { actif: false }
+        );
+      }
+
       showResult(
-        `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet} – ${formatMontantGNF(montant)})`,
+        useReservation
+          ? `Billet jeu ${numeroBillet} VALIDÉ ✅ et affilié à la réservation ${numeroReservation}`
+          : `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet} – ${formatMontantGNF(montant)})`,
         "success"
       );
 
       const ticketInput = $("ticketNumber");
       if (ticketInput) ticketInput.value = "";
+
+      if (useReservation) resetReservationForm();
 
       chargerNombreBillets();
     } catch (err) {
@@ -713,7 +799,7 @@ async function verifierEtudiant() {
 }
 
 // ===============================
-//  RESTO - VERSION SIMPLIFIÉE
+//  RESTO
 // ===============================
 
 function creerOngletsCategories() {
@@ -807,7 +893,10 @@ async function chargerProduitsResto() {
     const res = await db.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_MENU_RESTO_COLLECTION_ID,
-      [Appwrite.Query.equal("actif", true), Appwrite.Query.limit(200)]
+      [
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(200)
+      ]
     );
 
     restoProduitsCache = res.documents || [];
@@ -840,7 +929,10 @@ async function initialiserDernierNumeroVente() {
     const res = await db.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_VENTES_RESTO_COLLECTION_ID,
-      [Appwrite.Query.orderDesc("$createdAt"), Appwrite.Query.limit(1)]
+      [
+        Appwrite.Query.orderDesc("$createdAt"),
+        Appwrite.Query.limit(1)
+      ]
     );
 
     if (res.documents.length > 0) {
@@ -868,6 +960,7 @@ function ajouterProduitAuPanier(codeProduit) {
   const produit = restoProduitsCache.find(
     (p) => p.code_produit === codeProduit
   );
+
   if (!produit) return;
 
   const existant = restoPanier.find(
@@ -881,7 +974,7 @@ function ajouterProduitAuPanier(codeProduit) {
       code_produit: produit.code_produit,
       libelle: produit.libelle,
       prix_unitaire: Number(produit.prix_unitaire) || 0,
-      quantite: 1,
+      quantite: 1
     });
   }
 
@@ -918,6 +1011,7 @@ function actualiserPanier() {
     (sum, item) => sum + item.quantite,
     0
   );
+
   const totalMontant = restoPanier.reduce(
     (sum, item) => sum + item.prix_unitaire * item.quantite,
     0
@@ -938,9 +1032,7 @@ function actualiserPanier() {
     <div class="resto-cart-item">
       <div class="resto-cart-item-info">
         <div class="resto-cart-item-name">${item.libelle}</div>
-        <div class="resto-cart-item-price">${formatMontantGNF(
-          item.prix_unitaire
-        )}/unité</div>
+        <div class="resto-cart-item-price">${formatMontantGNF(item.prix_unitaire)}/unité</div>
       </div>
       <div class="resto-cart-item-controls">
         <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, -1)">-</button>
@@ -958,6 +1050,7 @@ function modifierQuantitePanier(index, delta) {
   if (index < 0 || index >= restoPanier.length) return;
 
   const newQte = restoPanier[index].quantite + delta;
+
   if (newQte <= 0) {
     supprimerDuPanier(index);
   } else {
@@ -968,6 +1061,7 @@ function modifierQuantitePanier(index, delta) {
 
 function supprimerDuPanier(index) {
   if (index < 0 || index >= restoPanier.length) return;
+
   const nom = restoPanier[index].libelle;
   restoPanier.splice(index, 1);
   actualiserPanier();
@@ -976,6 +1070,7 @@ function supprimerDuPanier(index) {
 
 function viderPanier() {
   if (restoPanier.length === 0) return;
+
   if (confirm("Vider tout le panier ?")) {
     restoPanier = [];
     actualiserPanier();
@@ -1021,7 +1116,7 @@ async function enregistrerVenteResto() {
           quantite: item.quantite,
           montant_total: montant,
           agent_id: currentAgent.$id,
-          poste_id: currentAgent.role || "resto_chicha",
+          poste_id: currentAgent.role || "resto_chicha"
         }
       );
     }
@@ -1052,10 +1147,7 @@ function afficherReçu(numeroVente, total, orderType, notes) {
       }</div>
       ${
         notes
-          ? `<div><strong>Notes :</strong> ${notes.replace(
-              /</g,
-              "&lt;"
-            )}</div>`
+          ? `<div><strong>Notes :</strong> ${notes.replace(/</g, "&lt;")}</div>`
           : ""
       }
     </div>
@@ -1109,7 +1201,7 @@ function nouvelleCommandeResto() {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[AGENT] DOMContentLoaded - VERSION RESERVATIONS");
+  console.log("[AGENT] DOMContentLoaded - VERSION AFFILIATION RESERVATION");
 
   appliquerEtatConnexion(null);
   updateTarifEtudiantVisibility();
@@ -1141,6 +1233,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chargerNombreBillets();
     });
   }
+
   if (btnModeResto) {
     btnModeResto.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1157,6 +1250,7 @@ document.addEventListener("DOMContentLoaded", () => {
       switchBilletsSubMode("ENTREE");
     });
   }
+
   if (btnBilletsJeux) {
     btnBilletsJeux.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1181,7 +1275,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const radioNormal = $("tarif-normal");
-  const radioEtu    = $("tarif-etudiant");
+  const radioEtu = $("tarif-etudiant");
 
   if (radioNormal) {
     radioNormal.addEventListener("change", () => {
@@ -1189,6 +1283,7 @@ document.addEventListener("DOMContentLoaded", () => {
       updateTarifEtudiantVisibility();
     });
   }
+
   if (radioEtu) {
     radioEtu.addEventListener("change", () => {
       lastVerifiedEtudiant = null;
@@ -1200,12 +1295,35 @@ document.addEventListener("DOMContentLoaded", () => {
   if (etuInput) {
     etuInput.addEventListener("input", () => {
       lastVerifiedEtudiant = null;
+
       const zoneInfo = $("etu-info");
       if (zoneInfo) {
         zoneInfo.style.display = "none";
         zoneInfo.textContent = "";
         zoneInfo.className = "result";
       }
+    });
+  }
+
+  const useReservationCheckbox = $("useReservation");
+  const reservationNumberZone = $("reservation-number-zone");
+  const reservationNumberInput = $("reservationNumber");
+
+  if (useReservationCheckbox && reservationNumberZone) {
+    useReservationCheckbox.addEventListener("change", () => {
+      reservationNumberZone.style.display = useReservationCheckbox.checked
+        ? "block"
+        : "none";
+
+      if (!useReservationCheckbox.checked && reservationNumberInput) {
+        reservationNumberInput.value = "";
+      }
+    });
+  }
+
+  if (reservationNumberInput) {
+    reservationNumberInput.addEventListener("input", () => {
+      reservationNumberInput.value = reservationNumberInput.value.toUpperCase();
     });
   }
 
@@ -1241,4 +1359,5 @@ document.addEventListener("DOMContentLoaded", () => {
       window.print();
     });
   }
+});
 });
