@@ -3,17 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Administration – Centre de loisirs</title>
+
+  <title>Calypço – Administration</title>
+
   <link rel="stylesheet" href="css/styles.css" />
 </head>
+
 <body>
 
 <header>
   <div class="header-inner">
     <div class="logo-badge">CL</div>
+
     <div>
-      <h1>Administration – Centre de loisirs</h1>
-      <p>Gestion des billets, enregistrement des étudiants et agents, statistiques.</p>
+      <h1>Calypço – Administration</h1>
+      <p>Gestion des billets, étudiants, agents, réservations et statistiques.</p>
     </div>
   </div>
 </header>
@@ -24,12 +28,13 @@
   <section id="admin-login-card" class="card">
     <h2>Connexion administrateur</h2>
 
-    <p style="margin-bottom:0.6rem;">
-      Accès réservé aux administrateurs (agents avec un rôle contenant <strong>admin</strong>).
+    <p class="status">
+      Accès réservé aux administrateurs.
+      Le rôle de l’agent doit contenir <strong>admin</strong>.
     </p>
 
     <div class="form-row">
-      <label for="adminLogin">Code admin (login agent) :</label>
+      <label for="adminLogin">Code admin :</label>
       <input type="text" id="adminLogin" placeholder="ex : admin01" />
     </div>
 
@@ -38,9 +43,15 @@
       <input type="password" id="adminPassword" placeholder="Mot de passe" />
     </div>
 
-    <button id="btnAdminLogin" type="button" class="btn-primary">
-      Se connecter
-    </button>
+    <div class="actions-row">
+      <button id="btnAdminLogin" type="button" class="btn-primary">
+        Se connecter
+      </button>
+
+      <a href="index.html" class="btn-secondary btn-link">
+        🏠 Accueil
+      </a>
+    </div>
 
     <p id="admin-login-message" class="status"></p>
   </section>
@@ -52,20 +63,26 @@
     <section class="card">
       <h2>Panneau d'administration</h2>
 
-      <p class="status" style="margin-bottom:0.8rem;">
+      <p class="status">
         Connecté :
         <strong id="admin-connected-name"></strong>
         (<span id="admin-connected-role"></span>)
       </p>
 
       <div class="mode-navigation">
+        <a href="index.html" class="btn-secondary btn-link">
+          🏠 Accueil
+        </a>
+
         <button id="btnAdminModeSaisie" type="button" class="mode-btn active">
           Saisie / Enregistrement
         </button>
+
         <button id="btnAdminModeGestion" type="button" class="mode-btn">
           Gestion & statistiques
         </button>
-        <button id="btnAdminLogout" type="button" class="btn-danger" style="margin-left:auto;">
+
+        <button id="btnAdminLogout" type="button" class="btn-danger">
           Se déconnecter
         </button>
       </div>
@@ -79,7 +96,8 @@
         <h2>Enregistrer un étudiant</h2>
 
         <p class="status">
-          Ajoute un étudiant dans la collection <strong>etudiants</strong> (pour le tarif étudiant).<br>
+          Ajoute un étudiant dans la collection <strong>etudiants</strong>
+          pour le tarif étudiant.<br>
           Le numéro étudiant est <strong>généré automatiquement</strong> au format :
           <code>UNIV-XX-1234</code>.
         </p>
@@ -148,31 +166,43 @@
       <section class="card">
         <h2>Créer un agent</h2>
 
-        <p class="status" style="margin-bottom:0.8rem;">
-          Ajoute un agent dans la collection <strong>agents</strong> (utilisé pour la connexion sur le poste agent).
+        <p class="status">
+          Ajoute un agent dans la collection <strong>agents</strong>
+          pour la connexion au poste agent ou au panneau admin.
         </p>
 
         <div class="form-row">
-          <label for="admin-agent-login">Login agent <span style="color:#ef4444;">*</span></label>
+          <label for="admin-agent-login">
+            Login agent <span style="color:#ef4444;">*</span>
+          </label>
           <input type="text" id="admin-agent-login" placeholder="Ex : agent01" />
         </div>
 
         <div class="form-row">
-          <label for="admin-agent-password">Mot de passe <span style="color:#ef4444;">*</span></label>
+          <label for="admin-agent-password">
+            Mot de passe <span style="color:#ef4444;">*</span>
+          </label>
           <input type="password" id="admin-agent-password" placeholder="Mot de passe" />
         </div>
 
         <div class="form-row">
-          <label for="admin-agent-nom">Nom / prénom (optionnel)</label>
+          <label for="admin-agent-nom">Nom / prénom</label>
           <input type="text" id="admin-agent-nom" placeholder="Nom de l'agent" />
         </div>
 
         <div class="form-row">
           <label for="admin-agent-role">
-            Rôle / poste <span style="color:#ef4444;">*</span> <br />
-            <span class="status">Ex : <em>admin</em>, <em>billets entrée</em>, <em>restauration</em>, <em>jeux internes</em>…</span>
+            Rôle / poste <span style="color:#ef4444;">*</span><br />
+            <span class="status">
+              Ex : <em>admin</em>, <em>billets entrée</em>,
+              <em>restauration</em>, <em>jeux internes</em>…
+            </span>
           </label>
-          <input type="text" id="admin-agent-role" placeholder="Ex : admin, billets entrée, restauration..." />
+          <input
+            type="text"
+            id="admin-agent-role"
+            placeholder="Ex : admin, billets entrée, restauration..."
+          />
         </div>
 
         <div class="form-row" style="flex-direction:row; align-items:center; gap:0.6rem;">
@@ -187,36 +217,42 @@
         <p id="admin-agent-message" class="status"></p>
       </section>
 
-    </div> <!-- /admin-zone-saisie -->
+    </div>
 
     <!-- === MODE 2 : Gestion & statistiques === -->
     <div id="admin-zone-gestion" class="mode-content" style="display:none;">
 
-      <!-- Gestion des billets (CSV) -->
+      <!-- Gestion des billets CSV -->
       <section class="card">
-        <h2>📂 Gestion des billets (CSV)</h2>
+        <h2>📂 Gestion des billets CSV</h2>
 
-        <h3 style="margin-bottom:0.5rem;">Import de billets</h3>
+        <h3>Import de billets</h3>
 
-        <p>Type de billets à importer :</p>
-        <div style="margin-bottom:0.5rem;">
+        <p class="status">
+          Importer des billets d’entrée ou des billets internes depuis un fichier CSV.
+        </p>
+
+        <div class="radio-group">
           <label class="radio-inline">
             <input type="radio" name="importType" value="entree" checked />
-            <span>Billets d'entrée (parc)</span>
+            <span>Billets d'entrée</span>
           </label>
 
           <label class="radio-inline">
             <input type="radio" name="importType" value="interne" />
-            <span>Billets internes (jeux)</span>
+            <span>Billets internes</span>
           </label>
         </div>
 
-        <p class="status" style="margin-bottom:0.3rem;">
-          Pour les billets d'entrée : <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
-          Pour les billets internes : <code>numero_billet;type_billet;prix</code> (le statut sera mis à "Non utilisé" par défaut).
+        <p class="status">
+          Pour les billets d'entrée :
+          <code>numero_billet;type_acces;prix;tarif_universite;statut</code><br />
+          Pour les billets internes :
+          <code>numero_billet;type_billet;prix</code>
         </p>
 
         <div class="form-row">
+          <label for="csvFile">Fichier CSV :</label>
           <input type="file" id="csvFile" accept=".csv" />
         </div>
 
@@ -227,11 +263,57 @@
         <p id="importStatus" class="status"></p>
       </section>
 
+      <!-- Historique des réservations -->
+      <section class="card" id="admin-reservations">
+        <h2>📅 Historique des réservations</h2>
+
+        <p class="status">
+          Cette zone permettra de suivre les réservations actives, utilisées ou annulées.
+        </p>
+
+        <div class="stats-actions-row">
+          <button id="btnRefreshReservations" type="button" class="btn-primary">
+            Actualiser les réservations
+          </button>
+
+          <div class="stats-period">
+            <label for="reservationFilter">Filtre :</label>
+            <select id="reservationFilter">
+              <option value="all">Toutes</option>
+              <option value="active">Actives</option>
+              <option value="used">Utilisées / désactivées</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>N° réservation</th>
+                <th>Client</th>
+                <th>Téléphone</th>
+                <th>Activité</th>
+                <th>Date réservation</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+
+            <tbody id="reservations-history-body">
+              <tr>
+                <td colspan="6">Cliquez sur “Actualiser les réservations”.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p id="reservations-history-message" class="message" style="display:none;"></p>
+      </section>
+
       <!-- Statistiques Billets / Restauration -->
       <section class="card">
         <h2>📊 Statistiques</h2>
 
-        <!-- Onglets Billets / Restauration -->
         <div class="stats-tabs">
           <label class="stats-tab">
             <input type="radio" name="statsMode" id="statsModeBillets" value="billets" checked />
@@ -244,7 +326,6 @@
           </label>
         </div>
 
-        <!-- Bouton + Période -->
         <div class="stats-actions-row">
           <button id="refreshStatsBtn" class="btn-primary" type="button">
             Actualiser les stats
@@ -261,22 +342,20 @@
           </div>
         </div>
 
-        <!-- Dates personnalisées (affichées uniquement si "custom") -->
         <div id="stats-custom-range" class="stats-date-range">
           <input type="date" id="statsStartDate" />
           <span>au</span>
           <input type="date" id="statsEndDate" />
         </div>
 
-        <!-- Texte d'info -->
         <p id="stats-info-billets" class="status">
-          Les montants sont calculés à partir de la collection <strong>validations</strong>
-          (billets d'entrée + billets internes) pour la période sélectionnée.
+          Les montants sont calculés à partir de la collection
+          <strong>validations</strong> pour la période sélectionnée.
         </p>
 
         <p id="stats-info-resto" class="status" style="display:none;">
-          Les montants sont calculés à partir de la collection <strong>ventes_resto</strong>
-          (commandes restauration) pour la période sélectionnée.
+          Les montants sont calculés à partir de la collection
+          <strong>ventes_resto</strong> pour la période sélectionnée.
         </p>
 
         <!-- PANNEAU BILLETS -->
@@ -286,14 +365,17 @@
               <h3>Billets validés</h3>
               <p id="stat-validations-count">0</p>
             </div>
+
             <div class="stat-item">
               <h3>Recette totale billets</h3>
               <p id="stat-revenue-total">0 GNF</p>
             </div>
+
             <div class="stat-item">
               <h3>Recette tarif normal</h3>
               <p id="stat-revenue-normal">0 GNF</p>
             </div>
+
             <div class="stat-item">
               <h3>Recette tarif étudiant</h3>
               <p id="stat-revenue-etudiant">0 GNF</p>
@@ -301,6 +383,7 @@
           </div>
 
           <h3 style="margin-top:2rem;">Détail par type d'accès</h3>
+
           <div class="table-wrapper">
             <table class="data-table">
               <thead>
@@ -310,6 +393,7 @@
                   <th>Recette (GNF)</th>
                 </tr>
               </thead>
+
               <tbody id="stats-type-body">
                 <!-- rempli par JS -->
               </tbody>
@@ -323,13 +407,15 @@
         <div id="stats-resto-panel" style="display:none;">
           <div class="stats-grid">
             <div class="stat-item">
-              <h3>Tickets (commandes)</h3>
+              <h3>Tickets commandes</h3>
               <p id="stat-resto-tickets">0</p>
             </div>
+
             <div class="stat-item">
               <h3>Plats vendus</h3>
               <p id="stat-resto-plates">0</p>
             </div>
+
             <div class="stat-item">
               <h3>Recette restauration</h3>
               <p id="stat-resto-total">0 GNF</p>
@@ -337,6 +423,7 @@
           </div>
 
           <h3 style="margin-top:2rem;">Détail par produit</h3>
+
           <div class="table-wrapper">
             <table class="data-table">
               <thead>
@@ -347,6 +434,7 @@
                   <th>Recette (GNF)</th>
                 </tr>
               </thead>
+
               <tbody id="stats-resto-body">
                 <!-- rempli par JS -->
               </tbody>
@@ -361,31 +449,32 @@
       <section class="card">
         <h2>🧹 Maintenance des données</h2>
 
-        <p class="status" style="margin-bottom:0.8rem;">
+        <p class="status">
           Ce bouton supprime tous les billets d'entrée et billets internes dans Appwrite
           (<strong>billets</strong> + <strong>billets_interne</strong>).<br />
-          Les validations ne sont pas supprimées (elles peuvent être exportées/archivées séparément une fois par an).
+          Les validations ne sont pas supprimées.
         </p>
 
         <button id="clearDataBtn" class="btn-danger" type="button">
-          Effacer TOUS les billets (entrée + internes)
+          Effacer TOUS les billets
         </button>
       </section>
 
-    </div> <!-- /admin-zone-gestion -->
+    </div>
 
-  </div> <!-- /admin-app-zone -->
+  </div>
 
 </main>
 
 <footer>
-  <p>© Centre de loisirs – Administration</p>
+  <p>© Calypço – Administration</p>
 </footer>
 
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=4"></script>
+<script src="js/admin-appwrite.js?v=8"></script>
 
 </body>
 </html>
