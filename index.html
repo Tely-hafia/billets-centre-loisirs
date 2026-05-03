@@ -3,663 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Calypço - Centre de Loisirs</title>
+
+  <!-- CSS principal -->
   <link rel="stylesheet" href="css/styles.css" />
 
+  <!-- PWA / Application mobile -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#667eea" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Calypço" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
   <!-- Flatpickr -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
-
-  <style>
-    /* Empêche les débordements horizontaux */
-    html, body {
-      max-width: 100%;
-      overflow-x: hidden;
-    }
-
-    /* Wrapper principal */
-    main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding-inline: 1.5rem;
-    }
-
-    /* --- RESERVATION / POPUP --- */
-    .reservation-section {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0;
-    }
-
-    .reservation-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-      align-items: flex-start;
-    }
-
-    /* OVERLAY */
-    #reservation-block.reservation-overlay {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top, rgba(15,23,42,0.25), rgba(15,23,42,0.75));
-      z-index: 9999;
-      transition: opacity 0.3s ease;
-      opacity: 0;
-    }
-
-    #reservation-block.reservation-overlay.visible {
-      opacity: 1;
-      display: flex;
-    }
-
-    /* Carte centrale */
-    #reservation-block .reservation-card {
-      max-width: 900px;
-      width: 90%;
-      max-height: 85vh;
-      overflow-y: auto;
-      transform: scale(0.92);
-      opacity: 0;
-      transition: transform 0.3s ease, opacity 0.3s ease;
-      background: white;
-      border-radius: var(--radius-lg);
-      padding: 2rem;
-      position: relative;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      margin: 2rem;
-    }
-
-    #reservation-block .reservation-card.visible {
-      transform: scale(1);
-      opacity: 1;
-    }
-
-    /* Bouton fermeture */
-    .reservation-close {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      border: 1px solid var(--border-soft);
-      background: #fff;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #4b5563;
-      box-shadow: 0 4px 10px rgba(15,23,42,0.15);
-      transition: var(--transition-fast);
-      z-index: 10;
-    }
-
-    .reservation-close:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-soft);
-      background: #ef4444;
-      color: white;
-    }
-
-    .date-display-input {
-      cursor: pointer;
-      background: #f8fafc;
-    }
-
-    .date-display-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    /* --- FLATPICKR --- */
-    .flatpickr-calendar {
-      z-index: 100000 !important;
-      box-shadow: var(--shadow-soft);
-      border-radius: var(--radius-md);
-    }
-
-    /* Lundi/Mardi fermés */
-    .fp-ferme {
-      background: #fee2e2 !important;
-      color: #b91c1c !important;
-    }
-
-    /* --- TICKET PREVIEW --- */
-    .ticket-preview-zone {
-      margin-top: 1.25rem;
-      padding: 1rem;
-      border: 1px dashed var(--border-soft);
-      border-radius: var(--radius-md);
-      background: #f8fafc;
-    }
-
-    .ticket-preview-img {
-      width: 100%;
-      max-width: 520px;
-      display: block;
-      margin: 0 auto;
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-soft);
-    }
-
-    /* --- STYLES PAGE D'ACCUEIL --- */
-    .hero-section {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 4rem 2rem;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-section::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
-      background-size: cover;
-      pointer-events: none;
-    }
-
-    .hero-content {
-      max-width: 800px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 2;
-    }
-
-    .hero-title {
-      font-size: 3rem;
-      font-weight: 800;
-      margin-bottom: 1rem;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-
-    .hero-subtitle {
-      font-size: 1.3rem;
-      margin-bottom: 2rem;
-      opacity: 0.9;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin: 3rem 0;
-    }
-
-    .feature-card {
-      background: var(--bg-card);
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      text-align: center;
-      box-shadow: var(--shadow-soft);
-      transition: var(--transition-fast);
-      border: 1px solid var(--border-soft);
-    }
-
-    .feature-card:hover {
-      transform: translateY(-5px);
-      box-shadow: var(--shadow-hover);
-    }
-
-    .feature-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
-
-    .feature-title {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      color: var(--text-main);
-    }
-
-    .access-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin: 2rem 0;
-    }
-
-    .btn-large {
-      padding: 1.2rem 2.5rem;
-      font-size: 1.1rem;
-      min-width: 200px;
-    }
-
-    .info-section {
-      background: linear-gradient(135deg, #f8fafc 0%, #e4edf5 100%);
-      padding: 4rem 2rem;
-      text-align: center;
-      margin: 4rem 0;
-    }
-
-    .stats-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 2rem;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .stat-card {
-      background: white;
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .stat-number {
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-label {
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    /* Galerie carousel */
-    .gallery-section {
-      padding: 4rem 0;
-      background: var(--bg-body);
-    }
-
-    .gallery-carousel {
-      position: relative;
-      max-width: 1000px;
-      margin: 0 auto;
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .carousel-track {
-      display: flex;
-      transition: transform 0.5s ease-in-out;
-    }
-
-    .carousel-slide {
-      min-width: 100%;
-      height: 400px;
-      background: linear-gradient(135deg, var(--accent-soft), var(--border-soft));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-main);
-      font-size: 1.5rem;
-      font-weight: 600;
-      text-align: center;
-      padding: 2rem;
-    }
-
-    .carousel-nav {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.9);
-      border: none;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      transition: var(--transition-fast);
-      z-index: 10;
-    }
-
-    .carousel-nav:hover {
-      background: white;
-      transform: translateY(-50%) scale(1.1);
-    }
-
-    .carousel-prev { left: 20px; }
-    .carousel-next { right: 20px; }
-
-    .carousel-dots {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 1rem;
-    }
-
-    .carousel-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--border-soft);
-      cursor: pointer;
-      transition: var(--transition-fast);
-    }
-
-    .carousel-dot.active {
-      background: var(--accent-primary);
-      transform: scale(1.2);
-    }
-
-    /* Contact WhatsApp */
-    .whatsapp-contact {
-      background: linear-gradient(135deg, #25D366, #128C7E);
-      color: white;
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      text-align: center;
-      margin: 2rem 0;
-      box-shadow: var(--shadow-soft);
-      max-width: 900px;
-      margin-inline: auto;
-    }
-
-    .whatsapp-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
-
-    .whatsapp-btn {
-      background: white;
-      color: #25D366;
-      border: none;
-      padding: 1rem 2rem;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: var(--transition-fast);
-    }
-
-    .whatsapp-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    }
-
-    /* Map */
-    .map-section {
-      background: var(--bg-card);
-      padding: 2rem;
-      border-radius: var(--radius-lg);
-      margin: 2rem 0;
-      box-shadow: var(--shadow-soft);
-      max-width: 1000px;
-      margin-inline: auto;
-    }
-
-    .gps-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 1.5rem;
-    }
-
-    .gps-btn {
-      padding: 0.8rem 1.5rem;
-      border-radius: var(--radius-md);
-      text-decoration: none;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: var(--transition-fast);
-    }
-
-    .gps-btn-google { background: #4285F4; color: white; }
-    .gps-btn-waze { background: #33CCFF; color: white; }
-    .gps-btn-apple { background: #000000; color: white; }
-
-    /* Accès pro discret */
-    .admin-access {
-      background: var(--bg-card);
-      padding: 1.5rem;
-      border-radius: var(--radius-lg);
-      margin: 2rem 0;
-      text-align: center;
-      border: 1px solid var(--border-soft);
-      max-width: 900px;
-      margin-inline: auto;
-    }
-
-    .admin-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 1rem;
-    }
-
-    .admin-btn {
-      padding: 0.8rem 1.5rem;
-      font-size: 0.9rem;
-      text-decoration: none;
-      border-radius: var(--radius-md);
-      transition: var(--transition-fast);
-    }
-
-    /* HEADER plus souple sans changer la structure */
-    header .header-inner {
-      display: flex;
-      align-items: center;
-      gap: 0.9rem;
-      padding: 1rem 1.5rem;
-    }
-
-    .logo-badge {
-      flex: 0 0 auto;
-      width: 56px;
-      height: 56px;
-      border-radius: 999px;
-      display: grid;
-      place-items: center;
-      font-size: 1.8rem;
-      font-weight: 800;
-    }
-
-    header h1 {
-      margin: 0;
-      line-height: 1.1;
-    }
-
-    header p {
-      margin: 0.15rem 0 0 0;
-    }
-
-    /* ===============================
-       ✅ MOBILE
-    =============================== */
-    @media (max-width: 768px) {
-      body {
-        font-size: 16px;
-      }
-
-      main {
-        padding-inline: 1rem;
-      }
-
-      .hero-section {
-        padding: 3rem 1.25rem;
-      }
-
-      .hero-title {
-        font-size: 2.1rem;
-      }
-
-      .hero-subtitle {
-        font-size: 1.05rem;
-      }
-
-      .hero-content {
-        max-width: 100%;
-      }
-
-      .access-buttons {
-        flex-direction: column;
-        align-items: center;
-        gap: 0.75rem;
-        margin: 1.5rem 0;
-      }
-
-      .btn-large {
-        width: 100%;
-        max-width: 320px;
-        min-width: 0;
-        padding: 1rem 1.5rem;
-        font-size: 1rem;
-      }
-
-      header .header-inner {
-        padding: 0.75rem 1rem;
-        gap: 0.75rem;
-      }
-
-      .logo-badge {
-        width: 44px;
-        height: 44px;
-        font-size: 1.4rem;
-      }
-
-      header h1 {
-        font-size: 1.5rem;
-      }
-
-      header p {
-        font-size: 0.85rem;
-      }
-
-      /* Cartes et sections vraiment centrées et plus étroites */
-      .features-grid {
-        grid-template-columns: 1fr;
-        gap: 1.25rem;
-        margin: 2.5rem 0;
-      }
-
-      .feature-card,
-      .whatsapp-contact,
-      .map-section,
-      .admin-access {
-        max-width: 380px;
-        margin-inline: auto;   /* <== centre toutes les cartes/services */
-        padding: 1.5rem 1.25rem;
-      }
-
-      .gallery-section {
-        padding: 3rem 0;
-      }
-
-      .gallery-carousel {
-        border-radius: var(--radius-md);
-        max-width: 380px;
-        margin-inline: auto;
-      }
-
-      .carousel-slide {
-        height: 260px;
-        font-size: 1.2rem;
-        padding: 1.5rem;
-      }
-
-      .info-section {
-        padding: 3rem 1.5rem;
-        margin: 3rem 0;
-      }
-
-      .stats-container {
-        grid-template-columns: 1fr;
-        max-width: 380px;
-        margin-inline: auto;
-      }
-
-      .stat-card {
-        padding: 1.5rem;
-      }
-
-      .admin-buttons, .gps-buttons {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .admin-btn, .gps-btn {
-        width: 100%;
-        max-width: 250px;
-      }
-
-      /* Popup de réservation type "app" */
-      #reservation-block.reservation-overlay {
-        padding: 0.75rem;
-        align-items: center;
-        justify-content: center;
-      }
-
-      #reservation-block .reservation-card {
-        width: 100%;
-        max-width: 480px;
-        margin: 0;
-        padding: 1.25rem 1rem;
-        max-height: 90vh;
-        overflow-y: auto;
-      }
-
-      .reservation-grid {
-        gap: 1rem;
-      }
-
-      #reservationForm .form-row input,
-      #reservationForm .form-row select,
-      #reservationForm button {
-        width: 100%;
-        font-size: 16px; /* évite le zoom auto iOS */
-      }
-
-      .ticket-preview-img {
-        max-width: 100%;
-      }
-
-      .flatpickr-calendar.open {
-        width: calc(100vw - 2.5rem);
-        max-width: 360px;
-      }
-    }
-
-    /* Très petits écrans */
-    @media (max-width: 480px) {
-      .hero-section {
-        padding: 3rem 1rem;
-      }
-
-      .hero-title {
-        font-size: 1.9rem;
-      }
-
-      .hero-subtitle {
-        font-size: 1rem;
-      }
-
-      header h1 {
-        font-size: 1.35rem;
-      }
-    }
-  </style>
 </head>
 
 <body>
@@ -675,18 +37,21 @@
     </div>
   </header>
 
-  <!-- Section Hero -->
+  <!-- Hero -->
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">Bienvenue au Calypço</h1>
+
       <p class="hero-subtitle">
-        Votre destination gaming, détente et aventure - PS5, réalité virtuelle, piscine et bien plus !
+        Votre destination gaming, détente et aventure - PS5, réalité virtuelle,
+        piscine et bien plus !
       </p>
 
       <div class="access-buttons">
         <button id="btnShowReservation" class="btn-primary btn-large" type="button">
           🏆 Réservation
         </button>
+
         <a href="#contact" class="btn-secondary btn-large">
           📞 Nous contacter
         </a>
@@ -694,15 +59,18 @@
     </div>
   </section>
 
-  <!-- SECTION RESERVATION (popup flottante, cachée au départ) -->
+  <!-- Popup réservation -->
   <section id="reservation-block" class="reservation-overlay">
     <div class="card reservation-card">
-      <button type="button" class="reservation-close" id="btnCloseReservation">×</button>
+      <button type="button" class="reservation-close" id="btnCloseReservation">
+        ×
+      </button>
 
       <h2>Réserver votre expérience</h2>
 
       <div class="reservation-grid">
         <form id="reservationForm">
+
           <div class="form-row">
             <label for="resNom">Nom *</label>
             <input type="text" id="resNom" placeholder="Votre nom" required />
@@ -747,7 +115,7 @@
           </div>
 
           <button id="btnSubmitReservation" type="submit" class="btn-primary">
-            ✅ Valider la réservation
+            ✅ Confirmer la réservation
           </button>
 
           <p id="reservationMessage" class="message" style="display:none;"></p>
@@ -758,51 +126,61 @@
 
   <main>
 
-    <!-- Galerie Carousel -->
+    <!-- Galerie -->
     <section class="gallery-section">
-      <h2 style="text-align: center; margin-bottom: 1rem;">Découvrez le Calypço</h2>
-      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
+      <h2>Découvrez le Calypço</h2>
+
+      <p class="section-intro">
         Parcourez notre univers gaming et détente en images
       </p>
 
       <div class="gallery-carousel">
         <div class="carousel-track" id="carouselTrack">
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #ff6b35, #ff8e53);">
-            <span style="color: white;">🎮 Espace Gaming & E-sport PS5/VR</span>
+          <div class="carousel-slide slide-gaming">
+            <span>🎮 Espace Gaming & E-sport PS5/VR</span>
           </div>
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #4ecdc4, #67e6dc);">
-            <span style="color: white;">💪 Jeux de Force & Défis Physiques</span>
+
+          <div class="carousel-slide slide-force">
+            <span>💪 Jeux de Force & Défis Physiques</span>
           </div>
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #45b7d1, #67d1e6);">
-            <span style="color: white;">🎯 Tir de Précision & Adresse</span>
+
+          <div class="carousel-slide slide-precision">
+            <span>🎯 Tir de Précision & Adresse</span>
           </div>
-          <div class="carousel-slide" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-            <span style="color: white;">🏊 Piscine & Toboggan Aquatique</span>
+
+          <div class="carousel-slide slide-piscine">
+            <span>🏊 Piscine & Toboggan Aquatique</span>
           </div>
         </div>
 
-        <button class="carousel-nav carousel-prev" onclick="prevSlide()">❮</button>
-        <button class="carousel-nav carousel-next" onclick="nextSlide()">❯</button>
+        <button class="carousel-nav carousel-prev" type="button" onclick="prevSlide()">❮</button>
+        <button class="carousel-nav carousel-next" type="button" onclick="nextSlide()">❯</button>
 
         <div class="carousel-dots" id="carouselDots"></div>
       </div>
     </section>
 
-    <!-- Nos Services -->
-    <section>
-      <h2 style="text-align: center; margin-bottom: 1rem;">Nos Expériences Uniques</h2>
-      <p style="text-align: center; color: var(--text-muted); margin-bottom: 3rem;">
+    <!-- Services -->
+    <section class="services-section">
+      <h2>Nos Expériences Uniques</h2>
+
+      <p class="section-intro">
         Découvrez tous les univers du Calypço - Gaming, aventure, détente et convivialité
       </p>
 
       <div class="features-grid">
+
         <div class="feature-card">
           <span class="feature-icon">🎮</span>
           <h3 class="feature-title">Gaming & E-sport</h3>
-          <p>Plongez dans l'univers du gaming nouvelle génération avec nos équipements high-tech.</p>
-          <div style="margin-top: 1rem;">
+
+          <p>
+            Plongez dans l'univers du gaming nouvelle génération avec nos équipements high-tech.
+          </p>
+
+          <div class="feature-details">
             <strong>Activités :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
+            <ul>
               <li>PS5 et consoles dernière génération</li>
               <li>Réalité Virtuelle (VR) immersive</li>
               <li>Jeux d'arcade rétro et modernes</li>
@@ -814,10 +192,14 @@
         <div class="feature-card">
           <span class="feature-icon">💪</span>
           <h3 class="feature-title">Jeux de Force & Défis</h3>
-          <p>Testez vos limites et défiez vos amis dans nos activités physiques fun et sécurisées.</p>
-          <div style="margin-top: 1rem;">
+
+          <p>
+            Testez vos limites et défiez vos amis dans nos activités physiques fun et sécurisées.
+          </p>
+
+          <div class="feature-details">
             <strong>Défis :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
+            <ul>
               <li>Boxe arcade électronique</li>
               <li>Marteau testeur de force</li>
               <li>Compétitions amicales</li>
@@ -829,10 +211,14 @@
         <div class="feature-card">
           <span class="feature-icon">🎯</span>
           <h3 class="feature-title">Tir de Précision</h3>
-          <p>Développez votre adresse et concentration avec nos activités de tir sécurisées.</p>
-          <div style="margin-top: 1rem;">
+
+          <p>
+            Développez votre adresse et concentration avec nos activités de tir sécurisées.
+          </p>
+
+          <div class="feature-details">
             <strong>Activités :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
+            <ul>
               <li>Tir à l'arbalète</li>
               <li>Carabine laser</li>
               <li>Tir à l'arc</li>
@@ -844,10 +230,14 @@
         <div class="feature-card">
           <span class="feature-icon">👥</span>
           <h3 class="feature-title">Jeux de Groupe</h3>
-          <p>Partagez des moments de complicité et de rires avec nos jeux conviviaux.</p>
-          <div style="margin-top: 1rem;">
+
+          <p>
+            Partagez des moments de complicité et de rires avec nos jeux conviviaux.
+          </p>
+
+          <div class="feature-details">
             <strong>Activités :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
+            <ul>
               <li>Baby-foot compétitif</li>
               <li>Mini-jeux variés</li>
               <li>Jeux de société géants</li>
@@ -859,10 +249,14 @@
         <div class="feature-card">
           <span class="feature-icon">🏊</span>
           <h3 class="feature-title">Espace Aquatique</h3>
-          <p>Détendez-vous et amusez-vous dans notre espace piscine avec toboggan aquatique.</p>
-          <div style="margin-top: 1rem;">
+
+          <p>
+            Détendez-vous et amusez-vous dans notre espace piscine avec toboggan aquatique.
+          </p>
+
+          <div class="feature-details">
             <strong>Équipements :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
+            <ul>
               <li>Piscine rafraîchissante</li>
               <li>Toboggan aquatique fun</li>
               <li>Espace détente pool</li>
@@ -874,10 +268,14 @@
         <div class="feature-card">
           <span class="feature-icon">🍹</span>
           <h3 class="feature-title">Détente & Restauration</h3>
-          <p>Savourez des moments de détente avec notre cuisine variée et nos cocktails signature.</p>
-          <div style="margin-top: 1rem;">
+
+          <p>
+            Savourez des moments de détente avec notre cuisine variée et nos cocktails signature.
+          </p>
+
+          <div class="feature-details">
             <strong>Services :</strong>
-            <ul style="text-align: left; margin-top: 0.5rem;">
+            <ul>
               <li>Cuisine internationale</li>
               <li>Milkshakes et cocktails</li>
               <li>Espace détente lounge</li>
@@ -885,13 +283,15 @@
             </ul>
           </div>
         </div>
+
       </div>
     </section>
 
     <!-- Informations pratiques -->
     <section class="info-section">
-      <h2 style="margin-bottom: 1rem;">Informations Pratiques</h2>
-      <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+      <h2>Informations Pratiques</h2>
+
+      <p class="section-intro">
         Tout ce que vous devez savoir pour profiter au maximum de notre centre
       </p>
 
@@ -921,30 +321,35 @@
     <!-- Contact WhatsApp -->
     <section id="contact" class="whatsapp-contact">
       <span class="whatsapp-icon">📱</span>
-      <h2 style="margin-bottom: 1rem;">Contactez-nous sur WhatsApp</h2>
-      <p style="margin-bottom: 2rem; opacity: 0.9;">
+
+      <h2>Contactez-nous sur WhatsApp</h2>
+
+      <p>
         Réponse rapide garantie ! Cliquez pour nous envoyer un message
       </p>
-      <a href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
-         class="whatsapp-btn"
-         target="_blank">
+
+      <a
+        href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
+        class="whatsapp-btn"
+        target="_blank"
+      >
         💬 Nous écrire sur WhatsApp
       </a>
     </section>
 
-    <!-- Map avec GPS -->
+    <!-- Localisation -->
     <section class="map-section">
-      <h2 style="margin-bottom: 1rem;">📍 Nous trouver</h2>
-      <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+      <h2>📍 Nous trouver</h2>
+
+      <p class="section-intro">
         Hafia Labé, proche université Hafia
       </p>
 
-      <div style="border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-soft);">
+      <div class="map-frame">
         <iframe
           src="https://www.openstreetmap.org/export/embed.html?bbox=-12.387032,11.222501,-12.383032,11.224501&layer=mapnik&marker=11.223501,-12.385032"
           width="100%"
           height="300"
-          style="border: none;"
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
           title="Calypço Centre de Loisirs - Hafia Labé">
@@ -952,40 +357,51 @@
       </div>
 
       <div class="gps-buttons">
-        <a href="https://maps.google.com/?q=11.223501,-12.385032"
-           class="gps-btn gps-btn-google"
-           target="_blank">
+        <a
+          href="https://maps.google.com/?q=11.223501,-12.385032"
+          class="gps-btn gps-btn-google"
+          target="_blank"
+        >
           🗺️ Google Maps
         </a>
-        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes"
-           class="gps-btn gps-btn-waze"
-           target="_blank">
+
+        <a
+          href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes"
+          class="gps-btn gps-btn-waze"
+          target="_blank"
+        >
           🚗 Waze
         </a>
-        <a href="https://maps.apple.com/?q=11.223501,-12.385032"
-           class="gps-btn gps-btn-apple"
-           target="_blank">
+
+        <a
+          href="https://maps.apple.com/?q=11.223501,-12.385032"
+          class="gps-btn gps-btn-apple"
+          target="_blank"
+        >
           🍎 Apple Plans
         </a>
       </div>
 
-      <div style="margin-top: 1.5rem; text-align: center;">
+      <div class="location-details">
         <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
         <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
       </div>
     </section>
 
-    <!-- Accès pro (discret) -->
+    <!-- Accès pro -->
     <section class="admin-access">
-      <h3 style="margin-bottom: 1rem; color: var(--text-muted);">Accès Professionnel</h3>
-      <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+      <h3>Accès Professionnel</h3>
+
+      <p>
         Personnel et administrateurs du centre
       </p>
+
       <div class="admin-buttons">
-        <a href="agent.html" class="admin-btn" style="background: var(--accent-soft); color: var(--accent-primary);">
+        <a href="agent.html" class="admin-btn agent-link">
           🎫 Espace Agent
         </a>
-        <a href="admin.html" class="admin-btn" style="background: var(--border-soft); color: var(--text-muted);">
+
+        <a href="admin.html" class="admin-btn admin-link">
           ⚙️ Administration
         </a>
       </div>
@@ -995,34 +411,48 @@
 
   <footer>
     <p>© 2024 Calypço - Tous droits réservés</p>
-    <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-light);">
+    <p>
       Votre destination gaming, aventure et détente à Labé
     </p>
   </footer>
 
   <!-- SDK Appwrite -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-  <!-- Script page d'accueil / réservation -->
-  <script src="js/index.js?v=3"></script>
 
+  <!-- Script page d'accueil / réservation -->
+  <script src="js/index.js?v=8"></script>
+
+  <!-- PWA Service Worker -->
   <script>
-    // Script pour la galerie carousel
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch((err) => {
+          console.warn("[PWA] Service worker non enregistré :", err);
+        });
+      });
+    }
+  </script>
+
+  <!-- Carousel -->
+  <script>
     let currentSlide = 0;
-    const slides = document.querySelectorAll('.carousel-slide');
-    const track = document.getElementById('carouselTrack');
-    const dotsContainer = document.getElementById('carouselDots');
+
+    const slides = document.querySelectorAll(".carousel-slide");
+    const track = document.getElementById("carouselTrack");
+    const dotsContainer = document.getElementById("carouselDots");
 
     slides.forEach((_, index) => {
-      const dot = document.createElement('div');
-      dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
-      dot.addEventListener('click', () => goToSlide(index));
+      const dot = document.createElement("div");
+      dot.className = `carousel-dot ${index === 0 ? "active" : ""}`;
+      dot.addEventListener("click", () => goToSlide(index));
       dotsContainer.appendChild(dot);
     });
 
     function updateCarousel() {
       track.style.transform = `translateX(-${currentSlide * 100}%)`;
-      document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
-        dot.classList.toggle('active', index === currentSlide);
+
+      document.querySelectorAll(".carousel-dot").forEach((dot, index) => {
+        dot.classList.toggle("active", index === currentSlide);
       });
     }
 
@@ -1043,15 +473,21 @@
 
     setInterval(nextSlide, 5000);
 
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener("click", function (e) {
         e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
+
+        const target = document.querySelector(this.getAttribute("href"));
+
         if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          target.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
         }
       });
     });
   </script>
+
 </body>
 </html>
