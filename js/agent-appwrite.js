@@ -22,13 +22,12 @@ const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
 // ===============================
 
 if (typeof Appwrite === "undefined") {
-  console.error(
-    "[AGENT] Appwrite SDK non chargé. Vérifie le script CDN appwrite@13.0.0."
-  );
+  console.error("[AGENT] Appwrite SDK non chargé. Vérifie le script CDN appwrite@13.0.0.");
 }
 
 const client = new Appwrite.Client();
 client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
+
 const db = new Appwrite.Databases(client);
 
 // ===============================
@@ -73,7 +72,7 @@ function showLoginMessage(text, type) {
   zone.textContent = text || "";
   zone.style.color =
     type === "success" ? "#16a34a" :
-    type === "error"   ? "#b91c1c" :
+    type === "error" ? "#b91c1c" :
     "#6b7280";
 }
 
@@ -88,16 +87,32 @@ function getTarifChoisi() {
   return "normal";
 }
 
+function setButtonLoading(button, text) {
+  if (!button) return;
+  button.dataset.originalText = button.dataset.originalText || button.textContent;
+  button.disabled = true;
+  button.textContent = text;
+}
+
+function resetButtonLoading(button) {
+  if (!button) return;
+  button.disabled = false;
+  button.textContent = button.dataset.originalText || "Valider le billet ▶▶";
+}
+
 // ===============================
 //  ETAT GLOBAL
 // ===============================
 
 let currentAgent = null;
+
 let restoProduitsCache = [];
 let restoPanier = [];
 let restoLoaded = false;
+
 let currentMode = "billets";
 let currentBilletsSubMode = "ENTREE";
+
 let lastVenteNumber = 0;
 let lastVerifiedEtudiant = null;
 
@@ -106,9 +121,9 @@ let lastVerifiedEtudiant = null;
 // ===============================
 
 function updateTarifEtudiantVisibility() {
-  const etuZone   = $("etu-zone");
+  const etuZone = $("etu-zone");
   const tarifZone = $("tarif-zone");
-  const radioEtu  = $("tarif-etudiant");
+  const radioEtu = $("tarif-etudiant");
 
   if (currentBilletsSubMode === "ENTREE") {
     if (tarifZone) tarifZone.style.display = "block";
@@ -126,11 +141,11 @@ function updateTarifEtudiantVisibility() {
 function resetReservationForm() {
   const useReservation = $("useReservation");
   const reservationNumber = $("reservationNumber");
-  const reservationZone = $("reservation-number-zone");
+  const reservationNumberZone = $("reservation-number-zone");
 
   if (useReservation) useReservation.checked = false;
   if (reservationNumber) reservationNumber.value = "";
-  if (reservationZone) reservationZone.style.display = "none";
+  if (reservationNumberZone) reservationNumberZone.style.display = "none";
 }
 
 function updateReservationVisibility() {
@@ -150,11 +165,16 @@ function switchMode(mode) {
   currentMode = mode;
 
   const modeBillets = $("mode-billets");
-  const modeResto   = $("mode-resto");
-  const modeLabel   = $("mode-label");
+  const modeResto = $("mode-resto");
+  const modeLabel = $("mode-label");
 
-  if (modeBillets) modeBillets.style.display = mode === "billets" ? "block" : "none";
-  if (modeResto) modeResto.style.display = mode === "resto" ? "block" : "none";
+  if (modeBillets) {
+    modeBillets.style.display = mode === "billets" ? "block" : "none";
+  }
+
+  if (modeResto) {
+    modeResto.style.display = mode === "resto" ? "block" : "none";
+  }
 
   if (modeLabel) {
     modeLabel.textContent =
@@ -171,8 +191,9 @@ function switchBilletsSubMode(mode) {
   currentBilletsSubMode = mode;
 
   const btnEntree = $("btnBilletsEntree");
-  const btnJeux   = $("btnBilletsJeux");
-  const hint      = $("billetsSubHint");
+  const btnJeux = $("btnBilletsJeux");
+  const hint = $("billetsSubHint");
+  const ticketNumber = $("ticketNumber");
 
   if (btnEntree) {
     btnEntree.classList.toggle("active-submode", mode === "ENTREE");
@@ -188,8 +209,13 @@ function switchBilletsSubMode(mode) {
         "Mode : billets d'entrée. Saisir le numéro du billet attribué au client.";
     } else {
       hint.textContent =
-        "Mode : billets jeux internes. Saisir le numéro du ticket de jeu.";
+        "Mode : billets jeux internes. Saisir le numéro du ticket de jeu. Aucune réservation n’est vérifiée dans ce mode.";
     }
+  }
+
+  if (ticketNumber) {
+    ticketNumber.placeholder =
+      mode === "ENTREE" ? "Ex : 26-0001" : "Ex : J-0001";
   }
 
   updateTarifEtudiantVisibility();
@@ -205,11 +231,11 @@ function appliquerEtatConnexion(agent) {
   currentAgent = agent;
 
   const loginCard = $("card-login");
-  const appZone   = $("app-zone");
-  const nameEl    = $("agent-connected-name");
-  const roleEl    = $("agent-connected-role");
+  const appZone = $("app-zone");
+  const nameEl = $("agent-connected-name");
+  const roleEl = $("agent-connected-role");
   const btnModeBillets = $("btnModeBillets");
-  const btnModeResto   = $("btnModeResto");
+  const btnModeResto = $("btnModeResto");
 
   if (agent) {
     const roleStr = (agent.role || "").toLowerCase();
@@ -296,11 +322,12 @@ async function connecterAgent() {
     }
 
     const agent = res.documents[0];
+
     showLoginMessage("Connexion réussie.", "success");
     appliquerEtatConnexion(agent);
   } catch (err) {
     console.error("[AGENT] Erreur connexion agent :", err);
-    showLoginMessage("Erreur lors de la connexion (voir console).", "error");
+    showLoginMessage("Erreur lors de la connexion. Voir console.", "error");
   }
 }
 
@@ -337,8 +364,7 @@ async function chargerNombreBillets() {
       );
     }
 
-    const nb = res.documents ? res.documents.length : 0;
-    setTicketCount(nb);
+    setTicketCount(res.documents ? res.documents.length : 0);
   } catch (err) {
     console.error("[AGENT] Erreur chargement billets :", err);
   }
@@ -402,7 +428,7 @@ async function verifierReservationActive(numeroReservation) {
 
 async function verifierReservationDejaLiee(numeroReservation) {
   try {
-    const resEntree = await db.listDocuments(
+    const res = await db.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_TABLE_ID,
       [
@@ -411,8 +437,8 @@ async function verifierReservationDejaLiee(numeroReservation) {
       ]
     );
 
-    if (resEntree.documents && resEntree.documents.length > 0) {
-      return resEntree.documents[0];
+    if (res.documents && res.documents.length > 0) {
+      return res.documents[0];
     }
 
     return null;
@@ -433,25 +459,47 @@ async function verifierReservationDejaLiee(numeroReservation) {
 async function verifierBillet() {
   clearResult();
 
+  const btnCheckTicket = $("btnCheckTicket");
+
   if (!currentAgent) {
     showResult("Veuillez d'abord vous connecter.", "error");
     return;
   }
 
   const numeroBillet = $("ticketNumber")?.value.trim();
-  const numeroEtu    = $("etuNumber")?.value.trim();
-  const tarifChoisi  = getTarifChoisi();
+  const numeroEtu = $("etuNumber")?.value.trim();
+  const tarifChoisi = getTarifChoisi();
 
   if (!numeroBillet) {
     showResult("Veuillez saisir un numéro de billet.", "error");
     return;
   }
 
+  setButtonLoading(btnCheckTicket, "Validation en cours...");
+
+  try {
+    if (currentBilletsSubMode === "ENTREE") {
+      await validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi);
+      return;
+    }
+
+    if (currentBilletsSubMode === "JEU") {
+      await validerBilletJeuInterne(numeroBillet);
+      return;
+    }
+  } finally {
+    resetButtonLoading(btnCheckTicket);
+  }
+}
+
+// ===============================
+//  VALIDATION BILLET ENTREE
+// ===============================
+
+async function validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi) {
   const reservationInfo = getReservationInfoFromForm();
 
-  const useReservation =
-    currentBilletsSubMode === "ENTREE" && reservationInfo.useReservation;
-
+  const useReservation = reservationInfo.useReservation;
   const numeroReservation = reservationInfo.numeroReservation;
 
   let reservationDoc = null;
@@ -473,253 +521,257 @@ async function verifierBillet() {
     }
   }
 
-  // ==========================
-  // MODE ENTREE
-  // ==========================
-  if (currentBilletsSubMode === "ENTREE") {
-    let billet;
+  let billet;
 
-    try {
-      const res = await db.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_BILLETS_TABLE_ID,
-        [
-          Appwrite.Query.equal("numero_billet", numeroBillet),
-          Appwrite.Query.limit(1)
-        ]
-      );
+  const billetRes = await db.listDocuments(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_BILLETS_TABLE_ID,
+    [
+      Appwrite.Query.equal("numero_billet", numeroBillet),
+      Appwrite.Query.limit(1)
+    ]
+  );
 
-      if (!res.documents || res.documents.length === 0) {
-        showResult(`Billet ${numeroBillet} introuvable.`, "error");
-        return;
-      }
-
-      billet = res.documents[0];
-
-      if (billet.statut === "Validé") {
-        showResult(`Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
-        return;
-      }
-
-      if (tarifChoisi === "etudiant") {
-        if (!numeroEtu) {
-          showResult(
-            "Pour le tarif étudiant, le numéro étudiant est obligatoire.",
-            "error"
-          );
-          return;
-        }
-
-        if (!lastVerifiedEtudiant || lastVerifiedEtudiant !== numeroEtu) {
-          showResult(
-            "Veuillez d'abord cliquer sur « Vérifier l'étudiant » pour ce numéro, puis valider le billet.",
-            "error"
-          );
-          return;
-        }
-
-        try {
-          const etuRes = await db.listDocuments(
-            APPWRITE_DATABASE_ID,
-            APPWRITE_ETUDIANTS_TABLE_ID,
-            [
-              Appwrite.Query.equal("numero_etudiant", numeroEtu),
-              Appwrite.Query.equal("actif", true),
-              Appwrite.Query.limit(1)
-            ]
-          );
-
-          if (!etuRes.documents || etuRes.documents.length === 0) {
-            showResult(
-              "Numéro étudiant introuvable ou inactif. L'étudiant doit être enregistré par l'administrateur.",
-              "error"
-            );
-            return;
-          }
-        } catch (errCheck) {
-          console.error("[AGENT] Erreur vérification étudiant :", errCheck);
-          showResult(
-            "Erreur lors de la vérification du numéro étudiant.",
-            "error"
-          );
-          return;
-        }
-      }
-
-      const updateBilletData = {
-        statut: "Validé"
-      };
-
-      if (useReservation) {
-        updateBilletData.reservation = numeroReservation;
-      }
-
-      await db.updateDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_BILLETS_TABLE_ID,
-        billet.$id,
-        updateBilletData
-      );
-
-      if (useReservation && reservationDoc) {
-        await db.updateDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_RESERVATION_COLLECTION_ID,
-          reservationDoc.$id,
-          { actif: false }
-        );
-      }
-
-      const typeAcces = billet.type_acces || "";
-      const dateAcces = billet.date_acces || "";
-
-      showResult(
-        useReservation
-          ? `Billet ${numeroBillet} VALIDÉ ✅ et affilié à la réservation ${numeroReservation}`
-          : `Billet ${numeroBillet} VALIDÉ ✅ (${typeAcces} – ${dateAcces})`,
-        "success"
-      );
-
-      const ticketInput = $("ticketNumber");
-      if (ticketInput) ticketInput.value = "";
-
-      if (useReservation) resetReservationForm();
-
-      lastVerifiedEtudiant = null;
-
-      chargerNombreBillets();
-    } catch (err) {
-      console.error("[AGENT] ERREUR validation billet entrée :", err);
-      showResult("Erreur lors de la vérification du billet.", "error");
-      return;
-    }
-
-    // Journalisation non bloquante
-    try {
-      const nowIso = new Date().toISOString();
-
-      const montantNormal   = parseInt(billet.prix || 0, 10) || 0;
-      const montantEtudiant = parseInt(billet.tarif_universite || 0, 10) || 0;
-      const montantPaye =
-        tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
-
-      await db.createDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_VALIDATIONS_TABLE_ID,
-        Appwrite.ID.unique(),
-        {
-          numero_billet: billet.numero_billet,
-          billet_id: billet.$id,
-          date_validation: nowIso,
-          type_acces: billet.type_acces || "",
-          type_billet: billet.type_billet || "",
-          code_offre: billet.code_offre || "ENTREE",
-          tarif_normal: montantNormal,
-          tarif_etudiant: montantEtudiant,
-          tarif_applique: tarifChoisi,
-          montant_paye: montantPaye,
-          agent_id: currentAgent.$id || "",
-          poste_id: "ENTREE",
-          numero_etudiant: numeroEtu || ""
-        }
-      );
-    } catch (logErr) {
-      console.warn(
-        "[AGENT] Erreur lors de l'enregistrement de la validation entrée :",
-        logErr
-      );
-    }
-
+  if (!billetRes.documents || billetRes.documents.length === 0) {
+    showResult(`Billet ${numeroBillet} introuvable.`, "error");
     return;
   }
 
-  // ==========================
-  // MODE JEU INTERNE
-  // Aucune réservation ici
-  // ==========================
-  if (currentBilletsSubMode === "JEU") {
-    try {
-      const res = await db.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_BILLETS_INTERNE_TABLE_ID,
-        [
-          Appwrite.Query.equal("numero_billet", numeroBillet),
-          Appwrite.Query.limit(1)
-        ]
-      );
+  billet = billetRes.documents[0];
 
-      if (!res.documents || res.documents.length === 0) {
-        showResult(`Billet jeu ${numeroBillet} introuvable.`, "error");
-        return;
-      }
+  if (billet.statut === "Validé") {
+    showResult(`Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
+    return;
+  }
 
-      const billet = res.documents[0];
+  if (billet.reservation) {
+    showResult(
+      `Ce billet est déjà affilié à la réservation ${billet.reservation}.`,
+      "error"
+    );
+    return;
+  }
 
-      const valRes = await db.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_VALIDATIONS_TABLE_ID,
-        [
-          Appwrite.Query.equal("numero_billet", numeroBillet),
-          Appwrite.Query.equal("poste_id", "INTERNE"),
-          Appwrite.Query.limit(1)
-        ]
-      );
+  if (tarifChoisi === "etudiant") {
+    const okEtudiant = await verifierTarifEtudiantAvantValidation(numeroEtu);
+    if (!okEtudiant) return;
+  }
 
-      if (valRes.documents && valRes.documents.length > 0) {
-        showResult(`Billet jeu ${numeroBillet} déjà utilisé ❌`, "error");
-        return;
-      }
+  const updateBilletData = {
+    statut: "Validé"
+  };
 
-      const montant = parseInt(billet.prix || 0, 10) || 0;
-      const nowIso = new Date().toISOString();
+  if (useReservation) {
+    updateBilletData.reservation = numeroReservation;
+  }
 
-      await db.createDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_VALIDATIONS_TABLE_ID,
-        Appwrite.ID.unique(),
-        {
-          numero_billet: numeroBillet,
-          billet_id: billet.$id,
-          date_validation: nowIso,
-          type_acces: billet.type_billet || "Jeu interne",
-          type_billet: billet.type_billet || "Jeu interne",
-          code_offre: billet.code_offre || "JEU",
-          tarif_normal: montant,
-          tarif_etudiant: 0,
-          tarif_applique: "normal",
-          montant_paye: montant,
-          agent_id: currentAgent.$id || "",
-          poste_id: "INTERNE",
-          numero_etudiant: ""
-        }
-      );
+  await db.updateDocument(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_BILLETS_TABLE_ID,
+    billet.$id,
+    updateBilletData
+  );
 
-      await db.updateDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_BILLETS_INTERNE_TABLE_ID,
-        billet.$id,
-        { statut: "Validé" }
-      );
+  if (useReservation && reservationDoc) {
+    await db.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_RESERVATION_COLLECTION_ID,
+      reservationDoc.$id,
+      { actif: false }
+    );
+  }
 
+  await journaliserValidationEntree({
+    billet,
+    tarifChoisi,
+    numeroEtu,
+    numeroReservation: useReservation ? numeroReservation : ""
+  });
+
+  const ticketInput = $("ticketNumber");
+  if (ticketInput) ticketInput.value = "";
+
+  if (useReservation) resetReservationForm();
+
+  lastVerifiedEtudiant = null;
+  chargerNombreBillets();
+
+  showResult(
+    useReservation
+      ? `Billet ${numeroBillet} VALIDÉ ✅ et affilié à la réservation ${numeroReservation}.`
+      : `Billet ${numeroBillet} VALIDÉ ✅.`,
+    "success"
+  );
+}
+
+async function verifierTarifEtudiantAvantValidation(numeroEtu) {
+  if (!numeroEtu) {
+    showResult(
+      "Pour le tarif étudiant, le numéro étudiant est obligatoire.",
+      "error"
+    );
+    return false;
+  }
+
+  if (!lastVerifiedEtudiant || lastVerifiedEtudiant !== numeroEtu) {
+    showResult(
+      "Veuillez d'abord cliquer sur « Vérifier l'étudiant » pour ce numéro, puis valider le billet.",
+      "error"
+    );
+    return false;
+  }
+
+  try {
+    const etuRes = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_ETUDIANTS_TABLE_ID,
+      [
+        Appwrite.Query.equal("numero_etudiant", numeroEtu),
+        Appwrite.Query.equal("actif", true),
+        Appwrite.Query.limit(1)
+      ]
+    );
+
+    if (!etuRes.documents || etuRes.documents.length === 0) {
       showResult(
-        `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet || "Jeu interne"} – ${formatMontantGNF(montant)})`,
-        "success"
-      );
-
-      const ticketInput = $("ticketNumber");
-      if (ticketInput) ticketInput.value = "";
-
-      chargerNombreBillets();
-    } catch (err) {
-      console.error("[AGENT] Erreur validation billet jeu interne :", err);
-      showResult(
-        "Erreur lors de la vérification du billet de jeu.",
+        "Numéro étudiant introuvable ou inactif. L'étudiant doit être enregistré par l'administrateur.",
         "error"
       );
+      return false;
     }
 
+    return true;
+  } catch (err) {
+    console.error("[AGENT] Erreur vérification étudiant :", err);
+    showResult("Erreur lors de la vérification du numéro étudiant.", "error");
+    return false;
+  }
+}
+
+async function journaliserValidationEntree({
+  billet,
+  tarifChoisi,
+  numeroEtu,
+  numeroReservation
+}) {
+  try {
+    const nowIso = new Date().toISOString();
+
+    const montantNormal = parseInt(billet.prix || 0, 10) || 0;
+    const montantEtudiant = parseInt(billet.tarif_universite || 0, 10) || 0;
+
+    const montantPaye =
+      tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
+
+    const validationDoc = {
+      numero_billet: billet.numero_billet,
+      billet_id: billet.$id,
+      date_validation: nowIso,
+      type_acces: billet.type_acces || "",
+      type_billet: billet.type_billet || "",
+      code_offre: billet.code_offre || "ENTREE",
+      tarif_normal: montantNormal,
+      tarif_etudiant: montantEtudiant,
+      tarif_applique: tarifChoisi,
+      montant_paye: montantPaye,
+      agent_id: currentAgent.$id || "",
+      poste_id: "ENTREE",
+      numero_etudiant: numeroEtu || ""
+    };
+
+    await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      Appwrite.ID.unique(),
+      validationDoc
+    );
+  } catch (logErr) {
+    console.warn("[AGENT] Erreur journalisation validation entrée :", logErr);
+  }
+}
+
+// ===============================
+//  VALIDATION BILLET JEU INTERNE
+//  AUCUNE RESERVATION ICI
+// ===============================
+
+async function validerBilletJeuInterne(numeroBillet) {
+  const res = await db.listDocuments(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_BILLETS_INTERNE_TABLE_ID,
+    [
+      Appwrite.Query.equal("numero_billet", numeroBillet),
+      Appwrite.Query.limit(1)
+    ]
+  );
+
+  if (!res.documents || res.documents.length === 0) {
+    showResult(`Billet jeu ${numeroBillet} introuvable.`, "error");
     return;
   }
+
+  const billet = res.documents[0];
+
+  if (billet.statut === "Validé") {
+    showResult(`Billet jeu ${numeroBillet} déjà utilisé ❌`, "error");
+    return;
+  }
+
+  const valRes = await db.listDocuments(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_VALIDATIONS_TABLE_ID,
+    [
+      Appwrite.Query.equal("numero_billet", numeroBillet),
+      Appwrite.Query.equal("poste_id", "INTERNE"),
+      Appwrite.Query.limit(1)
+    ]
+  );
+
+  if (valRes.documents && valRes.documents.length > 0) {
+    showResult(`Billet jeu ${numeroBillet} déjà utilisé ❌`, "error");
+    return;
+  }
+
+  const montant = parseInt(billet.prix || 0, 10) || 0;
+  const nowIso = new Date().toISOString();
+
+  await db.createDocument(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_VALIDATIONS_TABLE_ID,
+    Appwrite.ID.unique(),
+    {
+      numero_billet: numeroBillet,
+      billet_id: billet.$id,
+      date_validation: nowIso,
+      type_acces: billet.type_billet || "Jeu interne",
+      type_billet: billet.type_billet || "Jeu interne",
+      code_offre: billet.code_offre || "JEU",
+      tarif_normal: montant,
+      tarif_etudiant: 0,
+      tarif_applique: "normal",
+      montant_paye: montant,
+      agent_id: currentAgent.$id || "",
+      poste_id: "INTERNE",
+      numero_etudiant: ""
+    }
+  );
+
+  await db.updateDocument(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_BILLETS_INTERNE_TABLE_ID,
+    billet.$id,
+    { statut: "Validé" }
+  );
+
+  const ticketInput = $("ticketNumber");
+  if (ticketInput) ticketInput.value = "";
+
+  chargerNombreBillets();
+
+  showResult(
+    `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet || "Jeu interne"} – ${formatMontantGNF(montant)})`,
+    "success"
+  );
 }
 
 // ===============================
@@ -728,7 +780,7 @@ async function verifierBillet() {
 
 async function verifierEtudiant() {
   const numeroEtu = $("etuNumber")?.value.trim();
-  const zoneInfo  = $("etu-info");
+  const zoneInfo = $("etu-info");
 
   if (!zoneInfo) return;
 
@@ -774,8 +826,7 @@ async function verifierEtudiant() {
   } catch (err) {
     console.error("[AGENT] Erreur vérification étudiant :", err);
     zoneInfo.classList.add("error");
-    zoneInfo.textContent =
-      "Erreur lors de la vérification du numéro étudiant.";
+    zoneInfo.textContent = "Erreur lors de la vérification du numéro étudiant.";
   }
 }
 
@@ -788,7 +839,7 @@ function creerOngletsCategories() {
   if (!categoriesTabs) return;
 
   const categories = Array.from(
-    new Set(restoProduitsCache.map(p => p.categorie || "Autre"))
+    new Set(restoProduitsCache.map((p) => p.categorie || "Autre"))
   ).sort();
 
   categoriesTabs.innerHTML = "";
@@ -797,27 +848,34 @@ function creerOngletsCategories() {
   allButton.type = "button";
   allButton.className = "resto-category-tab active";
   allButton.textContent = "Tous les plats";
+
   allButton.onclick = () => {
-    document.querySelectorAll(".resto-category-tab").forEach(tab => {
+    document.querySelectorAll(".resto-category-tab").forEach((tab) => {
       tab.classList.remove("active");
     });
+
     allButton.classList.add("active");
     afficherTousLesProduits();
   };
+
   categoriesTabs.appendChild(allButton);
 
   categories.forEach((categorie) => {
     const button = document.createElement("button");
+
     button.type = "button";
     button.className = "resto-category-tab";
     button.textContent = categorie;
+
     button.onclick = () => {
-      document.querySelectorAll(".resto-category-tab").forEach(tab => {
+      document.querySelectorAll(".resto-category-tab").forEach((tab) => {
         tab.classList.remove("active");
       });
+
       button.classList.add("active");
       filtrerProduitsParCategorie(categorie);
     };
+
     categoriesTabs.appendChild(button);
   });
 }
@@ -830,6 +888,7 @@ function filtrerProduitsParCategorie(categorie) {
   const produitsFiltres = restoProduitsCache.filter(
     (p) => (p.categorie || "Autre") === categorie
   );
+
   afficherProduits(produitsFiltres);
 }
 
@@ -867,8 +926,7 @@ async function chargerProduitsResto() {
   const productsGrid = $("restoProductsGrid");
   if (!productsGrid) return;
 
-  productsGrid.innerHTML =
-    '<div class="resto-loading">Chargement du menu...</div>';
+  productsGrid.innerHTML = '<div class="resto-loading">Chargement du menu...</div>';
 
   try {
     const res = await db.listDocuments(
@@ -896,6 +954,7 @@ async function chargerProduitsResto() {
     afficherTousLesProduits();
   } catch (err) {
     console.error("[RESTO] Erreur chargement menu :", err);
+
     productsGrid.innerHTML = `
       <div class="resto-loading" style="color:var(--accent-primary);">
         ❌ Erreur de chargement du menu : ${err.message}
@@ -918,6 +977,7 @@ async function initialiserDernierNumeroVente() {
     if (res.documents.length > 0) {
       const lastNum = res.documents[0].numero_vente;
       const match = lastNum && lastNum.match(/V-(\d+)/);
+
       if (match) {
         lastVenteNumber = parseInt(match[1], 10) || 0;
       }
@@ -1011,6 +1071,7 @@ function actualiserPanier() {
             <div class="resto-cart-item-name">${item.libelle}</div>
             <div class="resto-cart-item-price">${formatMontantGNF(item.prix_unitaire)}/unité</div>
           </div>
+
           <div class="resto-cart-item-controls">
             <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, -1)">-</button>
             <span class="resto-cart-item-quantity">${item.quantite}</span>
@@ -1040,8 +1101,10 @@ function supprimerDuPanier(index) {
   if (index < 0 || index >= restoPanier.length) return;
 
   const nom = restoPanier[index].libelle;
+
   restoPanier.splice(index, 1);
   actualiserPanier();
+
   showTempMessage(`🗑️ ${nom} retiré du panier`, "warn");
 }
 
@@ -1068,9 +1131,11 @@ async function enregistrerVenteResto() {
 
   const numeroVente = genererNumeroVente();
   const nowIso = new Date().toISOString();
+
   const orderType =
     document.querySelector('input[name="orderType"]:checked')?.value ||
     "sur_place";
+
   const notes = $("restoOrderNotes")?.value.trim() || "";
 
   let totalGlobal = 0;
@@ -1078,6 +1143,7 @@ async function enregistrerVenteResto() {
   try {
     for (const item of restoPanier) {
       const montant = item.prix_unitaire * item.quantite;
+
       totalGlobal += montant;
 
       await db.createDocument(
@@ -1119,20 +1185,20 @@ function afficherReçu(numeroVente, total, orderType, notes) {
   let html = `
     <div style="margin-bottom:1rem;">
       <div><strong>Date :</strong> ${new Date().toLocaleString("fr-FR")}</div>
-      <div><strong>Type :</strong> ${
-        orderType === "sur_place" ? "Sur place" : "À emporter"
-      }</div>
+      <div><strong>Type :</strong> ${orderType === "sur_place" ? "Sur place" : "À emporter"}</div>
       ${
         notes
           ? `<div><strong>Notes :</strong> ${notes.replace(/</g, "&lt;")}</div>`
           : ""
       }
     </div>
+
     <div style="border-bottom:1px dashed #ccc; margin-bottom:0.5rem;"></div>
   `;
 
   restoPanier.forEach((item) => {
     const sousTotal = item.prix_unitaire * item.quantite;
+
     html += `
       <div class="receipt-item">
         <div>${item.quantite}x ${item.libelle}</div>
@@ -1143,10 +1209,12 @@ function afficherReçu(numeroVente, total, orderType, notes) {
 
   html += `
     <div style="border-bottom:1px dashed #ccc; margin:0.5rem 0;"></div>
+
     <div class="receipt-item receipt-total">
       <div>TOTAL</div>
       <div>${total.toLocaleString("fr-FR")} GNF</div>
     </div>
+
     <div style="text-align:center; margin-top:1rem; font-style:italic;">
       Merci pour votre commande !
     </div>
@@ -1155,6 +1223,7 @@ function afficherReçu(numeroVente, total, orderType, notes) {
   if (receiptContent) receiptContent.innerHTML = html;
 
   receipt.style.display = "block";
+
   if (productsSide) productsSide.style.display = "none";
 
   restoPanier = [];
@@ -1184,7 +1253,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateTarifEtudiantVisibility();
   updateReservationVisibility();
 
-  const btnLogin  = $("btnLogin");
+  const btnLogin = $("btnLogin");
   const btnLogout = $("btnLogout");
 
   if (btnLogin) {
@@ -1202,7 +1271,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const btnModeBillets = $("btnModeBillets");
-  const btnModeResto   = $("btnModeResto");
+  const btnModeResto = $("btnModeResto");
 
   if (btnModeBillets) {
     btnModeBillets.addEventListener("click", (e) => {
@@ -1220,7 +1289,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const btnBilletsEntree = $("btnBilletsEntree");
-  const btnBilletsJeux   = $("btnBilletsJeux");
+  const btnBilletsJeux = $("btnBilletsJeux");
 
   if (btnBilletsEntree) {
     btnBilletsEntree.addEventListener("click", (e) => {
@@ -1237,6 +1306,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const btnCheckTicket = $("btnCheckTicket");
+
   if (btnCheckTicket) {
     btnCheckTicket.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1245,6 +1315,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const btnCheckStudent = $("btnCheckStudent");
+
   if (btnCheckStudent) {
     btnCheckStudent.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1270,11 +1341,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const etuInput = $("etuNumber");
+
   if (etuInput) {
     etuInput.addEventListener("input", () => {
       lastVerifiedEtudiant = null;
 
       const zoneInfo = $("etu-info");
+
       if (zoneInfo) {
         zoneInfo.style.display = "none";
         zoneInfo.textContent = "";
