@@ -2544,3 +2544,355 @@ footer {
     width: 100%;
   }
 }
+/* =========================================================
+   CORRECTION MOBILE GLOBALE - CALYPÇO
+   À COLLER TOUT EN BAS DE css/styles.css
+   ========================================================= */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  min-width: 0;
+}
+
+main,
+header,
+footer,
+.card,
+.resto-container,
+.resto-products-side,
+.resto-cart-side,
+.resto-products-grid,
+.resto-product-card {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Les boutons ne doivent jamais forcer une largeur */
+button,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.mode-btn,
+.admin-btn,
+.gps-btn,
+.whatsapp-btn,
+.resto-category-tab {
+  max-width: 100%;
+  white-space: normal;
+}
+
+/* Liens boutons type Accueil */
+a.btn-primary,
+a.btn-secondary,
+a.btn-danger,
+a.admin-btn,
+a.gps-btn,
+a.whatsapp-btn {
+  max-width: 100%;
+  white-space: normal;
+}
+
+/* =========================================================
+   MOBILE TABLETTE / TÉLÉPHONE
+   ========================================================= */
+
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+
+  header {
+    padding: 1rem;
+  }
+
+  .header-inner {
+    width: 100%;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .logo-badge {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    font-size: 1rem;
+    border-radius: 14px;
+  }
+
+  header h1 {
+    font-size: 1.35rem;
+    line-height: 1.15;
+    word-break: normal;
+  }
+
+  header p {
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
+  main {
+    width: 100%;
+    max-width: 100%;
+    margin: 1rem auto 2rem;
+    padding: 0 0.85rem;
+    display: block;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto 1rem;
+    padding: 1.2rem;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .card h2 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+    flex-wrap: wrap;
+  }
+
+  /* Boutons du bandeau agent */
+  .card > div[style*="display:flex"],
+  .mode-navigation {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  #btnModeBillets,
+  #btnModeResto,
+  #btnLogout,
+  #btnAdminLogout,
+  .mode-btn {
+    width: 100% !important;
+    margin-left: 0 !important;
+    justify-content: center;
+    min-height: 48px;
+  }
+
+  button {
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  /* Formulaires */
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="file"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  .radio-inline {
+    width: 100%;
+    margin-right: 0;
+    justify-content: flex-start;
+  }
+
+  /* Sous-onglets billets */
+  #btnBilletsEntree,
+  #btnBilletsJeux {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  #reservationNumber,
+  #etuNumber,
+  #ticketNumber {
+    max-width: 100% !important;
+  }
+
+  /* =====================================================
+     RESTAURATION MOBILE
+     ===================================================== */
+
+  .resto-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .resto-products-side {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .resto-categories-tabs {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .resto-category-tab {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  .resto-products-grid {
+    display: grid;
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .resto-product-card {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
+    padding: 1rem;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .resto-product-card .btn-primary,
+  .resto-product-card button {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .resto-product-name {
+    font-size: 1rem;
+    line-height: 1.35;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .resto-product-price {
+    font-size: 1.05rem;
+  }
+
+  .resto-cart-side {
+    position: static;
+    width: 100%;
+    max-height: none;
+    padding: 1rem;
+    overflow: visible;
+  }
+
+  .resto-cart-info,
+  .resto-cart-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .resto-cart-item-controls {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .resto-cart-actions {
+    width: 100%;
+  }
+
+  .resto-cart-actions button {
+    width: 100%;
+  }
+
+  .resto-order-options .form-row > div {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .resto-receipt {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .receipt-header,
+  .receipt-item {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* Tableaux admin */
+  .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .data-table {
+    min-width: 640px;
+  }
+
+  /* Footer */
+  footer {
+    padding: 1.25rem 1rem;
+    margin-top: 1.5rem;
+  }
+}
+
+/* =========================================================
+   TRÈS PETITS TÉLÉPHONES
+   ========================================================= */
+
+@media (max-width: 480px) {
+  main {
+    padding: 0 0.75rem;
+  }
+
+  .card {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  header h1 {
+    font-size: 1.15rem;
+  }
+
+  header p {
+    font-size: 0.8rem;
+  }
+
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .mode-btn,
+  .resto-category-tab {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .resto-products-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .resto-product-card {
+    padding: 1rem 0.85rem;
+  }
+
+  .stat-item {
+    padding: 1rem;
+  }
+}
