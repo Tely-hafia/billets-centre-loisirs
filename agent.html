@@ -6,7 +6,7 @@
   <title>Centre de loisirs – Poste agent</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body>
+<body class="page-agent">
 
 <header>
   <div class="header-inner">
@@ -126,9 +126,30 @@
         <div id="etu-info" class="result" style="display:none; margin-top:0.5rem;"></div>
       </div>
 
+      <!-- Bloc réservation client -->
+      <div id="reservation-zone" style="margin-bottom:0.8rem; margin-top:0.8rem;">
+        <label class="radio-inline">
+          <input type="checkbox" id="useReservation" />
+          <span>Client avec réservation</span>
+        </label>
+
+        <div id="reservation-number-zone" style="display:none; margin-top:0.8rem;">
+          <label for="reservationNumber">Numéro de réservation :</label><br />
+          <input
+            type="text"
+            id="reservationNumber"
+            placeholder="Ex : RES-0526-0001"
+            style="max-width:320px;"
+          />
+          <p class="status" style="margin-top:0.35rem;">
+            Saisir le numéro de réservation présenté par le client.
+          </p>
+        </div>
+      </div>
+
       <!-- Numéro de billet -->
       <div style="margin-bottom:0.8rem;">
-        <label for="ticketNumber">Numéro du billet :</label><br />
+        <label for="ticketNumber">Numéro du billet à attribuer :</label><br />
         <input
           type="text"
           id="ticketNumber"
@@ -144,100 +165,100 @@
       <div id="result-message" class="result" style="display:none;"></div>
     </section>
 
-        <!-- MODE 2 : Restauration / Chicha - NOUVELLE VERSION -->
-<section class="card" id="mode-resto" style="display:none;">
-  <h2>🍽️ Restauration / Chicha</h2>
+    <!-- MODE 2 : Restauration / Chicha -->
+    <section class="card" id="mode-resto" style="display:none;">
+      <h2>🍽️ Restauration / Chicha</h2>
 
-  <div class="resto-container">
-    <!-- Colonne gauche : Produits -->
-    <div class="resto-products-side">
-      <!-- Onglets Catégories -->
-      <div class="resto-categories-tabs" id="restoCategoriesTabs">
-        <!-- Rempli dynamiquement par JS -->
-      </div>
+      <div class="resto-container">
+        <!-- Colonne gauche : Produits -->
+        <div class="resto-products-side">
+          <!-- Onglets Catégories -->
+          <div class="resto-categories-tabs" id="restoCategoriesTabs">
+            <!-- Rempli dynamiquement par JS -->
+          </div>
 
-      <!-- Grille des Produits -->
-      <div class="resto-products-grid" id="restoProductsGrid">
-        <!-- Rempli dynamiquement par JS -->
-        <div class="resto-loading">Chargement du menu...</div>
-      </div>
-    </div>
-
-    <!-- Colonne droite : Panier -->
-    <div class="resto-cart-side">
-      <div class="resto-cart-header">
-        <h3>🛒 Panier en cours</h3>
-        <div class="resto-cart-info">
-          <span id="restoCartCount">0 article(s)</span>
-          <span id="restoCartTotal">0 GNF</span>
-        </div>
-      </div>
-
-      <!-- Liste des articles du panier -->
-      <div class="resto-cart-items" id="restoCartItems">
-        <div class="resto-cart-empty">Panier vide</div>
-      </div>
-
-      <!-- Options de commande -->
-      <div class="resto-order-options">
-        <div class="form-row">
-          <label>Type de commande :</label>
-          <div style="display:flex; gap:1rem;">
-            <label class="radio-inline">
-              <input type="radio" name="orderType" value="sur_place" checked />
-              <span>Sur place</span>
-            </label>
-            <label class="radio-inline">
-              <input type="radio" name="orderType" value="a_emporter" />
-              <span>À emporter</span>
-            </label>
+          <!-- Grille des Produits -->
+          <div class="resto-products-grid" id="restoProductsGrid">
+            <!-- Rempli dynamiquement par JS -->
+            <div class="resto-loading">Chargement du menu...</div>
           </div>
         </div>
 
-        <div class="form-row">
-          <label for="restoOrderNotes">Notes spéciales :</label>
-          <textarea 
-            id="restoOrderNotes" 
-            placeholder="Sans oignons, supplément sauce..." 
-            rows="2"
-            style="width:100%; padding:0.75rem; border:1px solid var(--border-soft); border-radius:var(--radius-md);"
-          ></textarea>
+        <!-- Colonne droite : Panier -->
+        <div class="resto-cart-side">
+          <div class="resto-cart-header">
+            <h3>🛒 Panier en cours</h3>
+            <div class="resto-cart-info">
+              <span id="restoCartCount">0 article(s)</span>
+              <span id="restoCartTotal">0 GNF</span>
+            </div>
+          </div>
+
+          <!-- Liste des articles du panier -->
+          <div class="resto-cart-items" id="restoCartItems">
+            <div class="resto-cart-empty">Panier vide</div>
+          </div>
+
+          <!-- Options de commande -->
+          <div class="resto-order-options">
+            <div class="form-row">
+              <label>Type de commande :</label>
+              <div style="display:flex; gap:1rem;">
+                <label class="radio-inline">
+                  <input type="radio" name="orderType" value="sur_place" checked />
+                  <span>Sur place</span>
+                </label>
+                <label class="radio-inline">
+                  <input type="radio" name="orderType" value="a_emporter" />
+                  <span>À emporter</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="restoOrderNotes">Notes spéciales :</label>
+              <textarea 
+                id="restoOrderNotes" 
+                placeholder="Sans oignons, supplément sauce..." 
+                rows="2"
+                style="width:100%; padding:0.75rem; border:1px solid var(--border-soft); border-radius:var(--radius-md);"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Actions du panier -->
+          <div class="resto-cart-actions">
+            <button id="btnRestoValider" type="button" class="btn-primary" disabled>
+              ✅ Valider la commande
+            </button>
+            <button id="btnRestoVider" type="button" class="btn-danger">
+              🗑️ Vider le panier
+            </button>
+          </div>
+
+          <!-- Reçu après validation -->
+          <div id="restoReceipt" class="resto-receipt" style="display:none;">
+            <div class="receipt-header">
+              <h4>📋 Reçu de commande</h4>
+              <strong id="receiptNumber">V-001</strong>
+            </div>
+            <div class="receipt-content" id="receiptContent">
+              <!-- Contenu du reçu -->
+            </div>
+            <button id="btnRestoImprimer" type="button" class="btn-primary">
+              🖨️ Imprimer le reçu
+            </button>
+            <button id="btnRestoNouvelleCommande" type="button" class="btn-secondary">
+              🆕 Nouvelle commande
+            </button>
+          </div>
+
         </div>
       </div>
 
-      <!-- Actions du panier -->
-      <div class="resto-cart-actions">
-        <button id="btnRestoValider" type="button" class="btn-primary" disabled>
-          ✅ Valider la commande
-        </button>
-        <button id="btnRestoVider" type="button" class="btn-danger">
-          🗑️ Vider le panier
-        </button>
-      </div>
-
-      <!-- Reçu après validation -->
-      <div id="restoReceipt" class="resto-receipt" style="display:none;">
-  <div class="receipt-header">
-    <h4>📋 Reçu de commande</h4>
-    <strong id="receiptNumber">V-001</strong>
-  </div>
-  <div class="receipt-content" id="receiptContent">
-    <!-- Contenu du reçu -->
-  </div>
-  <button id="btnRestoImprimer" type="button" class="btn-primary">
-    🖨️ Imprimer le reçu
-  </button>
-  <button id="btnRestoNouvelleCommande" type="button" class="btn-secondary">
-    🆕 Nouvelle commande
-  </button>
-</div>
-
-    </div>
-  </div>
-
-  <!-- Message résultat -->
-  <div id="restoResult" class="result" style="margin-top:1rem; display:none;"></div>
-</section>
+      <!-- Message résultat -->
+      <div id="restoResult" class="result" style="margin-top:1rem; display:none;"></div>
+    </section>
 
   </div>
 
@@ -249,8 +270,8 @@
 
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-<!-- Script agent (version forcée pour recharger) -->
-<script src="js/agent-appwrite.js?v=4"></script>
+<!-- Script agent -->
+<script src="js/agent-appwrite.js?v=5"></script>
 
 </body>
 </html>
