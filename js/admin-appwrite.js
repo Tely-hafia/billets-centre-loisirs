@@ -1,4 +1,4 @@
-console.log("[ADMIN] admin-appwrite.js chargé");
+console.log("[ADMIN] admin-appwrite.js chargé - VERSION AVEC HISTORIQUE RESERVATIONS");
 
 // =====================================
 //  Configuration Appwrite
@@ -8,15 +8,17 @@ const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
 const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
 
-const APPWRITE_BILLETS_TABLE_ID = "billets";                 // billets d'entrée
-const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne"; // billets jeux internes
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";         // historique validations
-const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";             // étudiants
-const APPWRITE_AGENTS_TABLE_ID = "agents";                   // agents
+const APPWRITE_BILLETS_TABLE_ID = "billets";
+const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne";
+const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
+const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
+const APPWRITE_AGENTS_TABLE_ID = "agents";
 
-// resto
 const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
 const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
+
+// ✅ Réservations accueil
+const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
 
 // =====================================
 //  Initialisation du client Appwrite
@@ -49,12 +51,34 @@ function getImportType() {
   return r ? r.value : "entree";
 }
 
+function formatDateFR(value) {
+  if (!value) return "-";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+
+  return d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+}
+
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 // =====================================
 //  ÉTAT GLOBAL ADMIN
 // =====================================
 
 let currentAdmin = null;
-let adminCurrentMode = "saisie"; // "saisie" ou "gestion"
+let adminCurrentMode = "saisie";
 
 // =====================================
 //  UI Connexion Admin
@@ -63,6 +87,7 @@ let adminCurrentMode = "saisie"; // "saisie" ou "gestion"
 function showAdminLoginMessage(text, type) {
   const el = $("admin-login-message");
   if (!el) return;
+
   el.textContent = text || "";
   el.style.color =
     type === "success" ? "#16a34a" :
@@ -80,20 +105,19 @@ function appliquerEtatConnexionAdmin(admin) {
 
   if (admin) {
     if (loginCard) loginCard.style.display = "none";
-    if (appZone)   appZone.style.display   = "block";
+    if (appZone) appZone.style.display = "block";
 
     if (nameEl) nameEl.textContent = admin.nom || admin.login || "";
     if (roleEl) roleEl.textContent = admin.role || "";
 
-    // Mode par défaut : saisie
     switchAdminMode("saisie");
 
-    // Charger les stats par défaut (semaine en cours)
     chargerStatsBillets();
     chargerStatsResto();
+    chargerHistoriqueReservations();
   } else {
     if (loginCard) loginCard.style.display = "block";
-    if (appZone)   appZone.style.display   = "none";
+    if (appZone) appZone.style.display = "none";
 
     if (nameEl) nameEl.textContent = "";
     if (roleEl) roleEl.textContent = "";
@@ -103,7 +127,7 @@ function appliquerEtatConnexionAdmin(admin) {
 }
 
 async function adminLogin() {
-  const login    = $("adminLogin")?.value.trim();
+  const login = $("adminLogin")?.value.trim();
   const password = $("adminPassword")?.value.trim();
 
   if (!login || !password) {
@@ -130,7 +154,7 @@ async function adminLogin() {
       return;
     }
 
-    const agent   = res.documents[0];
+    const agent = res.documents[0];
     const roleStr = (agent.role || "").toLowerCase();
 
     if (!roleStr.includes("admin")) {
@@ -142,7 +166,7 @@ async function adminLogin() {
     appliquerEtatConnexionAdmin(agent);
   } catch (err) {
     console.error("[ADMIN] Erreur connexion admin :", err);
-    showAdminLoginMessage("Erreur lors de la connexion (voir console).", "error");
+    showAdminLoginMessage("Erreur lors de la connexion.", "error");
   }
 }
 
@@ -151,22 +175,26 @@ function adminLogout() {
 }
 
 // =====================================
-//  SWITCH MODE (Saisie / Gestion)
+//  SWITCH MODE
 // =====================================
 
 function switchAdminMode(mode) {
   adminCurrentMode = mode;
 
-  const btnSaisie   = $("btnAdminModeSaisie");
-  const btnGestion  = $("btnAdminModeGestion");
-  const zoneSaisie  = $("admin-zone-saisie");
+  const btnSaisie = $("btnAdminModeSaisie");
+  const btnGestion = $("btnAdminModeGestion");
+  const zoneSaisie = $("admin-zone-saisie");
   const zoneGestion = $("admin-zone-gestion");
 
-  if (btnSaisie)  btnSaisie.classList.toggle("active", mode === "saisie");
+  if (btnSaisie) btnSaisie.classList.toggle("active", mode === "saisie");
   if (btnGestion) btnGestion.classList.toggle("active", mode === "gestion");
 
-  if (zoneSaisie)  zoneSaisie.style.display  = mode === "saisie"  ? "block" : "none";
+  if (zoneSaisie) zoneSaisie.style.display = mode === "saisie" ? "block" : "none";
   if (zoneGestion) zoneGestion.style.display = mode === "gestion" ? "block" : "none";
+
+  if (mode === "gestion") {
+    chargerHistoriqueReservations();
+  }
 }
 
 // =====================================
@@ -175,18 +203,19 @@ function switchAdminMode(mode) {
 
 async function importerCSVDansBillets(file) {
   const status = $("importStatus");
+
   if (!file) {
     if (status) status.textContent = "Veuillez choisir un fichier CSV.";
     return;
   }
 
-  const typeImport = getImportType(); // "entree" ou "interne"
+  const typeImport = getImportType();
   console.log("[ADMIN] Import type =", typeImport);
 
   const reader = new FileReader();
 
   reader.onload = async (e) => {
-    const text   = e.target.result;
+    const text = e.target.result;
     const lignes = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
     if (lignes.length <= 1) {
@@ -200,17 +229,14 @@ async function importerCSVDansBillets(file) {
     let count = 0;
 
     if (typeImport === "entree") {
-      // ======== BILLETS D'ENTRÉE ========
-      const idxNumero   = header.indexOf("numero_billet");
-      const idxType     = header.indexOf("type_acces");
-      const idxPrix     = header.indexOf("prix");
+      const idxNumero = header.indexOf("numero_billet");
+      const idxType = header.indexOf("type_acces");
+      const idxPrix = header.indexOf("prix");
       const idxTarifUni = header.indexOf("tarif_universite");
-      const idxStatut   = header.indexOf("statut");
+      const idxStatut = header.indexOf("statut");
 
       if (idxNumero === -1 || idxType === -1) {
-        alert(
-          "Pour les billets d'entrée, le CSV doit contenir au minimum : numero_billet;type_acces"
-        );
+        alert("Pour les billets d'entrée, le CSV doit contenir au minimum : numero_billet;type_acces");
         return;
       }
 
@@ -218,16 +244,19 @@ async function importerCSVDansBillets(file) {
         const cols = lignes[i].split(";");
         if (!cols[idxNumero]) continue;
 
-        const numero    = cols[idxNumero].trim();
+        const numero = cols[idxNumero].trim();
         const typeAcces = cols[idxType] ? cols[idxType].trim() : "";
+
         if (!numero || !typeAcces) continue;
 
         const prix =
           idxPrix !== -1 ? parseInt(cols[idxPrix].trim() || "0", 10) || 0 : 0;
+
         const tarifUni =
           idxTarifUni !== -1
             ? parseInt(cols[idxTarifUni].trim() || "0", 10) || 0
             : 0;
+
         const statut =
           idxStatut !== -1 && cols[idxStatut]
             ? cols[idxStatut].trim()
@@ -236,9 +265,9 @@ async function importerCSVDansBillets(file) {
         const doc = {
           numero_billet: numero,
           type_acces: typeAcces,
-          prix: prix,
+          prix,
           tarif_universite: tarifUni,
-          statut: statut
+          statut
         };
 
         try {
@@ -255,17 +284,13 @@ async function importerCSVDansBillets(file) {
       }
 
       alert(`Import billets d'entrée terminé : ${count} billets créés.`);
-
     } else {
-      // ======== BILLETS INTERNES (JEUX) ========
-      const idxNumero    = header.indexOf("numero_billet");
-      const idxTypeBillet= header.indexOf("type_billet");
-      const idxPrix      = header.indexOf("prix");
+      const idxNumero = header.indexOf("numero_billet");
+      const idxTypeBillet = header.indexOf("type_billet");
+      const idxPrix = header.indexOf("prix");
 
       if (idxNumero === -1 || idxTypeBillet === -1) {
-        alert(
-          "Pour les billets internes, le CSV doit contenir au minimum : numero_billet;type_billet"
-        );
+        alert("Pour les billets internes, le CSV doit contenir au minimum : numero_billet;type_billet");
         return;
       }
 
@@ -273,8 +298,9 @@ async function importerCSVDansBillets(file) {
         const cols = lignes[i].split(";");
         if (!cols[idxNumero]) continue;
 
-        const numero    = cols[idxNumero].trim();
-        const typeBillet= cols[idxTypeBillet] ? cols[idxTypeBillet].trim() : "";
+        const numero = cols[idxNumero].trim();
+        const typeBillet = cols[idxTypeBillet] ? cols[idxTypeBillet].trim() : "";
+
         if (!numero || !typeBillet) continue;
 
         const prix =
@@ -283,7 +309,7 @@ async function importerCSVDansBillets(file) {
         const doc = {
           numero_billet: numero,
           type_billet: typeBillet,
-          prix: prix,
+          prix,
           statut: "Non utilisé"
         };
 
@@ -311,7 +337,117 @@ async function importerCSVDansBillets(file) {
 }
 
 // =====================================
-//  2. STATS : gestion de la période
+//  2. HISTORIQUE RESERVATIONS
+// =====================================
+
+function showReservationHistoryMessage(text, type = "info") {
+  const msg = $("reservations-history-message");
+  if (!msg) return;
+
+  msg.style.display = "block";
+  msg.textContent = text;
+  msg.className = "message message-" + type;
+}
+
+function clearReservationHistoryMessage() {
+  const msg = $("reservations-history-message");
+  if (!msg) return;
+
+  msg.style.display = "none";
+  msg.textContent = "";
+  msg.className = "message";
+}
+
+async function chargerHistoriqueReservations() {
+  const tbody = $("reservations-history-body");
+  const filter = $("reservationFilter")?.value || "all";
+
+  if (!tbody) return;
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="6">Chargement des réservations...</td>
+    </tr>
+  `;
+
+  clearReservationHistoryMessage();
+
+  try {
+    const queries = [
+      Appwrite.Query.orderDesc("$createdAt"),
+      Appwrite.Query.limit(100)
+    ];
+
+    if (filter === "active") {
+      queries.unshift(Appwrite.Query.equal("actif", true));
+    } else if (filter === "used") {
+      queries.unshift(Appwrite.Query.equal("actif", false));
+    }
+
+    const res = await adminDB.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_RESERVATION_COLLECTION_ID,
+      queries
+    );
+
+    const docs = res.documents || [];
+
+    if (docs.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6">Aucune réservation trouvée.</td>
+        </tr>
+      `;
+      showReservationHistoryMessage("Aucune réservation pour ce filtre.", "info");
+      return;
+    }
+
+    tbody.innerHTML = docs.map((r) => {
+      const numero = escapeHTML(r.numero_reservation || "-");
+      const client = escapeHTML(`${r.prenom || ""} ${r.nom || ""}`.trim() || "-");
+      const tel = escapeHTML(r.telephone || "-");
+      const activite = escapeHTML(r.activite || "-");
+      const date = formatDateFR(r.date_reservation);
+      const active = r.actif !== false;
+
+      return `
+        <tr>
+          <td><strong>${numero}</strong></td>
+          <td>${client}</td>
+          <td>${tel}</td>
+          <td>${activite}</td>
+          <td>${date}</td>
+          <td>
+            <span class="${active ? "badge-success" : "badge-muted"}">
+              ${active ? "Active" : "Utilisée / désactivée"}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    showReservationHistoryMessage(
+      `${docs.length} réservation(s) affichée(s).`,
+      "success"
+    );
+  } catch (err) {
+    console.error("[ADMIN] Erreur chargement réservations :", err);
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">Erreur lors du chargement.</td>
+      </tr>
+    `;
+
+    showReservationHistoryMessage(
+      "Erreur lors du chargement des réservations.",
+      "error"
+    );
+  }
+}
+
+// =====================================
+//  3. STATS : gestion de la période
 // =====================================
 
 function getSelectedPeriod() {
@@ -322,30 +458,29 @@ function getSelectedPeriod() {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   let start = new Date(today);
-  let end   = new Date(today);
-  end.setDate(end.getDate() + 1); // exclusif
+  let end = new Date(today);
+  end.setDate(end.getDate() + 1);
 
   if (mode === "week") {
-    const day = today.getDay();      // 0 = dimanche
-    const diff = (day + 6) % 7;      // lundi = 0
+    const day = today.getDay();
+    const diff = (day + 6) % 7;
     start = new Date(today);
     start.setDate(today.getDate() - diff);
     end = new Date(start);
     end.setDate(start.getDate() + 7);
   } else if (mode === "month") {
     start = new Date(today.getFullYear(), today.getMonth(), 1);
-    end   = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    end = new Date(today.getFullYear(), today.getMonth() + 1, 1);
   } else if (mode === "custom") {
     const startInput = $("statsStartDate");
-    const endInput   = $("statsEndDate");
+    const endInput = $("statsEndDate");
 
     if (!startInput?.value || !endInput?.value) {
       return { error: "custom-missing" };
     }
 
     start = new Date(startInput.value + "T00:00:00");
-    end   = new Date(endInput.value + "T00:00:00");
-    // inclure le jour de fin
+    end = new Date(endInput.value + "T00:00:00");
     end.setDate(end.getDate() + 1);
   }
 
@@ -353,11 +488,12 @@ function getSelectedPeriod() {
 }
 
 // =====================================
-//  3. STATS BILLETS (validations)
+//  4. STATS BILLETS
 // =====================================
 
 async function chargerStatsBillets() {
   const msg = $("stats-message-billets");
+
   if (msg) {
     msg.style.display = "block";
     msg.textContent = "Chargement des stats billets...";
@@ -365,10 +501,11 @@ async function chargerStatsBillets() {
   }
 
   const period = getSelectedPeriod();
+
   if (period.error === "custom-missing") {
     if (msg) {
       msg.style.display = "block";
-      msg.textContent = "Veuillez choisir une période personnalisée (du / au).";
+      msg.textContent = "Veuillez choisir une période personnalisée.";
       msg.className = "message message-warning";
     }
     return;
@@ -376,7 +513,7 @@ async function chargerStatsBillets() {
 
   const { start, end } = period;
   const startIso = start.toISOString();
-  const endIso   = end.toISOString();
+  const endIso = end.toISOString();
 
   try {
     const res = await adminDB.listDocuments(
@@ -390,73 +527,53 @@ async function chargerStatsBillets() {
     );
 
     const docs = res.documents || [];
-    console.log("[ADMIN] Validations récupérées (période) :", docs.length);
 
     const totalValidations = docs.length;
 
-    let recetteTotale   = 0;
-    let recetteNormal   = 0;
+    let recetteTotale = 0;
+    let recetteNormal = 0;
     let recetteEtudiant = 0;
 
-    const parType = {}; // { type_acces: { count, montant } }
+    const parType = {};
 
     docs.forEach((d) => {
       const montant = parseInt(d.montant_paye || 0, 10) || 0;
       recetteTotale += montant;
 
-      if (d.tarif_applique === "normal") {
-        recetteNormal += montant;
-      } else if (d.tarif_applique === "etudiant") {
-        recetteEtudiant += montant;
-      }
+      if (d.tarif_applique === "normal") recetteNormal += montant;
+      else if (d.tarif_applique === "etudiant") recetteEtudiant += montant;
 
       const type = d.type_acces || "Non renseigné";
-      if (!parType[type]) {
-        parType[type] = { count: 0, montant: 0 };
-      }
-      parType[type].count   += 1;
+      if (!parType[type]) parType[type] = { count: 0, montant: 0 };
+
+      parType[type].count += 1;
       parType[type].montant += montant;
     });
 
-    const elCount  = $("stat-validations-count");
-    const elTotal  = $("stat-revenue-total");
-    const elNormal = $("stat-revenue-normal");
-    const elEtu    = $("stat-revenue-etudiant");
-
-    if (elCount)  elCount.textContent  = totalValidations.toString();
-    if (elTotal)  elTotal.textContent  = formatGNF(recetteTotale);
-    if (elNormal) elNormal.textContent = formatGNF(recetteNormal);
-    if (elEtu)    elEtu.textContent    = formatGNF(recetteEtudiant);
+    if ($("stat-validations-count")) $("stat-validations-count").textContent = totalValidations.toString();
+    if ($("stat-revenue-total")) $("stat-revenue-total").textContent = formatGNF(recetteTotale);
+    if ($("stat-revenue-normal")) $("stat-revenue-normal").textContent = formatGNF(recetteNormal);
+    if ($("stat-revenue-etudiant")) $("stat-revenue-etudiant").textContent = formatGNF(recetteEtudiant);
 
     const tbody = $("stats-type-body");
+
     if (tbody) {
-      tbody.innerHTML = "";
-
       const types = Object.keys(parType);
+
       if (types.length === 0) {
-        const row = document.createElement("tr");
-        const td  = document.createElement("td");
-        td.colSpan    = 3;
-        td.textContent= "Aucune validation pour cette période.";
-        row.appendChild(td);
-        tbody.appendChild(row);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3">Aucune validation pour cette période.</td>
+          </tr>
+        `;
       } else {
-        types.forEach((type) => {
-          const row = document.createElement("tr");
-
-          const tdType    = document.createElement("td");
-          const tdCount   = document.createElement("td");
-          const tdMontant = document.createElement("td");
-
-          tdType.textContent    = type;
-          tdCount.textContent   = parType[type].count.toString();
-          tdMontant.textContent = formatGNF(parType[type].montant);
-
-          row.appendChild(tdType);
-          row.appendChild(tdCount);
-          row.appendChild(tdMontant);
-          tbody.appendChild(row);
-        });
+        tbody.innerHTML = types.map((type) => `
+          <tr>
+            <td>${escapeHTML(type)}</td>
+            <td>${parType[type].count}</td>
+            <td>${formatGNF(parType[type].montant)}</td>
+          </tr>
+        `).join("");
       }
     }
 
@@ -467,16 +584,17 @@ async function chargerStatsBillets() {
     }
   } catch (err) {
     console.error("[ADMIN] Erreur chargement stats billets :", err);
+
     if (msg) {
       msg.style.display = "block";
-      msg.textContent = "Erreur lors du chargement des stats billets (voir console).";
+      msg.textContent = "Erreur lors du chargement des stats billets.";
       msg.className = "message message-error";
     }
   }
 }
 
 // =====================================
-//  4. STATS RESTAURATION
+//  5. STATS RESTAURATION
 // =====================================
 
 let restoMenuCache = null;
@@ -490,6 +608,7 @@ async function chargerMenuRestoPourStats() {
       APPWRITE_MENU_RESTO_COLLECTION_ID,
       [Appwrite.Query.limit(200)]
     );
+
     restoMenuCache = res.documents || [];
     return restoMenuCache;
   } catch (err) {
@@ -501,6 +620,7 @@ async function chargerMenuRestoPourStats() {
 
 async function chargerStatsResto() {
   const msg = $("stats-message-resto");
+
   if (msg) {
     msg.style.display = "block";
     msg.textContent = "Chargement des stats restauration...";
@@ -508,10 +628,11 @@ async function chargerStatsResto() {
   }
 
   const period = getSelectedPeriod();
+
   if (period.error === "custom-missing") {
     if (msg) {
       msg.style.display = "block";
-      msg.textContent = "Veuillez choisir une période personnalisée (du / au).";
+      msg.textContent = "Veuillez choisir une période personnalisée.";
       msg.className = "message message-warning";
     }
     return;
@@ -519,7 +640,7 @@ async function chargerStatsResto() {
 
   const { start, end } = period;
   const startIso = start.toISOString();
-  const endIso   = end.toISOString();
+  const endIso = end.toISOString();
 
   try {
     const res = await adminDB.listDocuments(
@@ -533,14 +654,12 @@ async function chargerStatsResto() {
     );
 
     const docs = res.documents || [];
-    console.log("[ADMIN] Ventes resto récupérées (période) :", docs.length);
 
-    // stats globales
     const numeros = new Set();
     let totalPlats = 0;
     let totalMontant = 0;
 
-    const parProduit = {}; // { code_produit: { qte, montant } }
+    const parProduit = {};
 
     docs.forEach((d) => {
       const numeroVente = d.numero_vente || d.$id;
@@ -553,60 +672,43 @@ async function chargerStatsResto() {
       totalMontant += montant;
 
       const code = d.code_produit || "N/A";
-      if (!parProduit[code]) {
-        parProduit[code] = { qte: 0, montant: 0 };
-      }
-      parProduit[code].qte     += qte;
+      if (!parProduit[code]) parProduit[code] = { qte: 0, montant: 0 };
+
+      parProduit[code].qte += qte;
       parProduit[code].montant += montant;
     });
 
-    const elTickets = $("stat-resto-tickets");
-    const elPlats   = $("stat-resto-plates");
-    const elTotal   = $("stat-resto-total");
+    if ($("stat-resto-tickets")) $("stat-resto-tickets").textContent = numeros.size.toString();
+    if ($("stat-resto-plates")) $("stat-resto-plates").textContent = totalPlats.toString();
+    if ($("stat-resto-total")) $("stat-resto-total").textContent = formatGNF(totalMontant);
 
-    if (elTickets) elTickets.textContent = numeros.size.toString();
-    if (elPlats)   elPlats.textContent   = totalPlats.toString();
-    if (elTotal)   elTotal.textContent   = formatGNF(totalMontant);
-
-    // Détail par produit (avec libellé depuis menu_resto)
     const menu = await chargerMenuRestoPourStats();
     const libellesByCode = {};
+
     menu.forEach((p) => {
       libellesByCode[p.code_produit] = p.libelle || p.code_produit;
     });
 
     const tbody = $("stats-resto-body");
+
     if (tbody) {
-      tbody.innerHTML = "";
-
       const codes = Object.keys(parProduit);
+
       if (codes.length === 0) {
-        const row = document.createElement("tr");
-        const td  = document.createElement("td");
-        td.colSpan    = 4;
-        td.textContent= "Aucune vente restauration pour cette période.";
-        row.appendChild(td);
-        tbody.appendChild(row);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4">Aucune vente restauration pour cette période.</td>
+          </tr>
+        `;
       } else {
-        codes.forEach((code) => {
-          const row = document.createElement("tr");
-
-          const tdCode   = document.createElement("td");
-          const tdLib    = document.createElement("td");
-          const tdQte    = document.createElement("td");
-          const tdMontant= document.createElement("td");
-
-          tdCode.textContent = code;
-          tdLib.textContent  = libellesByCode[code] || "";
-          tdQte.textContent  = parProduit[code].qte.toString();
-          tdMontant.textContent = formatGNF(parProduit[code].montant);
-
-          row.appendChild(tdCode);
-          row.appendChild(tdLib);
-          row.appendChild(tdQte);
-          row.appendChild(tdMontant);
-          tbody.appendChild(row);
-        });
+        tbody.innerHTML = codes.map((code) => `
+          <tr>
+            <td>${escapeHTML(code)}</td>
+            <td>${escapeHTML(libellesByCode[code] || "")}</td>
+            <td>${parProduit[code].qte}</td>
+            <td>${formatGNF(parProduit[code].montant)}</td>
+          </tr>
+        `).join("");
       }
     }
 
@@ -617,31 +719,33 @@ async function chargerStatsResto() {
     }
   } catch (err) {
     console.error("[ADMIN] Erreur chargement stats restauration :", err);
+
     if (msg) {
       msg.style.display = "block";
-      msg.textContent = "Erreur lors du chargement des stats restauration (voir console).";
+      msg.textContent = "Erreur lors du chargement des stats restauration.";
       msg.className = "message message-error";
     }
   }
 }
 
 // =====================================
-//  5. Nettoyage des BILLETS (pas validations)
+//  6. Nettoyage des BILLETS
 // =====================================
 
 async function effacerTousLesBillets() {
   const ok = confirm(
-    "CONFIRMATION : effacer TOUS les billets d'entrée ET les billets internes ?\n(Les validations NE seront PAS effacées.)"
+    "CONFIRMATION : effacer TOUS les billets d'entrée ET les billets internes ?\nLes validations NE seront PAS effacées."
   );
+
   if (!ok) return;
 
   try {
-    // billets d'entrée
     const billetsRes = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_TABLE_ID,
       [Appwrite.Query.limit(10000)]
     );
+
     const billets = billetsRes.documents || [];
 
     for (const b of billets) {
@@ -656,12 +760,12 @@ async function effacerTousLesBillets() {
       }
     }
 
-    // billets internes
     const biRes = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_BILLETS_INTERNE_TABLE_ID,
       [Appwrite.Query.limit(10000)]
     );
+
     const billetsInt = biRes.documents || [];
 
     for (const bi of billetsInt) {
@@ -676,26 +780,16 @@ async function effacerTousLesBillets() {
       }
     }
 
-    alert(
-      "Tous les billets (entrée + internes) ont été supprimés.\nLes validations sont conservées."
-    );
-    console.log(
-      "[ADMIN] Nettoyage billets terminé. Entrée:",
-      billets.length,
-      "Internes:",
-      billetsInt.length
-    );
+    alert("Tous les billets ont été supprimés. Les validations sont conservées.");
   } catch (err) {
     console.error("[ADMIN] Erreur lors du nettoyage des billets :", err);
-    alert("Erreur lors du nettoyage (voir console).");
+    alert("Erreur lors du nettoyage.");
   }
 }
 
 // =====================================
-//  6. SAISIE : étudiants & agents
+//  7. SAISIE : étudiants & agents
 // =====================================
-
-// --- Messages formulaires ---
 
 function showAdminEtuMessage(text, type) {
   const msg = $("admin-etu-message");
@@ -706,16 +800,12 @@ function showAdminEtuMessage(text, type) {
   }
 
   msg.style.display = "block";
-  msg.textContent   = text;
-  msg.className     = "message";
+  msg.textContent = text;
+  msg.className = "message";
 
-  if (type === "success") {
-    msg.classList.add("message-success");
-  } else if (type === "error") {
-    msg.classList.add("message-error");
-  } else {
-    msg.classList.add("message-info");
-  }
+  if (type === "success") msg.classList.add("message-success");
+  else if (type === "error") msg.classList.add("message-error");
+  else msg.classList.add("message-info");
 }
 
 function showAdminAgentMessage(text, type) {
@@ -723,25 +813,21 @@ function showAdminAgentMessage(text, type) {
   if (!msg) return;
 
   msg.textContent = text;
-  msg.className   = "status";
+  msg.className = "status";
 
   if (type === "success") msg.style.color = "#16a34a";
   else if (type === "error") msg.style.color = "#b91c1c";
   else msg.style.color = "#6b7280";
 }
 
-// --- Génère un numéro étudiant de la forme UNIV-XX-1234 ---
-
 function genererNumeroEtudiant(universite) {
   const clean = (universite || "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")  // enlève les accents
+    .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase()
-    .replace(/[^A-Z]/g, "");          // garde seulement les lettres
+    .replace(/[^A-Z]/g, "");
 
   const codeEcole = clean.slice(0, 2) || "XX";
-
-  // 4 chiffres aléatoires entre 1000 et 9999
   const randomDigits = Math.floor(1000 + Math.random() * 9000);
 
   return `UNIV-${codeEcole}-${randomDigits}`;
@@ -749,38 +835,32 @@ function genererNumeroEtudiant(universite) {
 
 async function creerEtudiantDepuisAdmin() {
   const univEl = $("admin-etu-universite");
-  const nomEl  = $("admin-etu-nom");
-  const preEl  = $("admin-etu-prenom");
+  const nomEl = $("admin-etu-nom");
+  const preEl = $("admin-etu-prenom");
   const mailEl = $("admin-etu-email");
-  const telEl  = $("admin-etu-telephone");
-  const actEl  = $("admin-etu-actif");
+  const telEl = $("admin-etu-telephone");
+  const actEl = $("admin-etu-actif");
 
   if (!univEl || !nomEl || !preEl) {
-    console.error("[ADMIN] Formulaire étudiant mal configuré dans le HTML.");
-    alert("Problème de configuration du formulaire étudiant (voir console).");
+    alert("Problème de configuration du formulaire étudiant.");
     return;
   }
 
   const universite = univEl.value.trim();
-  const nom        = nomEl.value.trim();
-  const prenom     = preEl.value.trim();
-  const email      = (mailEl?.value || "").trim();
-  const telephone  = (telEl?.value || "").trim();
-  const actif      = !!(actEl && actEl.checked);
+  const nom = nomEl.value.trim();
+  const prenom = preEl.value.trim();
+  const email = (mailEl?.value || "").trim();
+  const telephone = (telEl?.value || "").trim();
+  const actif = !!(actEl && actEl.checked);
 
   if (!universite || !nom || !prenom) {
-    showAdminEtuMessage(
-      "Veuillez remplir au minimum université, nom et prénom.",
-      "error"
-    );
+    showAdminEtuMessage("Veuillez remplir au minimum université, nom et prénom.", "error");
     return;
   }
 
   const numero = genererNumeroEtudiant(universite);
 
   try {
-    const nowIso = new Date().toISOString();
-
     await adminDB.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_ETUDIANTS_TABLE_ID,
@@ -793,7 +873,7 @@ async function creerEtudiantDepuisAdmin() {
         "e-mail": email || null,
         telephone: telephone || null,
         actif,
-        date_creation: nowIso
+        date_creation: new Date().toISOString()
       }
     );
 
@@ -803,38 +883,32 @@ async function creerEtudiantDepuisAdmin() {
     );
 
     univEl.value = "";
-    nomEl.value  = "";
-    preEl.value  = "";
+    nomEl.value = "";
+    preEl.value = "";
     if (mailEl) mailEl.value = "";
-    if (telEl)  telEl.value  = "";
-    if (actEl)  actEl.checked = true;
+    if (telEl) telEl.value = "";
+    if (actEl) actEl.checked = true;
   } catch (err) {
     console.error("[ADMIN] Erreur création étudiant :", err);
-    showAdminEtuMessage(
-      "Erreur lors de l'enregistrement de l'étudiant (voir console).",
-      "error"
-    );
+    showAdminEtuMessage("Erreur lors de l'enregistrement de l'étudiant.", "error");
   }
 }
 
 async function creerAgentDepuisAdmin() {
   const loginEl = $("admin-agent-login");
-  const pwdEl   = $("admin-agent-password");
-  const nomEl   = $("admin-agent-nom");
-  const roleEl  = $("admin-agent-role");
-  const actEl   = $("admin-agent-actif");
+  const pwdEl = $("admin-agent-password");
+  const nomEl = $("admin-agent-nom");
+  const roleEl = $("admin-agent-role");
+  const actEl = $("admin-agent-actif");
 
   const login = loginEl?.value.trim();
-  const pwd   = pwdEl?.value.trim();
-  const nom   = nomEl?.value.trim() || "";
-  const role  = roleEl?.value.trim();
+  const pwd = pwdEl?.value.trim();
+  const nom = nomEl?.value.trim() || "";
+  const role = roleEl?.value.trim();
   const actif = !!(actEl && actEl.checked);
 
   if (!login || !pwd || !role) {
-    showAdminAgentMessage(
-      "Veuillez remplir au minimum login, mot de passe et rôle.",
-      "error"
-    );
+    showAdminAgentMessage("Veuillez remplir au minimum login, mot de passe et rôle.", "error");
     return;
   }
 
@@ -855,28 +929,24 @@ async function creerAgentDepuisAdmin() {
     showAdminAgentMessage("Agent créé avec succès.", "success");
 
     if (loginEl) loginEl.value = "";
-    if (pwdEl)   pwdEl.value   = "";
-    if (nomEl)   nomEl.value   = "";
-    if (roleEl)  roleEl.value  = "";
-    if (actEl)   actEl.checked = true;
+    if (pwdEl) pwdEl.value = "";
+    if (nomEl) nomEl.value = "";
+    if (roleEl) roleEl.value = "";
+    if (actEl) actEl.checked = true;
   } catch (err) {
     console.error("[ADMIN] Erreur création agent :", err);
-    showAdminAgentMessage(
-      "Erreur lors de la création de l'agent (voir console).",
-      "error"
-    );
+    showAdminAgentMessage("Erreur lors de la création de l'agent.", "error");
   }
 }
 
 // =====================================
-//  7. Initialisation des événements
+//  8. Initialisation des événements
 // =====================================
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[ADMIN] DOMContentLoaded");
 
-  // Connexion admin
-  const btnAdminLogin  = $("btnAdminLogin");
+  const btnAdminLogin = $("btnAdminLogin");
   const btnAdminLogout = $("btnAdminLogout");
 
   if (btnAdminLogin) {
@@ -893,8 +963,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Changement de mode (saisie / gestion)
-  const btnSaisie  = $("btnAdminModeSaisie");
+  const btnSaisie = $("btnAdminModeSaisie");
   const btnGestion = $("btnAdminModeGestion");
 
   if (btnSaisie) {
@@ -903,6 +972,7 @@ document.addEventListener("DOMContentLoaded", () => {
       switchAdminMode("saisie");
     });
   }
+
   if (btnGestion) {
     btnGestion.addEventListener("click", (e) => {
       e.preventDefault();
@@ -910,9 +980,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Import CSV
   const btnImportCsv = $("btnImportCsv");
-  const csvInput     = $("csvFile");
+  const csvInput = $("csvFile");
+
   if (btnImportCsv && csvInput) {
     btnImportCsv.addEventListener("click", (e) => {
       e.preventDefault();
@@ -920,8 +990,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Bouton "Actualiser les stats"
   const refreshStatsBtn = $("refreshStatsBtn");
+
   if (refreshStatsBtn) {
     refreshStatsBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -930,38 +1000,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Sélecteur de période : montrer / cacher les dates personnalisées
   const statsPeriodSelect = $("statsPeriod");
-  const customRange       = $("stats-custom-range");
+  const customRange = $("stats-custom-range");
 
   if (statsPeriodSelect && customRange) {
     const toggleCustomRange = () => {
       customRange.style.display =
         statsPeriodSelect.value === "custom" ? "flex" : "none";
     };
+
     statsPeriodSelect.addEventListener("change", toggleCustomRange);
     toggleCustomRange();
   }
 
-  // Onglets Billets / Restauration
   const billetsPanel = $("stats-billets-panel");
-  const restoPanel   = $("stats-resto-panel");
+  const restoPanel = $("stats-resto-panel");
 
   const modeBillets = $("statsModeBillets");
-  const modeResto   = $("statsModeResto");
+  const modeResto = $("statsModeResto");
 
   const infoBillets = $("stats-info-billets");
-  const infoResto   = $("stats-info-resto");
+  const infoResto = $("stats-info-resto");
 
   const updateStatsMode = () => {
-    const mode =
-      (modeResto && modeResto.checked) ? "resto" : "billets";
+    const mode = modeResto && modeResto.checked ? "resto" : "billets";
 
     if (billetsPanel) billetsPanel.style.display = mode === "billets" ? "block" : "none";
-    if (restoPanel)   restoPanel.style.display   = mode === "resto"   ? "block" : "none";
+    if (restoPanel) restoPanel.style.display = mode === "resto" ? "block" : "none";
 
     if (infoBillets) infoBillets.style.display = mode === "billets" ? "block" : "none";
-    if (infoResto)   infoResto.style.display   = mode === "resto"   ? "block" : "none";
+    if (infoResto) infoResto.style.display = mode === "resto" ? "block" : "none";
   };
 
   if (modeBillets && modeResto) {
@@ -970,8 +1038,24 @@ document.addEventListener("DOMContentLoaded", () => {
     updateStatsMode();
   }
 
-  // Maintenance
+  const btnRefreshReservations = $("btnRefreshReservations");
+  const reservationFilter = $("reservationFilter");
+
+  if (btnRefreshReservations) {
+    btnRefreshReservations.addEventListener("click", (e) => {
+      e.preventDefault();
+      chargerHistoriqueReservations();
+    });
+  }
+
+  if (reservationFilter) {
+    reservationFilter.addEventListener("change", () => {
+      chargerHistoriqueReservations();
+    });
+  }
+
   const clearDataBtn = $("clearDataBtn");
+
   if (clearDataBtn) {
     clearDataBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -979,9 +1063,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Saisie étudiants / agents
   const btnCreateEtudiant = $("btnCreateEtudiant");
-  const btnCreateAgent    = $("btnCreateAgent");
+  const btnCreateAgent = $("btnCreateAgent");
 
   if (btnCreateEtudiant) {
     btnCreateEtudiant.addEventListener("click", (e) => {
@@ -997,6 +1080,5 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Au chargement : pas d'admin connecté
   appliquerEtatConnexionAdmin(null);
 });
