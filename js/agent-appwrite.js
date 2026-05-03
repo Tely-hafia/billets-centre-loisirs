@@ -1,4 +1,4 @@
-console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETE AVEC AFFILIATION RESERVATION");
+console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETE RESERVATION ENTREE UNIQUEMENT");
 
 // ===============================
 //  CONFIG APPWRITE
@@ -47,6 +47,7 @@ function formatMontantGNF(n) {
 function showResult(text, type) {
   const zone = $("result-message");
   if (!zone) return;
+
   zone.style.display = "block";
   zone.textContent = text;
   zone.className = "result";
@@ -59,6 +60,7 @@ function showResult(text, type) {
 function clearResult() {
   const zone = $("result-message");
   if (!zone) return;
+
   zone.style.display = "none";
   zone.textContent = "";
   zone.className = "result";
@@ -121,6 +123,29 @@ function updateTarifEtudiantVisibility() {
   }
 }
 
+function resetReservationForm() {
+  const useReservation = $("useReservation");
+  const reservationNumber = $("reservationNumber");
+  const reservationZone = $("reservation-number-zone");
+
+  if (useReservation) useReservation.checked = false;
+  if (reservationNumber) reservationNumber.value = "";
+  if (reservationZone) reservationZone.style.display = "none";
+}
+
+function updateReservationVisibility() {
+  const reservationZone = $("reservation-zone");
+
+  if (!reservationZone) return;
+
+  if (currentBilletsSubMode === "ENTREE") {
+    reservationZone.style.display = "block";
+  } else {
+    reservationZone.style.display = "none";
+    resetReservationForm();
+  }
+}
+
 function switchMode(mode) {
   currentMode = mode;
 
@@ -163,11 +188,12 @@ function switchBilletsSubMode(mode) {
         "Mode : billets d'entrée. Saisir le numéro du billet attribué au client.";
     } else {
       hint.textContent =
-        "Mode : billets jeux internes. Saisir le numéro du ticket de jeu attribué au client.";
+        "Mode : billets jeux internes. Saisir le numéro du ticket de jeu.";
     }
   }
 
   updateTarifEtudiantVisibility();
+  updateReservationVisibility();
   chargerNombreBillets();
 }
 
@@ -319,7 +345,7 @@ async function chargerNombreBillets() {
 }
 
 // ===============================
-//  RESERVATION : HELPERS
+//  RESERVATION : ENTREE UNIQUEMENT
 // ===============================
 
 function getReservationInfoFromForm() {
@@ -386,26 +412,7 @@ async function verifierReservationDejaLiee(numeroReservation) {
     );
 
     if (resEntree.documents && resEntree.documents.length > 0) {
-      return {
-        collection: "billets",
-        billet: resEntree.documents[0]
-      };
-    }
-
-    const resInterne = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_BILLETS_INTERNE_TABLE_ID,
-      [
-        Appwrite.Query.equal("reservation", numeroReservation),
-        Appwrite.Query.limit(1)
-      ]
-    );
-
-    if (resInterne.documents && resInterne.documents.length > 0) {
-      return {
-        collection: "billets_interne",
-        billet: resInterne.documents[0]
-      };
+      return resEntree.documents[0];
     }
 
     return null;
@@ -419,18 +426,8 @@ async function verifierReservationDejaLiee(numeroReservation) {
   }
 }
 
-function resetReservationForm() {
-  const useReservation = $("useReservation");
-  const reservationNumber = $("reservationNumber");
-  const reservationZone = $("reservation-number-zone");
-
-  if (useReservation) useReservation.checked = false;
-  if (reservationNumber) reservationNumber.value = "";
-  if (reservationZone) reservationZone.style.display = "none";
-}
-
 // ===============================
-//  VALIDATION BILLETS + RESERVATION
+//  VALIDATION BILLETS
 // ===============================
 
 async function verifierBillet() {
@@ -445,12 +442,17 @@ async function verifierBillet() {
   const numeroEtu    = $("etuNumber")?.value.trim();
   const tarifChoisi  = getTarifChoisi();
 
-  const { useReservation, numeroReservation } = getReservationInfoFromForm();
-
   if (!numeroBillet) {
     showResult("Veuillez saisir un numéro de billet.", "error");
     return;
   }
+
+  const reservationInfo = getReservationInfoFromForm();
+
+  const useReservation =
+    currentBilletsSubMode === "ENTREE" && reservationInfo.useReservation;
+
+  const numeroReservation = reservationInfo.numeroReservation;
 
   let reservationDoc = null;
 
@@ -459,18 +461,21 @@ async function verifierBillet() {
     if (!reservationDoc) return;
 
     const dejaLiee = await verifierReservationDejaLiee(numeroReservation);
+
     if (dejaLiee === "ERROR") return;
 
     if (dejaLiee) {
       showResult(
-        `Cette réservation est déjà affiliée au billet ${dejaLiee.billet.numero_billet || ""}.`,
+        `Cette réservation est déjà affiliée au billet ${dejaLiee.numero_billet || ""}.`,
         "error"
       );
       return;
     }
   }
 
-  // ======== MODE ENTREE ========
+  // ==========================
+  // MODE ENTREE
+  // ==========================
   if (currentBilletsSubMode === "ENTREE") {
     let billet;
 
@@ -534,7 +539,7 @@ async function verifierBillet() {
         } catch (errCheck) {
           console.error("[AGENT] Erreur vérification étudiant :", errCheck);
           showResult(
-            "Erreur lors de la vérification du numéro étudiant (voir console).",
+            "Erreur lors de la vérification du numéro étudiant.",
             "error"
           );
           return;
@@ -584,11 +589,12 @@ async function verifierBillet() {
 
       chargerNombreBillets();
     } catch (err) {
-      console.error("[AGENT] ERREUR critique validation billet entrée :", err);
-      showResult("Erreur lors de la vérification (voir console).", "error");
+      console.error("[AGENT] ERREUR validation billet entrée :", err);
+      showResult("Erreur lors de la vérification du billet.", "error");
       return;
     }
 
+    // Journalisation non bloquante
     try {
       const nowIso = new Date().toISOString();
 
@@ -597,31 +603,25 @@ async function verifierBillet() {
       const montantPaye =
         tarifChoisi === "etudiant" ? montantEtudiant : montantNormal;
 
-      const validationDoc = {
-        numero_billet: billet.numero_billet,
-        billet_id: billet.$id,
-        date_validation: nowIso,
-        type_acces: billet.type_acces || "",
-        type_billet: billet.type_billet || "",
-        code_offre: billet.code_offre || "ENTREE",
-        tarif_normal: montantNormal,
-        tarif_etudiant: montantEtudiant,
-        tarif_applique: tarifChoisi,
-        montant_paye: montantPaye,
-        agent_id: currentAgent.$id || "",
-        poste_id: "ENTREE",
-        numero_etudiant: numeroEtu || ""
-      };
-
-      if (useReservation) {
-        validationDoc.reservation = numeroReservation;
-      }
-
       await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VALIDATIONS_TABLE_ID,
         Appwrite.ID.unique(),
-        validationDoc
+        {
+          numero_billet: billet.numero_billet,
+          billet_id: billet.$id,
+          date_validation: nowIso,
+          type_acces: billet.type_acces || "",
+          type_billet: billet.type_billet || "",
+          code_offre: billet.code_offre || "ENTREE",
+          tarif_normal: montantNormal,
+          tarif_etudiant: montantEtudiant,
+          tarif_applique: tarifChoisi,
+          montant_paye: montantPaye,
+          agent_id: currentAgent.$id || "",
+          poste_id: "ENTREE",
+          numero_etudiant: numeroEtu || ""
+        }
       );
     } catch (logErr) {
       console.warn(
@@ -633,7 +633,10 @@ async function verifierBillet() {
     return;
   }
 
-  // ======== MODE JEU ========
+  // ==========================
+  // MODE JEU INTERNE
+  // Aucune réservation ici
+  // ==========================
   if (currentBilletsSubMode === "JEU") {
     try {
       const res = await db.listDocuments(
@@ -687,52 +690,30 @@ async function verifierBillet() {
           montant_paye: montant,
           agent_id: currentAgent.$id || "",
           poste_id: "INTERNE",
-          numero_etudiant: "",
-          reservation: useReservation ? numeroReservation : ""
+          numero_etudiant: ""
         }
       );
-
-      const updateBilletInterneData = {
-        statut: "Validé"
-      };
-
-      if (useReservation) {
-        updateBilletInterneData.reservation = numeroReservation;
-      }
 
       await db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_BILLETS_INTERNE_TABLE_ID,
         billet.$id,
-        updateBilletInterneData
+        { statut: "Validé" }
       );
 
-      if (useReservation && reservationDoc) {
-        await db.updateDocument(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_RESERVATION_COLLECTION_ID,
-          reservationDoc.$id,
-          { actif: false }
-        );
-      }
-
       showResult(
-        useReservation
-          ? `Billet jeu ${numeroBillet} VALIDÉ ✅ et affilié à la réservation ${numeroReservation}`
-          : `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet} – ${formatMontantGNF(montant)})`,
+        `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet || "Jeu interne"} – ${formatMontantGNF(montant)})`,
         "success"
       );
 
       const ticketInput = $("ticketNumber");
       if (ticketInput) ticketInput.value = "";
 
-      if (useReservation) resetReservationForm();
-
       chargerNombreBillets();
     } catch (err) {
       console.error("[AGENT] Erreur validation billet jeu interne :", err);
       showResult(
-        "Erreur lors de la vérification du billet de jeu (voir console).",
+        "Erreur lors de la vérification du billet de jeu.",
         "error"
       );
     }
@@ -794,7 +775,7 @@ async function verifierEtudiant() {
     console.error("[AGENT] Erreur vérification étudiant :", err);
     zoneInfo.classList.add("error");
     zoneInfo.textContent =
-      "Erreur lors de la vérification du numéro étudiant (voir console).";
+      "Erreur lors de la vérification du numéro étudiant.";
   }
 }
 
@@ -868,16 +849,16 @@ function afficherProduits(produits) {
   productsGrid.innerHTML = produits
     .map(
       (produit) => `
-    <div class="resto-product-card" onclick="ajouterProduitAuPanier('${produit.code_produit}')">
-      <div class="resto-product-name">${produit.libelle}</div>
-      <div class="resto-product-price">${formatMontantGNF(produit.prix_unitaire)}</div>
-      <div style="margin-top: 0.5rem;">
-        <button type="button" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
-          + Ajouter
-        </button>
-      </div>
-    </div>
-  `
+        <div class="resto-product-card" onclick="ajouterProduitAuPanier('${produit.code_produit}')">
+          <div class="resto-product-name">${produit.libelle}</div>
+          <div class="resto-product-price">${formatMontantGNF(produit.prix_unitaire)}</div>
+          <div style="margin-top:0.5rem;">
+            <button type="button" class="btn-primary" style="padding:0.5rem 1rem; font-size:0.9rem;">
+              + Ajouter
+            </button>
+          </div>
+        </div>
+      `
     )
     .join("");
 }
@@ -900,11 +881,10 @@ async function chargerProduitsResto() {
     );
 
     restoProduitsCache = res.documents || [];
-    console.log("[RESTO] Produits chargés :", restoProduitsCache.length);
 
     if (restoProduitsCache.length === 0) {
       productsGrid.innerHTML = `
-        <div class="resto-loading" style="color: var(--accent-primary);">
+        <div class="resto-loading" style="color:var(--accent-primary);">
           ❌ Aucun produit trouvé dans le menu
         </div>
       `;
@@ -917,7 +897,7 @@ async function chargerProduitsResto() {
   } catch (err) {
     console.error("[RESTO] Erreur chargement menu :", err);
     productsGrid.innerHTML = `
-      <div class="resto-loading" style="color: var(--accent-primary);">
+      <div class="resto-loading" style="color:var(--accent-primary);">
         ❌ Erreur de chargement du menu : ${err.message}
       </div>
     `;
@@ -943,10 +923,7 @@ async function initialiserDernierNumeroVente() {
       }
     }
   } catch (err) {
-    console.warn(
-      "[RESTO] Impossible de récupérer le dernier numéro de vente :",
-      err
-    );
+    console.warn("[RESTO] Impossible de récupérer le dernier numéro de vente :", err);
     lastVenteNumber = 0;
   }
 }
@@ -1029,19 +1006,19 @@ function actualiserPanier() {
   cartItems.innerHTML = restoPanier
     .map(
       (item, index) => `
-    <div class="resto-cart-item">
-      <div class="resto-cart-item-info">
-        <div class="resto-cart-item-name">${item.libelle}</div>
-        <div class="resto-cart-item-price">${formatMontantGNF(item.prix_unitaire)}/unité</div>
-      </div>
-      <div class="resto-cart-item-controls">
-        <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, -1)">-</button>
-        <span class="resto-cart-item-quantity">${item.quantite}</span>
-        <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, 1)">+</button>
-        <button type="button" class="resto-cart-item-btn resto-cart-item-remove" onclick="supprimerDuPanier(${index})">×</button>
-      </div>
-    </div>
-  `
+        <div class="resto-cart-item">
+          <div class="resto-cart-item-info">
+            <div class="resto-cart-item-name">${item.libelle}</div>
+            <div class="resto-cart-item-price">${formatMontantGNF(item.prix_unitaire)}/unité</div>
+          </div>
+          <div class="resto-cart-item-controls">
+            <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, -1)">-</button>
+            <span class="resto-cart-item-quantity">${item.quantite}</span>
+            <button type="button" class="resto-cart-item-btn" onclick="modifierQuantitePanier(${index}, 1)">+</button>
+            <button type="button" class="resto-cart-item-btn resto-cart-item-remove" onclick="supprimerDuPanier(${index})">×</button>
+          </div>
+        </div>
+      `
     )
     .join("");
 }
@@ -1079,8 +1056,6 @@ function viderPanier() {
 }
 
 async function enregistrerVenteResto() {
-  const msg = $("restoResult");
-
   if (!currentAgent) {
     showTempMessage("❌ Veuillez vous connecter", "error");
     return;
@@ -1122,6 +1097,8 @@ async function enregistrerVenteResto() {
     }
 
     afficherReçu(numeroVente, totalGlobal, orderType, notes);
+
+    const msg = $("restoResult");
     if (msg) msg.style.display = "none";
   } catch (err) {
     console.error("[RESTO] Erreur enregistrement vente :", err);
@@ -1140,7 +1117,7 @@ function afficherReçu(numeroVente, total, orderType, notes) {
   if (receiptNumber) receiptNumber.textContent = numeroVente;
 
   let html = `
-    <div style="margin-bottom: 1rem;">
+    <div style="margin-bottom:1rem;">
       <div><strong>Date :</strong> ${new Date().toLocaleString("fr-FR")}</div>
       <div><strong>Type :</strong> ${
         orderType === "sur_place" ? "Sur place" : "À emporter"
@@ -1151,7 +1128,7 @@ function afficherReçu(numeroVente, total, orderType, notes) {
           : ""
       }
     </div>
-    <div style="border-bottom: 1px dashed #ccc; margin-bottom: 0.5rem;"></div>
+    <div style="border-bottom:1px dashed #ccc; margin-bottom:0.5rem;"></div>
   `;
 
   restoPanier.forEach((item) => {
@@ -1165,7 +1142,7 @@ function afficherReçu(numeroVente, total, orderType, notes) {
   });
 
   html += `
-    <div style="border-bottom: 1px dashed #ccc; margin: 0.5rem 0;"></div>
+    <div style="border-bottom:1px dashed #ccc; margin:0.5rem 0;"></div>
     <div class="receipt-item receipt-total">
       <div>TOTAL</div>
       <div>${total.toLocaleString("fr-FR")} GNF</div>
@@ -1201,10 +1178,11 @@ function nouvelleCommandeResto() {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[AGENT] DOMContentLoaded - VERSION AFFILIATION RESERVATION");
+  console.log("[AGENT] DOMContentLoaded - RESERVATION ENTREE UNIQUEMENT");
 
   appliquerEtatConnexion(null);
   updateTarifEtudiantVisibility();
+  updateReservationVisibility();
 
   const btnLogin  = $("btnLogin");
   const btnLogout = $("btnLogout");
