@@ -1360,4 +1360,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-});
