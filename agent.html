@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Centre de loisirs – Poste agent</title>
+
+  <title>Calypço – Poste agent</title>
+
   <link rel="stylesheet" href="css/styles.css" />
 </head>
+
 <body>
 
 <header>
   <div class="header-inner">
     <div class="logo-badge">CL</div>
+
     <div>
-      <h1>Centre de loisirs – Poste agent</h1>
+      <h1>Calypço – Poste agent</h1>
       <p>Connexion, contrôle des billets et ventes restauration/chicha.</p>
     </div>
   </div>
@@ -20,11 +24,11 @@
 
 <main>
 
-  <!-- 1. Connexion agent -->
+  <!-- Connexion agent -->
   <section id="card-login" class="card">
     <h2>Connexion agent</h2>
 
-    <p style="margin-bottom:0.6rem;">
+    <p class="status">
       Saisissez votre code agent et votre mot de passe pour accéder au poste.
     </p>
 
@@ -38,37 +42,51 @@
       <input type="password" id="agentPassword" placeholder="Mot de passe" />
     </div>
 
-    <button id="btnLogin" type="button" class="btn-primary">Se connecter</button>
+    <div class="actions-row">
+      <button id="btnLogin" type="button" class="btn-primary">
+        Se connecter
+      </button>
+
+      <a href="index.html" class="btn-secondary btn-link">
+        🏠 Accueil
+      </a>
+    </div>
 
     <p id="login-message" class="status"></p>
   </section>
 
-  <!-- 2. Zone après connexion -->
+  <!-- Zone après connexion -->
   <div id="app-zone" style="display:none;">
 
-    <!-- Bandeau agent + choix du mode -->
+    <!-- Bandeau agent -->
     <section class="card">
       <h2>Poste agent</h2>
 
-      <p id="agent-connected-info" class="status" style="margin-bottom:0.8rem;">
+      <p id="agent-connected-info" class="status">
         Connecté :
         <strong id="agent-connected-name"></strong>
         (<span id="agent-connected-role"></span>)
       </p>
 
-      <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+      <div class="agent-toolbar">
+        <a href="index.html" class="btn-secondary btn-link">
+          🏠 Accueil
+        </a>
+
         <button id="btnModeBillets" type="button" class="btn-secondary">
-          Contrôle billets
+          🎫 Contrôle billets
         </button>
+
         <button id="btnModeResto" type="button" class="btn-primary">
-          Restauration / Chicha
+          🍽️ Restauration / Chicha
         </button>
-        <button id="btnLogout" type="button" class="btn-danger" style="margin-left:auto;">
+
+        <button id="btnLogout" type="button" class="btn-danger">
           Se déconnecter
         </button>
       </div>
 
-      <p class="status" style="margin-top:0.3rem;">
+      <p class="status">
         Mode actif : <strong id="mode-label">Contrôle billets</strong>
       </p>
     </section>
@@ -77,79 +95,98 @@
     <section class="card" id="mode-billets">
       <h2>Contrôle des billets</h2>
 
-      <!-- Sous-onglets : Entrée / Jeux internes -->
-      <div style="margin:0.4rem 0 0.8rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+      <!-- Sous-onglets -->
+      <div class="submode-row">
         <button type="button" id="btnBilletsEntree" class="btn-submode active-submode">
           Billets Entrée
         </button>
+
         <button type="button" id="btnBilletsJeux" class="btn-submode">
           Billets Jeux internes
         </button>
       </div>
 
-      <!-- Texte d'aide selon le sous-mode -->
-      <p id="billetsSubHint" class="status" style="margin-bottom:0.4rem;">
+      <p id="billetsSubHint" class="status">
         Mode : billets d’entrée. Saisir le numéro du billet attribué au client.
       </p>
 
-      <p style="font-size:1rem; font-weight:600;">
+      <p class="ticket-count-line">
         Billets non utilisés : <span id="ticketCount">0</span>
       </p>
 
-      <!-- Choix du tarif uniquement pour billets d'entrée -->
-      <div id="tarif-zone" style="margin-bottom:0.6rem; margin-top:0.8rem;">
-        <label>Tarif appliqué :</label><br />
-        <label class="radio-inline">
-          <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
-          <span>Normal</span>
-        </label>
-        <label class="radio-inline">
-          <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
-          <span>Étudiant</span>
-        </label>
+      <!-- Tarif uniquement pour billets d'entrée -->
+      <div id="tarif-zone" class="agent-block">
+        <label>Tarif appliqué :</label>
+
+        <div class="radio-group">
+          <label class="radio-inline">
+            <input type="radio" name="tarif" id="tarif-normal" value="normal" checked />
+            <span>Normal</span>
+          </label>
+
+          <label class="radio-inline">
+            <input type="radio" name="tarif" id="tarif-etudiant" value="etudiant" />
+            <span>Étudiant</span>
+          </label>
+        </div>
       </div>
 
-      <!-- Bloc numéro étudiant uniquement si tarif étudiant -->
-      <div id="etu-zone" style="margin-bottom:0.6rem; display:none;">
-        <label for="etuNumber">Numéro étudiant :</label><br />
-        <input
-          type="text"
-          id="etuNumber"
-          placeholder="Ex : UNIV-HA-1234"
-          style="max-width:260px;"
-        />
+      <!-- Numéro étudiant uniquement si tarif étudiant -->
+      <div id="etu-zone" class="agent-block" style="display:none;">
+        <label for="etuNumber">Numéro étudiant :</label>
 
-        <button type="button" id="btnCheckStudent" class="btn-secondary" style="margin-top:0.5rem;">
-          Vérifier l'étudiant
-        </button>
+        <div class="inline-input-actions">
+          <input
+            type="text"
+            id="etuNumber"
+            placeholder="Ex : UNIV-HA-1234"
+          />
 
-        <div id="etu-info" class="result" style="display:none; margin-top:0.5rem;"></div>
+          <button type="button" id="btnCheckStudent" class="btn-secondary">
+            Vérifier l'étudiant
+          </button>
+        </div>
+
+        <div id="etu-info" class="result" style="display:none;"></div>
       </div>
 
       <!-- Réservation uniquement pour billets d'entrée -->
-      <div id="reservation-zone" style="margin-bottom:0.8rem; margin-top:0.8rem;">
+      <div id="reservation-zone" class="agent-block">
         <label class="radio-inline">
           <input type="checkbox" id="useReservation" />
           <span>Client avec réservation</span>
         </label>
 
-        <div id="reservation-number-zone" style="display:none; margin-top:0.8rem;">
-          <label for="reservationNumber">Numéro de réservation :</label><br />
-          <input
-            type="text"
-            id="reservationNumber"
-            placeholder="Ex : RES-0526-0001"
-            style="max-width:320px;"
-          />
-          <p class="status" style="margin-top:0.35rem;">
+        <div id="reservation-number-zone" style="display:none;">
+          <label for="reservationNumber">Numéro de réservation :</label>
+
+          <div class="inline-input-actions">
+            <input
+              type="text"
+              id="reservationNumber"
+              placeholder="Ex : RES-0526-0001"
+            />
+
+            <button
+              type="button"
+              id="btnScanReservation"
+              class="btn-secondary"
+              disabled
+              title="Fonction scan prévue plus tard"
+            >
+              📷 Scanner
+            </button>
+          </div>
+
+          <p class="status">
             Saisir le numéro de réservation présenté par le client.
           </p>
         </div>
       </div>
 
       <!-- Numéro de billet -->
-      <div style="margin-bottom:0.8rem;">
-        <label for="ticketNumber">Numéro du billet à attribuer :</label><br />
+      <div class="form-row">
+        <label for="ticketNumber">Numéro du billet à attribuer :</label>
         <input
           type="text"
           id="ticketNumber"
@@ -157,7 +194,6 @@
         />
       </div>
 
-      <!-- Bouton validation -->
       <button id="btnCheckTicket" type="button" class="btn-primary">
         Valider le billet ▶▶
       </button>
@@ -170,10 +206,11 @@
       <h2>🍽️ Restauration / Chicha</h2>
 
       <div class="resto-container">
-        <!-- Colonne gauche : Produits -->
+
+        <!-- Produits -->
         <div class="resto-products-side">
           <div class="resto-categories-tabs" id="restoCategoriesTabs">
-            <!-- Rempli dynamiquement par JS -->
+            <!-- Rempli par JS -->
           </div>
 
           <div class="resto-products-grid" id="restoProductsGrid">
@@ -181,10 +218,11 @@
           </div>
         </div>
 
-        <!-- Colonne droite : Panier -->
+        <!-- Panier -->
         <div class="resto-cart-side">
           <div class="resto-cart-header">
             <h3>🛒 Panier en cours</h3>
+
             <div class="resto-cart-info">
               <span id="restoCartCount">0 article(s)</span>
               <span id="restoCartTotal">0 GNF</span>
@@ -198,11 +236,13 @@
           <div class="resto-order-options">
             <div class="form-row">
               <label>Type de commande :</label>
-              <div style="display:flex; gap:1rem;">
+
+              <div class="radio-group">
                 <label class="radio-inline">
                   <input type="radio" name="orderType" value="sur_place" checked />
                   <span>Sur place</span>
                 </label>
+
                 <label class="radio-inline">
                   <input type="radio" name="orderType" value="a_emporter" />
                   <span>À emporter</span>
@@ -212,11 +252,10 @@
 
             <div class="form-row">
               <label for="restoOrderNotes">Notes spéciales :</label>
-              <textarea 
-                id="restoOrderNotes" 
-                placeholder="Sans oignons, supplément sauce..." 
+              <textarea
+                id="restoOrderNotes"
+                placeholder="Sans oignons, supplément sauce..."
                 rows="2"
-                style="width:100%; padding:0.75rem; border:1px solid var(--border-soft); border-radius:var(--radius-md);"
               ></textarea>
             </div>
           </div>
@@ -225,6 +264,7 @@
             <button id="btnRestoValider" type="button" class="btn-primary" disabled>
               ✅ Valider la commande
             </button>
+
             <button id="btnRestoVider" type="button" class="btn-danger">
               🗑️ Vider le panier
             </button>
@@ -243,6 +283,7 @@
             <button id="btnRestoImprimer" type="button" class="btn-primary">
               🖨️ Imprimer le reçu
             </button>
+
             <button id="btnRestoNouvelleCommande" type="button" class="btn-secondary">
               🆕 Nouvelle commande
             </button>
@@ -258,13 +299,14 @@
 </main>
 
 <footer>
-  <p>© Centre de loisirs – Poste agent</p>
+  <p>© Calypço – Poste agent</p>
 </footer>
 
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=6"></script>
+<script src="js/agent-appwrite.js?v=8"></script>
 
 </body>
 </html>
