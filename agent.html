@@ -6,7 +6,7 @@
   <title>Centre de loisirs – Poste agent</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body class="page-agent">
+<body>
 
 <header>
   <div class="header-inner">
@@ -73,7 +73,7 @@
       </p>
     </section>
 
-    <!-- MODE 1 : Contrôle billets (entrée + jeux internes) -->
+    <!-- MODE 1 : Contrôle billets -->
     <section class="card" id="mode-billets">
       <h2>Contrôle des billets</h2>
 
@@ -89,14 +89,14 @@
 
       <!-- Texte d'aide selon le sous-mode -->
       <p id="billetsSubHint" class="status" style="margin-bottom:0.4rem;">
-        Mode : billets d’entrée (bracelets). Saisir le numéro imprimé sur le bracelet.
+        Mode : billets d’entrée. Saisir le numéro du billet attribué au client.
       </p>
 
       <p style="font-size:1rem; font-weight:600;">
         Billets non utilisés : <span id="ticketCount">0</span>
       </p>
 
-      <!-- Choix du tarif (uniquement pour les billets d'entrée) -->
+      <!-- Choix du tarif uniquement pour billets d'entrée -->
       <div id="tarif-zone" style="margin-bottom:0.6rem; margin-top:0.8rem;">
         <label>Tarif appliqué :</label><br />
         <label class="radio-inline">
@@ -109,7 +109,7 @@
         </label>
       </div>
 
-      <!-- Bloc numéro étudiant (uniquement si tarif étudiant) -->
+      <!-- Bloc numéro étudiant uniquement si tarif étudiant -->
       <div id="etu-zone" style="margin-bottom:0.6rem; display:none;">
         <label for="etuNumber">Numéro étudiant :</label><br />
         <input
@@ -126,7 +126,7 @@
         <div id="etu-info" class="result" style="display:none; margin-top:0.5rem;"></div>
       </div>
 
-      <!-- Bloc réservation client -->
+      <!-- Réservation uniquement pour billets d'entrée -->
       <div id="reservation-zone" style="margin-bottom:0.8rem; margin-top:0.8rem;">
         <label class="radio-inline">
           <input type="checkbox" id="useReservation" />
@@ -172,14 +172,11 @@
       <div class="resto-container">
         <!-- Colonne gauche : Produits -->
         <div class="resto-products-side">
-          <!-- Onglets Catégories -->
           <div class="resto-categories-tabs" id="restoCategoriesTabs">
             <!-- Rempli dynamiquement par JS -->
           </div>
 
-          <!-- Grille des Produits -->
           <div class="resto-products-grid" id="restoProductsGrid">
-            <!-- Rempli dynamiquement par JS -->
             <div class="resto-loading">Chargement du menu...</div>
           </div>
         </div>
@@ -194,12 +191,10 @@
             </div>
           </div>
 
-          <!-- Liste des articles du panier -->
           <div class="resto-cart-items" id="restoCartItems">
             <div class="resto-cart-empty">Panier vide</div>
           </div>
 
-          <!-- Options de commande -->
           <div class="resto-order-options">
             <div class="form-row">
               <label>Type de commande :</label>
@@ -226,7 +221,6 @@
             </div>
           </div>
 
-          <!-- Actions du panier -->
           <div class="resto-cart-actions">
             <button id="btnRestoValider" type="button" class="btn-primary" disabled>
               ✅ Valider la commande
@@ -236,15 +230,16 @@
             </button>
           </div>
 
-          <!-- Reçu après validation -->
           <div id="restoReceipt" class="resto-receipt" style="display:none;">
             <div class="receipt-header">
               <h4>📋 Reçu de commande</h4>
               <strong id="receiptNumber">V-001</strong>
             </div>
+
             <div class="receipt-content" id="receiptContent">
               <!-- Contenu du reçu -->
             </div>
+
             <button id="btnRestoImprimer" type="button" class="btn-primary">
               🖨️ Imprimer le reçu
             </button>
@@ -252,11 +247,9 @@
               🆕 Nouvelle commande
             </button>
           </div>
-
         </div>
       </div>
 
-      <!-- Message résultat -->
       <div id="restoResult" class="result" style="margin-top:1rem; display:none;"></div>
     </section>
 
@@ -271,7 +264,7 @@
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=5"></script>
+<script src="js/agent-appwrite.js?v=6"></script>
 
 </body>
 </html>
