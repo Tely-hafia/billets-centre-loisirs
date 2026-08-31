@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calypço – Invitation</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo-badge">CL</div>
+      <div>
+        <h1>Rejoindre l’équipe Calypço</h1>
+        <p>Activation sécurisée de votre accès professionnel.</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Accepter l’invitation</h2>
+      <p class="status">
+        Confirmez votre invitation. Vous pourrez ensuite définir votre mot de passe
+        sans le communiquer à un administrateur.
+      </p>
+
+      <button id="btnAcceptInvite" class="btn-primary" type="button">
+        Accepter l’invitation
+      </button>
+
+      <p id="inviteMessage" class="message" style="display:none;"></p>
+
+      <div id="passwordSetupZone" style="display:none; margin-top:1.5rem;">
+        <h3>Définir votre mot de passe</h3>
+        <p class="status">
+          Si ce compte est nouveau, saisissez l’adresse e-mail qui a reçu l’invitation.
+          Un lien personnel de création de mot de passe vous sera envoyé.
+        </p>
+
+        <div class="form-row">
+          <label for="inviteEmail">E-mail</label>
+          <input
+            id="inviteEmail"
+            type="email"
+            placeholder="agent@exemple.com"
+            autocomplete="email"
+          />
+        </div>
+
+        <button id="btnSendPasswordLink" class="btn-secondary" type="button">
+          Recevoir le lien de mot de passe
+        </button>
+
+        <p class="status" style="margin-top:1rem;">
+          Vous avez déjà un mot de passe ?
+          <a href="agent.html">Accéder à la connexion agent</a>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+  <script src="js/appwrite-config.js?v=1"></script>
+  <script src="js/appwrite-client.js?v=1"></script>
+  <script src="js/invite.js?v=1"></script>
+</body>
+</html>

@@ -1,21 +1,11 @@
 console.log("[SITE] index.js chargé – Calypço");
 
 // ===============================
-//  CONFIG APPWRITE
+//  CONFIGURATION PARTAGÉE
 // ===============================
-const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
-const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
-const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
-
-if (typeof Appwrite === "undefined") {
-  console.error("[SITE] Appwrite SDK non chargé.");
-}
-
-const client = new Appwrite.Client();
-client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-
-const db = new Appwrite.Databases(client);
+const APPWRITE_DATABASE_ID = CalypsoConfig.databaseId;
+const APPWRITE_RESERVATION_COLLECTION_ID = CalypsoConfig.tables.reservations;
+const db = CalypsoAppwrite.databases;
 
 // ===============================
 //  HELPERS DOM
@@ -165,28 +155,15 @@ async function generateReservationNumber(dateIso) {
   const month = String(d.getUTCMonth() + 1).padStart(2, "0");
   const year = String(d.getUTCFullYear()).slice(-2);
   const prefix = `RES-${month}${year}-`;
+  const bytes = new Uint8Array(5);
+  crypto.getRandomValues(bytes);
+  const suffix = [...bytes]
+    .map((value) => value.toString(36).padStart(2, "0"))
+    .join("")
+    .slice(0, 8)
+    .toUpperCase();
 
-  const res = await db.listDocuments(
-    APPWRITE_DATABASE_ID,
-    APPWRITE_RESERVATION_COLLECTION_ID,
-    [
-      Appwrite.Query.startsWith("numero_reservation", prefix),
-      Appwrite.Query.limit(10000)
-    ]
-  );
-
-  let maxIndex = 0;
-
-  for (const doc of res.documents || []) {
-    const num = doc.numero_reservation || "";
-    const idx = parseInt(num.split("-")[2] || "0", 10);
-
-    if (!Number.isNaN(idx) && idx > maxIndex) {
-      maxIndex = idx;
-    }
-  }
-
-  return `${prefix}${String(maxIndex + 1).padStart(4, "0")}`;
+  return `${prefix}${suffix}`;
 }
 
 // ===============================

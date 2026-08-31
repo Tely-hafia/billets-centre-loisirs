@@ -29,18 +29,28 @@
     <h2>Connexion administrateur</h2>
 
     <p class="status">
-      Accès réservé aux administrateurs.
-      Le rôle de l’agent doit contenir <strong>admin</strong>.
+      Accès réservé aux membres de l’équipe Calypço ayant le rôle
+      <strong>administrateur</strong>.
     </p>
 
     <div class="form-row">
-      <label for="adminLogin">Code admin :</label>
-      <input type="text" id="adminLogin" placeholder="ex : admin01" />
+      <label for="adminEmail">E-mail :</label>
+      <input
+        type="email"
+        id="adminEmail"
+        placeholder="admin@exemple.com"
+        autocomplete="username"
+      />
     </div>
 
     <div class="form-row">
       <label for="adminPassword">Mot de passe :</label>
-      <input type="password" id="adminPassword" placeholder="Mot de passe" />
+      <input
+        type="password"
+        id="adminPassword"
+        placeholder="Mot de passe"
+        autocomplete="current-password"
+      />
     </div>
 
     <div class="actions-row">
@@ -162,27 +172,24 @@
         <p id="admin-etu-message" class="message" style="display:none;"></p>
       </section>
 
-      <!-- CRÉATION D'UN AGENT -->
+      <!-- INVITATION D'UN AGENT -->
       <section class="card">
-        <h2>Créer un agent</h2>
+        <h2>Inviter un agent</h2>
 
         <p class="status">
-          Ajoute un agent dans la collection <strong>agents</strong>
-          pour la connexion au poste agent ou au panneau admin.
+          L’agent recevra une invitation par e-mail. Il définira lui-même son
+          mot de passe : aucun mot de passe n’est conservé dans la base métier.
         </p>
 
         <div class="form-row">
-          <label for="admin-agent-login">
-            Login agent <span style="color:#ef4444;">*</span>
+          <label for="admin-agent-email">
+            E-mail de l’agent <span style="color:#ef4444;">*</span>
           </label>
-          <input type="text" id="admin-agent-login" placeholder="Ex : agent01" />
-        </div>
-
-        <div class="form-row">
-          <label for="admin-agent-password">
-            Mot de passe <span style="color:#ef4444;">*</span>
-          </label>
-          <input type="password" id="admin-agent-password" placeholder="Mot de passe" />
+          <input
+            type="email"
+            id="admin-agent-email"
+            placeholder="agent@exemple.com"
+          />
         </div>
 
         <div class="form-row">
@@ -191,27 +198,25 @@
         </div>
 
         <div class="form-row">
-          <label for="admin-agent-role">
-            Rôle / poste <span style="color:#ef4444;">*</span><br />
-            <span class="status">
-              Ex : <em>admin</em>, <em>billets entrée</em>,
-              <em>restauration</em>, <em>jeux internes</em>…
-            </span>
-          </label>
-          <input
-            type="text"
-            id="admin-agent-role"
-            placeholder="Ex : admin, billets entrée, restauration..."
-          />
-        </div>
-
-        <div class="form-row" style="flex-direction:row; align-items:center; gap:0.6rem;">
-          <input type="checkbox" id="admin-agent-actif" checked />
-          <label for="admin-agent-actif" style="margin:0;">Agent actif</label>
+          <label>Rôles autorisés <span style="color:#ef4444;">*</span></label>
+          <div class="radio-group">
+            <label class="radio-inline">
+              <input class="admin-agent-role" type="checkbox" value="billets" />
+              <span>Billets et réservations</span>
+            </label>
+            <label class="radio-inline">
+              <input class="admin-agent-role" type="checkbox" value="resto" />
+              <span>Restauration</span>
+            </label>
+            <label class="radio-inline">
+              <input class="admin-agent-role" type="checkbox" value="admin" />
+              <span>Administration</span>
+            </label>
+          </div>
         </div>
 
         <button id="btnCreateAgent" type="button" class="btn-secondary">
-          Créer l'agent
+          Envoyer l’invitation
         </button>
 
         <p id="admin-agent-message" class="status"></p>
@@ -473,8 +478,13 @@
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 
+<!-- Configuration et authentification partagées -->
+<script src="js/appwrite-config.js?v=1"></script>
+<script src="js/appwrite-client.js?v=1"></script>
+<script src="js/auth-service.js?v=1"></script>
+
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=8"></script>
+<script src="js/admin-appwrite.js?v=9"></script>
 
 </body>
 </html>
