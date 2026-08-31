@@ -1,34 +1,18 @@
 console.log("[AGENT] agent-appwrite.js chargé - VERSION COMPLETE RESERVATION ENTREE UNIQUEMENT");
 
 // ===============================
-//  CONFIG APPWRITE
+//  CONFIGURATION PARTAGÉE
 // ===============================
 
-const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
-const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
-
-const APPWRITE_BILLETS_TABLE_ID = "billets";
-const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne";
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
-const APPWRITE_AGENTS_TABLE_ID = "agents";
-const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
-const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
-const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
-const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
-
-// ===============================
-//  CLIENT APPWRITE
-// ===============================
-
-if (typeof Appwrite === "undefined") {
-  console.error("[AGENT] Appwrite SDK non chargé. Vérifie le script CDN appwrite@13.0.0.");
-}
-
-const client = new Appwrite.Client();
-client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-
-const db = new Appwrite.Databases(client);
+const APPWRITE_DATABASE_ID = CalypsoConfig.databaseId;
+const APPWRITE_BILLETS_TABLE_ID = CalypsoConfig.tables.billets;
+const APPWRITE_BILLETS_INTERNE_TABLE_ID = CalypsoConfig.tables.billetsInterne;
+const APPWRITE_VALIDATIONS_TABLE_ID = CalypsoConfig.tables.validations;
+const APPWRITE_ETUDIANTS_TABLE_ID = CalypsoConfig.tables.etudiants;
+const APPWRITE_MENU_RESTO_COLLECTION_ID = CalypsoConfig.tables.menuResto;
+const APPWRITE_VENTES_RESTO_COLLECTION_ID = CalypsoConfig.tables.ventesResto;
+const APPWRITE_RESERVATION_COLLECTION_ID = CalypsoConfig.tables.reservations;
+const db = CalypsoAppwrite.databases;
 
 // ===============================
 //  HELPERS DOM & FORMAT
@@ -238,33 +222,15 @@ function appliquerEtatConnexion(agent) {
   const btnModeResto = $("btnModeResto");
 
   if (agent) {
-    const roleStr = (agent.role || "").toLowerCase();
-
-    let canBillets =
-      roleStr.includes("billet") ||
-      roleStr.includes("entree") ||
-      roleStr.includes("entrée") ||
-      roleStr.includes("gardien") ||
-      roleStr.includes("jeux") ||
-      roleStr.includes("interne") ||
-      roleStr.includes("reservation") ||
-      roleStr.includes("réservation");
-
-    let canResto =
-      roleStr.includes("resto") ||
-      roleStr.includes("restaurant") ||
-      roleStr.includes("bar") ||
-      roleStr.includes("chicha");
-
-    if (!canBillets && !canResto) {
-      canBillets = true;
-      canResto = true;
-    }
+    const roles = agent.roles || [];
+    const isAdmin = roles.includes(CalypsoConfig.staffRoles.admin);
+    const canBillets = isAdmin || roles.includes(CalypsoConfig.staffRoles.billets);
+    const canResto = isAdmin || roles.includes(CalypsoConfig.staffRoles.resto);
 
     if (loginCard) loginCard.style.display = "none";
     if (appZone) appZone.style.display = "block";
 
-    if (nameEl) nameEl.textContent = agent.login || "";
+    if (nameEl) nameEl.textContent = agent.nom || agent.login || "";
     if (roleEl) roleEl.textContent = agent.role || "";
 
     if (btnModeBillets) {
@@ -294,46 +260,55 @@ function appliquerEtatConnexion(agent) {
 }
 
 async function connecterAgent() {
-  const login = $("agentLogin")?.value.trim();
+  const email = $("agentEmail")?.value.trim();
   const password = $("agentPassword")?.value.trim();
 
-  if (!login || !password) {
-    showLoginMessage("Veuillez saisir le code agent et le mot de passe.", "error");
+  if (!email || !password) {
+    showLoginMessage("Veuillez saisir votre e-mail et votre mot de passe.", "error");
     return;
   }
 
   showLoginMessage("Vérification en cours...", "info");
 
   try {
-    const res = await db.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_AGENTS_TABLE_ID,
-      [
-        Appwrite.Query.equal("login", login),
-        Appwrite.Query.equal("mot_de_passe", password),
-        Appwrite.Query.equal("actif", true),
-        Appwrite.Query.limit(1)
-      ]
-    );
-
-    if (!res.documents || res.documents.length === 0) {
-      showLoginMessage("Identifiants invalides ou agent inactif.", "error");
-      return;
-    }
-
-    const agent = res.documents[0];
+    const agent = await CalypsoAuth.login(email, password, [
+      CalypsoConfig.staffRoles.admin,
+      CalypsoConfig.staffRoles.billets,
+      CalypsoConfig.staffRoles.resto
+    ]);
 
     showLoginMessage("Connexion réussie.", "success");
     appliquerEtatConnexion(agent);
   } catch (err) {
     console.error("[AGENT] Erreur connexion agent :", err);
-    showLoginMessage("Erreur lors de la connexion. Voir console.", "error");
+    showLoginMessage(err?.message || "Identifiants invalides.", "error");
   }
 }
 
-function deconnexionAgent() {
-  appliquerEtatConnexion(null);
-  showLoginMessage("Déconnecté.", "info");
+async function deconnexionAgent() {
+  try {
+    await CalypsoAuth.logout();
+  } finally {
+    appliquerEtatConnexion(null);
+    showLoginMessage("Déconnecté.", "info");
+  }
+}
+
+async function restaurerSessionAgent() {
+  try {
+    const agent = await CalypsoAuth.restore([
+      CalypsoConfig.staffRoles.admin,
+      CalypsoConfig.staffRoles.billets,
+      CalypsoConfig.staffRoles.resto
+    ]);
+    appliquerEtatConnexion(agent);
+    showLoginMessage("Session restaurée.", "success");
+  } catch (error) {
+    appliquerEtatConnexion(null);
+    if (error?.code && error.code !== 401) {
+      showLoginMessage(error.message, "error");
+    }
+  }
 }
 
 // ===============================
@@ -1249,7 +1224,7 @@ function nouvelleCommandeResto() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[AGENT] DOMContentLoaded - RESERVATION ENTREE UNIQUEMENT");
 
-  appliquerEtatConnexion(null);
+  restaurerSessionAgent();
   updateTarifEtudiantVisibility();
   updateReservationVisibility();
 

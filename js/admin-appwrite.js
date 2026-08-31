@@ -1,39 +1,18 @@
 console.log("[ADMIN] admin-appwrite.js chargé - VERSION AVEC HISTORIQUE RESERVATIONS");
 
 // =====================================
-//  Configuration Appwrite
+//  Configuration partagée
 // =====================================
 
-const APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
-const APPWRITE_PROJECT_ID = "6919c99200348d6d8afe";
-const APPWRITE_DATABASE_ID = "6919ca20001ab6e76866";
-
-const APPWRITE_BILLETS_TABLE_ID = "billets";
-const APPWRITE_BILLETS_INTERNE_TABLE_ID = "billets_interne";
-const APPWRITE_VALIDATIONS_TABLE_ID = "validations";
-const APPWRITE_ETUDIANTS_TABLE_ID = "etudiants";
-const APPWRITE_AGENTS_TABLE_ID = "agents";
-
-const APPWRITE_MENU_RESTO_COLLECTION_ID = "menu_resto";
-const APPWRITE_VENTES_RESTO_COLLECTION_ID = "ventes_resto";
-
-// ✅ Réservations accueil
-const APPWRITE_RESERVATION_COLLECTION_ID = "reservation";
-
-// =====================================
-//  Initialisation du client Appwrite
-// =====================================
-
-if (typeof Appwrite === "undefined") {
-  console.error(
-    '[ADMIN] Appwrite SDK non chargé. Vérifie la balise <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>'
-  );
-}
-
-const adminClient = new Appwrite.Client();
-adminClient.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
-
-const adminDB = new Appwrite.Databases(adminClient);
+const APPWRITE_DATABASE_ID = CalypsoConfig.databaseId;
+const APPWRITE_BILLETS_TABLE_ID = CalypsoConfig.tables.billets;
+const APPWRITE_BILLETS_INTERNE_TABLE_ID = CalypsoConfig.tables.billetsInterne;
+const APPWRITE_VALIDATIONS_TABLE_ID = CalypsoConfig.tables.validations;
+const APPWRITE_ETUDIANTS_TABLE_ID = CalypsoConfig.tables.etudiants;
+const APPWRITE_MENU_RESTO_COLLECTION_ID = CalypsoConfig.tables.menuResto;
+const APPWRITE_VENTES_RESTO_COLLECTION_ID = CalypsoConfig.tables.ventesResto;
+const APPWRITE_RESERVATION_COLLECTION_ID = CalypsoConfig.tables.reservations;
+const adminDB = CalypsoAppwrite.databases;
 
 // Helpers DOM
 function $(id) {
@@ -127,51 +106,48 @@ function appliquerEtatConnexionAdmin(admin) {
 }
 
 async function adminLogin() {
-  const login = $("adminLogin")?.value.trim();
+  const email = $("adminEmail")?.value.trim();
   const password = $("adminPassword")?.value.trim();
 
-  if (!login || !password) {
-    showAdminLoginMessage("Veuillez saisir le login admin et le mot de passe.", "error");
+  if (!email || !password) {
+    showAdminLoginMessage("Veuillez saisir votre e-mail et votre mot de passe.", "error");
     return;
   }
 
   showAdminLoginMessage("Vérification en cours...", "info");
 
   try {
-    const res = await adminDB.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_AGENTS_TABLE_ID,
-      [
-        Appwrite.Query.equal("login", login),
-        Appwrite.Query.equal("mot_de_passe", password),
-        Appwrite.Query.equal("actif", true),
-        Appwrite.Query.limit(1)
-      ]
-    );
-
-    if (!res.documents || res.documents.length === 0) {
-      showAdminLoginMessage("Identifiants invalides ou agent inactif.", "error");
-      return;
-    }
-
-    const agent = res.documents[0];
-    const roleStr = (agent.role || "").toLowerCase();
-
-    if (!roleStr.includes("admin")) {
-      showAdminLoginMessage("Accès refusé : rôle 'admin' requis.", "error");
-      return;
-    }
+    const agent = await CalypsoAuth.login(email, password, [
+      CalypsoConfig.staffRoles.admin
+    ]);
 
     showAdminLoginMessage("Connexion administrateur réussie.", "success");
     appliquerEtatConnexionAdmin(agent);
   } catch (err) {
     console.error("[ADMIN] Erreur connexion admin :", err);
-    showAdminLoginMessage("Erreur lors de la connexion.", "error");
+    showAdminLoginMessage(err?.message || "Identifiants invalides.", "error");
   }
 }
 
-function adminLogout() {
-  appliquerEtatConnexionAdmin(null);
+async function adminLogout() {
+  try {
+    await CalypsoAuth.logout();
+  } finally {
+    appliquerEtatConnexionAdmin(null);
+  }
+}
+
+async function restaurerSessionAdmin() {
+  try {
+    const admin = await CalypsoAuth.restore([CalypsoConfig.staffRoles.admin]);
+    appliquerEtatConnexionAdmin(admin);
+    showAdminLoginMessage("Session restaurée.", "success");
+  } catch (error) {
+    appliquerEtatConnexionAdmin(null);
+    if (error?.code && error.code !== 401) {
+      showAdminLoginMessage(error.message, "error");
+    }
+  }
 }
 
 // =====================================
@@ -895,47 +871,35 @@ async function creerEtudiantDepuisAdmin() {
 }
 
 async function creerAgentDepuisAdmin() {
-  const loginEl = $("admin-agent-login");
-  const pwdEl = $("admin-agent-password");
+  const emailEl = $("admin-agent-email");
   const nomEl = $("admin-agent-nom");
-  const roleEl = $("admin-agent-role");
-  const actEl = $("admin-agent-actif");
+  const roleEls = document.querySelectorAll(".admin-agent-role:checked");
 
-  const login = loginEl?.value.trim();
-  const pwd = pwdEl?.value.trim();
+  const email = emailEl?.value.trim();
   const nom = nomEl?.value.trim() || "";
-  const role = roleEl?.value.trim();
-  const actif = !!(actEl && actEl.checked);
+  const roles = [...roleEls].map((element) => element.value);
 
-  if (!login || !pwd || !role) {
-    showAdminAgentMessage("Veuillez remplir au minimum login, mot de passe et rôle.", "error");
+  if (!email || roles.length === 0) {
+    showAdminAgentMessage("Veuillez saisir un e-mail et choisir au moins un rôle.", "error");
     return;
   }
 
   try {
-    await adminDB.createDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_AGENTS_TABLE_ID,
-      Appwrite.ID.unique(),
-      {
-        login,
-        mot_de_passe: pwd,
-        nom,
-        role,
-        actif
-      }
+    await CalypsoAuth.inviteStaff({ email, name: nom, roles });
+
+    showAdminAgentMessage(
+      "Invitation envoyée. L’agent devra l’accepter puis définir son mot de passe.",
+      "success"
     );
 
-    showAdminAgentMessage("Agent créé avec succès.", "success");
-
-    if (loginEl) loginEl.value = "";
-    if (pwdEl) pwdEl.value = "";
+    if (emailEl) emailEl.value = "";
     if (nomEl) nomEl.value = "";
-    if (roleEl) roleEl.value = "";
-    if (actEl) actEl.checked = true;
+    roleEls.forEach((element) => {
+      element.checked = false;
+    });
   } catch (err) {
-    console.error("[ADMIN] Erreur création agent :", err);
-    showAdminAgentMessage("Erreur lors de la création de l'agent.", "error");
+    console.error("[ADMIN] Erreur invitation agent :", err);
+    showAdminAgentMessage(err?.message || "Erreur lors de l'invitation.", "error");
   }
 }
 
@@ -1080,5 +1044,5 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  appliquerEtatConnexionAdmin(null);
+  restaurerSessionAdmin();
 });

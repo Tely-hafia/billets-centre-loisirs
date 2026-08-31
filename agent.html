@@ -29,17 +29,27 @@
     <h2>Connexion agent</h2>
 
     <p class="status">
-      Saisissez votre code agent et votre mot de passe pour accéder au poste.
+      Saisissez l’adresse e-mail associée à votre compte Calypço.
     </p>
 
     <div class="form-row">
-      <label for="agentLogin">Code agent :</label>
-      <input type="text" id="agentLogin" placeholder="ex : agent" />
+      <label for="agentEmail">E-mail :</label>
+      <input
+        type="email"
+        id="agentEmail"
+        placeholder="agent@exemple.com"
+        autocomplete="username"
+      />
     </div>
 
     <div class="form-row">
       <label for="agentPassword">Mot de passe :</label>
-      <input type="password" id="agentPassword" placeholder="Mot de passe" />
+      <input
+        type="password"
+        id="agentPassword"
+        placeholder="Mot de passe"
+        autocomplete="current-password"
+      />
     </div>
 
     <div class="actions-row">
@@ -305,8 +315,13 @@
 <!-- SDK Appwrite -->
 <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
 
+<!-- Configuration et authentification partagées -->
+<script src="js/appwrite-config.js?v=1"></script>
+<script src="js/appwrite-client.js?v=1"></script>
+<script src="js/auth-service.js?v=1"></script>
+
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=8"></script>
+<script src="js/agent-appwrite.js?v=9"></script>
 
 </body>
 </html>
