@@ -146,11 +146,23 @@ function updateReservationVisibility() {
 }
 
 function switchMode(mode) {
+  if (currentAgent) {
+    const roles = currentAgent.roles || [];
+    const isAdmin = roles.includes(CalypsoConfig.staffRoles.admin);
+    const allowed = mode === "billets"
+      ? isAdmin || roles.includes(CalypsoConfig.staffRoles.billets)
+      : isAdmin || roles.includes(CalypsoConfig.staffRoles.resto);
+
+    if (!allowed) return;
+  }
+
   currentMode = mode;
 
   const modeBillets = $("mode-billets");
   const modeResto = $("mode-resto");
   const modeLabel = $("mode-label");
+  const btnModeBillets = $("btnModeBillets");
+  const btnModeResto = $("btnModeResto");
 
   if (modeBillets) {
     modeBillets.style.display = mode === "billets" ? "block" : "none";
@@ -163,6 +175,18 @@ function switchMode(mode) {
   if (modeLabel) {
     modeLabel.textContent =
       mode === "billets" ? "Contrôle billets" : "Restauration / Chicha";
+  }
+
+  if (btnModeBillets) {
+    btnModeBillets.classList.toggle("btn-primary", mode === "billets");
+    btnModeBillets.classList.toggle("btn-secondary", mode !== "billets");
+    btnModeBillets.setAttribute("aria-pressed", String(mode === "billets"));
+  }
+
+  if (btnModeResto) {
+    btnModeResto.classList.toggle("btn-primary", mode === "resto");
+    btnModeResto.classList.toggle("btn-secondary", mode !== "resto");
+    btnModeResto.setAttribute("aria-pressed", String(mode === "resto"));
   }
 
   if (mode === "resto" && !restoLoaded) {
@@ -226,12 +250,26 @@ function appliquerEtatConnexion(agent) {
     const isAdmin = roles.includes(CalypsoConfig.staffRoles.admin);
     const canBillets = isAdmin || roles.includes(CalypsoConfig.staffRoles.billets);
     const canResto = isAdmin || roles.includes(CalypsoConfig.staffRoles.resto);
+    const operationalRoleCount = [canBillets, canResto].filter(Boolean).length;
+
+    document.body.dataset.singleRole = String(operationalRoleCount === 1);
+    document.body.dataset.role = canBillets && canResto
+      ? "dual"
+      : canBillets
+        ? "billets"
+        : "resto";
 
     if (loginCard) loginCard.style.display = "none";
     if (appZone) appZone.style.display = "block";
 
     if (nameEl) nameEl.textContent = agent.nom || agent.login || "";
-    if (roleEl) roleEl.textContent = agent.role || "";
+    if (roleEl) {
+      const labels = [];
+      if (canBillets) labels.push("Billets");
+      if (canResto) labels.push("Restauration");
+      if (isAdmin) labels.push("Admin");
+      roleEl.textContent = [...new Set(labels)].join(" · ");
+    }
 
     if (btnModeBillets) {
       btnModeBillets.style.display = canBillets ? "inline-flex" : "none";
@@ -248,6 +286,9 @@ function appliquerEtatConnexion(agent) {
       switchMode("resto");
     }
   } else {
+    delete document.body.dataset.singleRole;
+    delete document.body.dataset.role;
+
     if (loginCard) loginCard.style.display = "block";
     if (appZone) appZone.style.display = "none";
 
@@ -438,6 +479,11 @@ async function verifierBillet() {
 
   if (!currentAgent) {
     showResult("Veuillez d'abord vous connecter.", "error");
+    return;
+  }
+
+  if (!navigator.onLine) {
+    showResult("Connexion requise pour valider un billet.", "error");
     return;
   }
 
@@ -1096,6 +1142,11 @@ function viderPanier() {
 async function enregistrerVenteResto() {
   if (!currentAgent) {
     showTempMessage("❌ Veuillez vous connecter", "error");
+    return;
+  }
+
+  if (!navigator.onLine) {
+    showTempMessage("❌ Connexion requise pour enregistrer la vente", "error");
     return;
   }
 
