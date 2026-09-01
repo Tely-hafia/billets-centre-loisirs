@@ -113,6 +113,44 @@
       </div>
     </section>
 
+    <section id="agent-profile-card" class="card staff-profile-card" style="display:none;">
+      <p class="eyebrow">Profil requis</p>
+      <h2>Indiquez votre prénom et votre nom</h2>
+      <p class="status">
+        Ces informations identifieront clairement vos validations et vos ventes
+        dans le tableau de bord administrateur.
+      </p>
+
+      <div class="identity-fields">
+        <div class="form-row">
+          <label for="agent-profile-prenom">Prénom *</label>
+          <input
+            id="agent-profile-prenom"
+            type="text"
+            autocomplete="given-name"
+            maxlength="64"
+            required
+          />
+        </div>
+
+        <div class="form-row">
+          <label for="agent-profile-nom">Nom *</label>
+          <input
+            id="agent-profile-nom"
+            type="text"
+            autocomplete="family-name"
+            maxlength="64"
+            required
+          />
+        </div>
+      </div>
+
+      <button id="btnSaveAgentProfile" type="button" class="btn-primary">
+        Enregistrer mon identité
+      </button>
+      <p id="agent-profile-message" class="status" aria-live="polite"></p>
+    </section>
+
     <!-- MODE 1 : Contrôle billets -->
     <section class="card" id="mode-billets">
       <div class="agent-workspace-heading">
@@ -350,10 +388,10 @@
 <!-- Configuration et authentification partagées -->
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
-<script src="js/auth-service.js?v=1"></script>
+<script src="js/auth-service.js?v=2"></script>
 
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=9"></script>
+<script src="js/agent-appwrite.js?v=10"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>

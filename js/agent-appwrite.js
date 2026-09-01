@@ -240,6 +240,7 @@ function appliquerEtatConnexion(agent) {
 
   const loginCard = $("card-login");
   const appZone = $("app-zone");
+  const profileCard = $("agent-profile-card");
   const nameEl = $("agent-connected-name");
   const roleEl = $("agent-connected-role");
   const btnModeBillets = $("btnModeBillets");
@@ -262,7 +263,7 @@ function appliquerEtatConnexion(agent) {
     if (loginCard) loginCard.style.display = "none";
     if (appZone) appZone.style.display = "block";
 
-    if (nameEl) nameEl.textContent = agent.nom || agent.login || "";
+    if (nameEl) nameEl.textContent = agent.nom || "Profil à compléter";
     if (roleEl) {
       const labels = [];
       if (canBillets) labels.push("Billets");
@@ -279,6 +280,20 @@ function appliquerEtatConnexion(agent) {
       btnModeResto.style.display = canResto ? "inline-flex" : "none";
     }
 
+    if (!agent.profileComplete) {
+      if (profileCard) profileCard.style.display = "block";
+      if (btnModeBillets) btnModeBillets.disabled = true;
+      if (btnModeResto) btnModeResto.disabled = true;
+      if ($("mode-billets")) $("mode-billets").style.display = "none";
+      if ($("mode-resto")) $("mode-resto").style.display = "none";
+      if ($("mode-label")) $("mode-label").textContent = "Profil à compléter";
+      return;
+    }
+
+    if (profileCard) profileCard.style.display = "none";
+    if (btnModeBillets) btnModeBillets.disabled = false;
+    if (btnModeResto) btnModeResto.disabled = false;
+
     if (canBillets) {
       switchMode("billets");
       switchBilletsSubMode("ENTREE");
@@ -291,12 +306,51 @@ function appliquerEtatConnexion(agent) {
 
     if (loginCard) loginCard.style.display = "block";
     if (appZone) appZone.style.display = "none";
+    if (profileCard) profileCard.style.display = "none";
 
     if (btnModeBillets) btnModeBillets.style.display = "inline-flex";
     if (btnModeResto) btnModeResto.style.display = "inline-flex";
 
     setTicketCount(0);
     clearResult();
+  }
+}
+
+function showAgentProfileMessage(text, type = "info") {
+  const element = $("agent-profile-message");
+  if (!element) return;
+
+  element.textContent = text || "";
+  element.style.color =
+    type === "success" ? "#15803d" :
+    type === "error" ? "#b91c1c" :
+    "#64748b";
+}
+
+async function enregistrerProfilAgent() {
+  const prenomEl = $("agent-profile-prenom");
+  const nomEl = $("agent-profile-nom");
+  const button = $("btnSaveAgentProfile");
+  const prenom = prenomEl?.value.trim() || "";
+  const nom = nomEl?.value.trim() || "";
+
+  if (!prenom || !nom) {
+    showAgentProfileMessage("Veuillez saisir votre prénom et votre nom.", "error");
+    return;
+  }
+
+  if (button) button.disabled = true;
+  showAgentProfileMessage("Enregistrement en cours…");
+
+  try {
+    const updatedAgent = await CalypsoAuth.updateStaffName({ prenom, nom });
+    appliquerEtatConnexion(updatedAgent);
+    showTempMessage(`Profil enregistré : ${updatedAgent.nom}`, "success");
+  } catch (error) {
+    console.error("[AGENT] Erreur profil :", error);
+    showAgentProfileMessage(error?.message || "Impossible d’enregistrer le profil.", "error");
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 
@@ -1281,6 +1335,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const btnLogin = $("btnLogin");
   const btnLogout = $("btnLogout");
+  const btnSaveAgentProfile = $("btnSaveAgentProfile");
 
   if (btnLogin) {
     btnLogin.addEventListener("click", (e) => {
@@ -1293,6 +1348,13 @@ document.addEventListener("DOMContentLoaded", () => {
     btnLogout.addEventListener("click", (e) => {
       e.preventDefault();
       deconnexionAgent();
+    });
+  }
+
+  if (btnSaveAgentProfile) {
+    btnSaveAgentProfile.addEventListener("click", (e) => {
+      e.preventDefault();
+      enregistrerProfilAgent();
     });
   }
 

@@ -14,6 +14,33 @@
     return required.length === 0 || required.some((role) => context.roles.includes(role));
   }
 
+  function normalizeNamePart(value) {
+    return String(value || "").trim().replace(/\s+/g, " ");
+  }
+
+  function buildStaffName(prenom, nom) {
+    const normalizedPrenom = normalizeNamePart(prenom);
+    const normalizedNom = normalizeNamePart(nom);
+
+    if (!normalizedPrenom || !normalizedNom) {
+      throw new Error("Le prénom et le nom de l’agent sont requis.");
+    }
+
+    return `${normalizedPrenom} ${normalizedNom}`;
+  }
+
+  function hasUsableStaffName(user) {
+    const name = normalizeNamePart(user?.name);
+    const email = normalizeNamePart(user?.email).toLowerCase();
+    const userId = normalizeNamePart(user?.$id);
+
+    return Boolean(
+      name &&
+      name !== userId &&
+      name.toLowerCase() !== email
+    );
+  }
+
   async function getStaffContext(requiredRoles = []) {
     const user = await account.get();
     const memberships = await teams.listMemberships(
@@ -31,13 +58,15 @@
       throw error;
     }
 
+    const profileComplete = hasUsableStaffName(user);
     const context = {
       $id: user.$id,
       user,
       membership,
       roles: normalizeRoles(membership.roles),
       login: user.email,
-      nom: user.name || user.email,
+      nom: profileComplete ? normalizeNamePart(user.name) : "",
+      profileComplete,
       role: normalizeRoles(membership.roles).join(", ")
     };
 
@@ -79,13 +108,15 @@
     }
   }
 
-  async function inviteStaff({ email, name, roles }) {
+  async function inviteStaff({ email, prenom, nom, roles }) {
     await getStaffContext([config.staffRoles.admin]);
 
     const normalizedRoles = normalizeRoles(roles);
     if (!email || normalizedRoles.length === 0) {
       throw new Error("Une adresse e-mail et au moins un rôle sont requis.");
     }
+
+    const name = buildStaffName(prenom, nom);
 
     const inviteUrl = new URL("accept-invite.html", global.location.href).toString();
 
@@ -100,6 +131,13 @@
     );
   }
 
+  async function updateStaffName({ prenom, nom }) {
+    await getStaffContext();
+    const name = buildStaffName(prenom, nom);
+    await account.updateName(name);
+    return getStaffContext();
+  }
+
   global.CalypsoAuth = Object.freeze({
     getStaffContext,
     hasAnyRole,
@@ -107,6 +145,7 @@
     login,
     logout,
     normalizeRoles,
-    restore
+    restore,
+    updateStaffName
   });
 })(window);
