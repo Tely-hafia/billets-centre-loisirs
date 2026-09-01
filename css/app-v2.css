@@ -560,7 +560,15 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
   body.staff-page main,
   body.admin-page main { width: 100%; padding: 0 0.85rem; }
 
-  .public-nav a:not(.nav-cta) { display: none; }
+  body.public-page .site-header .header-inner { flex-wrap: wrap; }
+  body.public-page .public-nav {
+    width: 100%;
+    margin-left: 0;
+    gap: .35rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  body.public-page .public-nav a { display: inline-flex; flex: 0 0 auto; padding: .5rem .65rem; font-size: .78rem; }
   body.public-page .hero-section { min-height: 620px; }
   body.public-page .hero-content { width: calc(100% - 2rem); }
   .public-proof { width: calc(100% - 2rem); grid-template-columns: 1fr; margin-top: -2rem; }

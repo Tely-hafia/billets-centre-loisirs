@@ -221,7 +221,7 @@ async function calculerSyntheseCaisse(session) {
     orange: sumByPayment("orange_money"),
     mtn: sumByPayment("mtn_money"),
     operations: new Set(ventes.map((sale) => sale.id)).size,
-    mouvementsEnAttente: (movementsResult.documents || []).filter((item) => item.statut !== "APPROUVE").length
+    mouvementsEnAttente: (movementsResult.documents || []).filter((item) => item.statut === "EN_ATTENTE").length
   };
 }
 

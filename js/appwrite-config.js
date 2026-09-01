@@ -16,8 +16,7 @@
       ventesResto: "ventes_resto",
       reservations: "reservation",
       sessionsCaisse: "sessions_caisse",
-      mouvementsCaisse: "mouvements_caisse",
-      remisesCaisse: "remises_caisse"
+      mouvementsCaisse: "mouvements_caisse"
     }),
     staffRoles: Object.freeze({
       admin: "admin",
