@@ -216,6 +216,34 @@ body.public-page .site-header {
   box-shadow: none;
 }
 
+html,
+body.public-page { max-width: 100%; overflow-x: hidden; }
+
+body.public-page .home-main,
+body.public-page .gallery-section,
+body.public-page .services-section,
+body.public-page .info-section { max-width: 100%; min-width: 0; }
+
+body.public-page .gallery-carousel { width: min(980px, calc(100% - 1.5rem)); max-width: 100%; }
+body.public-page .carousel-track { width: 100%; }
+body.public-page .carousel-slide { flex: 0 0 100%; width: 100%; min-width: 0; overflow-wrap: anywhere; }
+
+body.public-inner-page .site-header { position: relative; background: #0b1324; }
+.public-brand-link { display: inline-flex; align-items: center; gap: .75rem; color: #fff; text-decoration: none; }
+.public-brand-link span { display: grid; }
+.public-brand-link strong { font-size: 1.3rem; }
+.public-brand-link small { color: #cbd5e1; }
+.public-inner-main { width: min(1160px, calc(100% - 2rem)); margin: 0 auto; padding: 3rem 0 5rem; }
+.public-page-intro { max-width: 760px; margin: 0 auto 2.5rem; text-align: center; }
+.public-page-intro h1 { margin: .5rem 0 1rem; color: #0b1324; font-size: clamp(2.4rem, 7vw, 4.8rem); line-height: 1; }
+.public-page-intro .btn-link { display: inline-flex; margin-top: 1rem; }
+.contact-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.contact-info-card { padding: 1.5rem; border: 1px solid #dce5ee; border-radius: 18px; background: #fff; box-shadow: 0 15px 35px rgb(15 31 55 / 8%); }
+.contact-info-card > span { font-size: 2rem; }
+.contact-info-card h2 { margin: .6rem 0 .35rem; }
+.contact-info-card a { color: #0f766e; font-weight: 800; }
+.contact-job-card { grid-column: 1 / -1; background: linear-gradient(135deg, #ecf9f7, #fff7ed); }
+
 body.public-page .site-header::before { display: none; }
 
 .public-nav {
@@ -588,6 +616,71 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
   body.public-page .hero-title { font-size: 3.2rem; }
   .dashboard-kpis { grid-template-columns: 1fr; }
   .dashboard-kpi { min-height: auto; }
+}
+
+.payment-panel {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.payment-panel legend { padding: 0 .4rem; font-weight: 800; color: #0b1324; }
+.payment-methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.payment-choice {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+.payment-choice:has(input:checked) { border-color: #0f9f9a; box-shadow: 0 0 0 2px rgb(15 159 154 / 14%); }
+.cash-change-row {
+  display: grid;
+  grid-template-columns: minmax(140px, .7fr) minmax(160px, 1fr) minmax(190px, 1fr);
+  align-items: center;
+  gap: .75rem;
+  margin-top: .9rem;
+}
+.cash-change-row output { font-weight: 800; color: #0f766e; }
+.control-entry-card { max-width: 760px; margin-inline: auto; }
+.control-fast-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; align-items: end; }
+.control-fast-form label { grid-column: 1 / -1; font-weight: 800; }
+.control-fast-form input { min-height: 58px; font-size: 1.3rem; font-weight: 800; }
+.control-fast-form button { min-height: 58px; }
+.cash-register-card { border-top: 4px solid #0f9f9a; }
+.cash-register-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.cash-open-form { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 1rem; align-items: end; }
+.cash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0; }
+.cash-kpis article { padding: .9rem; border: 1px solid #dce5ee; border-radius: 14px; background: #f8fafc; }
+.cash-kpis span { display: block; margin-bottom: .25rem; color: #64748b; font-size: .82rem; }
+.cash-kpis strong { color: #0b1324; font-size: 1.05rem; }
+.cash-details { margin-top: .8rem; padding: .9rem; border: 1px solid #dce5ee; border-radius: 14px; }
+.cash-details summary { cursor: pointer; font-weight: 800; color: #0f314d; }
+.cash-movement-form { display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: .75rem; align-items: end; margin-top: .8rem; }
+.cash-close-form { display: grid; grid-template-columns: 1fr 1.5fr auto; gap: .75rem; align-items: end; margin-top: .8rem; }
+
+@media (max-width: 768px) {
+  .payment-methods,
+  .cash-change-row,
+  .control-fast-form { grid-template-columns: 1fr; }
+  .agent-role-switch { display: grid; grid-template-columns: 1fr; width: 100%; }
+  .agent-role-switch button,
+  .control-fast-form button { width: 100%; }
+  .cash-register-header,
+  .cash-open-form,
+  .cash-close-form { display: grid; grid-template-columns: 1fr; }
+  .cash-kpis { grid-template-columns: 1fr 1fr; }
+  .cash-movement-form { grid-template-columns: 1fr; }
+  .contact-info-grid { grid-template-columns: 1fr; }
+  .contact-job-card { grid-column: auto; }
+  body.public-page .carousel-nav { width: 44px; height: 44px; }
+  body.public-page .carousel-prev { left: .5rem; }
+  body.public-page .carousel-next { right: .5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

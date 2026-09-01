@@ -12,6 +12,8 @@ const APPWRITE_ETUDIANTS_TABLE_ID = CalypsoConfig.tables.etudiants;
 const APPWRITE_MENU_RESTO_COLLECTION_ID = CalypsoConfig.tables.menuResto;
 const APPWRITE_VENTES_RESTO_COLLECTION_ID = CalypsoConfig.tables.ventesResto;
 const APPWRITE_RESERVATION_COLLECTION_ID = CalypsoConfig.tables.reservations;
+const APPWRITE_SESSIONS_CAISSE_TABLE_ID = CalypsoConfig.tables.sessionsCaisse;
+const APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID = CalypsoConfig.tables.mouvementsCaisse;
 const db = CalypsoAppwrite.databases;
 
 // ===============================
@@ -71,6 +73,38 @@ function getTarifChoisi() {
   return "normal";
 }
 
+function getSelectedPayment(groupName) {
+  return document.querySelector(`input[name="${groupName}"]:checked`)?.value ||
+    CalypsoConfig.paymentMethods.especes;
+}
+
+function getCashDetails(groupName, inputId, total) {
+  const moyenPaiement = getSelectedPayment(groupName);
+  if (moyenPaiement !== CalypsoConfig.paymentMethods.especes) {
+    return { moyenPaiement, montantRecu: total, monnaieRendue: 0 };
+  }
+
+  const raw = $(inputId)?.value;
+  const montantRecu = raw === "" || raw == null ? total : Number(raw);
+  if (!Number.isFinite(montantRecu) || montantRecu < total) {
+    throw new Error(`Espèces insuffisantes : ${formatMontantGNF(total)} attendus.`);
+  }
+
+  return {
+    moyenPaiement,
+    montantRecu,
+    monnaieRendue: montantRecu - total
+  };
+}
+
+function updatePaymentZone(groupName, zoneId) {
+  const zone = $(zoneId);
+  if (!zone) return;
+  zone.style.display = getSelectedPayment(groupName) === CalypsoConfig.paymentMethods.especes
+    ? "grid"
+    : "none";
+}
+
 function setButtonLoading(button, text) {
   if (!button) return;
   button.dataset.originalText = button.dataset.originalText || button.textContent;
@@ -99,6 +133,290 @@ let currentBilletsSubMode = "ENTREE";
 
 let lastVenteNumber = 0;
 let lastVerifiedEtudiant = null;
+let currentCashSession = null;
+let currentCashSummary = null;
+
+function agentHasRole(role) {
+  return Boolean(currentAgent?.roles?.includes(role));
+}
+
+function isAdminAgent() {
+  return agentHasRole(CalypsoConfig.staffRoles.admin);
+}
+
+function isGerantAgent() {
+  return isAdminAgent() ||
+    agentHasRole(CalypsoConfig.staffRoles.gerant) ||
+    agentHasRole(CalypsoConfig.staffRoles.billets);
+}
+
+function isControleAgent() {
+  return isAdminAgent() || agentHasRole(CalypsoConfig.staffRoles.controle);
+}
+
+function isRestoAgent() {
+  return isAdminAgent() || agentHasRole(CalypsoConfig.staffRoles.resto);
+}
+
+function getCashPoste() {
+  return currentMode === "resto" ? "RESTO" : "GERANT";
+}
+
+function showCashMessage(text, type = "info") {
+  const element = $("cash-register-message");
+  if (!element) return;
+  element.textContent = text || "";
+  element.style.color = type === "error" ? "#b91c1c" : type === "success" ? "#15803d" : "#64748b";
+}
+
+async function calculerSyntheseCaisse(session) {
+  const [validationsResult, restoResult, movementsResult] = await Promise.all([
+    db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VALIDATIONS_TABLE_ID, [
+      Appwrite.Query.equal("session_caisse_id", session.$id),
+      Appwrite.Query.limit(5000)
+    ]),
+    db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VENTES_RESTO_COLLECTION_ID, [
+      Appwrite.Query.equal("session_caisse_id", session.$id),
+      Appwrite.Query.limit(5000)
+    ]),
+    db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID, [
+      Appwrite.Query.equal("session_id", session.$id),
+      Appwrite.Query.limit(5000)
+    ])
+  ]);
+
+  const ventesBillets = (validationsResult.documents || []).filter(
+    (item) => ["VENTE_ENTREE", "INTERNE"].includes(item.poste_id)
+  );
+  const lignesResto = restoResult.documents || [];
+  const ventes = [
+    ...ventesBillets.map((item) => ({
+      id: item.$id,
+      moyen: item.moyen_paiement || "especes",
+      montant: Number(item.montant_paye || 0)
+    })),
+    ...lignesResto.map((item) => ({
+      id: item.numero_vente || item.$id,
+      moyen: item.moyen_paiement || "especes",
+      montant: Number(item.montant_total || 0)
+    }))
+  ];
+  const sumByPayment = (method) => ventes
+    .filter((sale) => sale.moyen === method)
+    .reduce((sum, sale) => sum + sale.montant, 0);
+
+  const mouvementsApprouves = (movementsResult.documents || []).filter(
+    (item) => item.statut === "APPROUVE"
+  );
+  const ajouts = mouvementsApprouves
+    .filter((item) => item.type === "AJOUT_CAISSE")
+    .reduce((sum, item) => sum + Number(item.montant || 0), 0);
+  const sorties = mouvementsApprouves
+    .filter((item) => ["DEPENSE", "REMBOURSEMENT", "AVANCE", "REMISE_GERANT"].includes(item.type))
+    .reduce((sum, item) => sum + Number(item.montant || 0), 0);
+  const especesVentes = sumByPayment("especes");
+
+  return {
+    especes: Number(session.fonds_depart || 0) + especesVentes + ajouts - sorties,
+    orange: sumByPayment("orange_money"),
+    mtn: sumByPayment("mtn_money"),
+    operations: new Set(ventes.map((sale) => sale.id)).size,
+    mouvementsEnAttente: (movementsResult.documents || []).filter((item) => item.statut !== "APPROUVE").length
+  };
+}
+
+function renderCashRegister() {
+  const card = $("cash-register-card");
+  const openZone = $("cash-open-zone");
+  const activeZone = $("cash-active-zone");
+  const status = $("cash-register-status");
+  const badge = $("cash-session-badge");
+  const canCash = currentAgent?.profileComplete && (isGerantAgent() || isRestoAgent()) && currentMode !== "controle";
+
+  if (!card) return;
+  card.style.display = canCash ? "block" : "none";
+  if (!canCash) return;
+
+  if ($("cash-register-title")) {
+    $("cash-register-title").textContent = getCashPoste() === "GERANT" ? "Caisse du gérant" : "Caisse restauration";
+  }
+  openZone.style.display = currentCashSession ? "none" : "block";
+  activeZone.style.display = currentCashSession ? "block" : "none";
+  badge.textContent = currentCashSession ? "Ouverte" : "Fermée";
+
+  if (!currentCashSession) {
+    status.textContent = "Ouvrez une caisse avant la première vente du service.";
+    return;
+  }
+
+  status.textContent = `Ouverte le ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} — fonds : ${formatMontantGNF(currentCashSession.fonds_depart)}.`;
+  if (currentCashSummary) {
+    $("cashExpected").textContent = formatMontantGNF(currentCashSummary.especes);
+    $("cashOrange").textContent = formatMontantGNF(currentCashSummary.orange);
+    $("cashMtn").textContent = formatMontantGNF(currentCashSummary.mtn);
+    $("cashOperations").textContent = String(currentCashSummary.operations);
+  }
+}
+
+async function chargerSessionCaisse() {
+  currentCashSession = null;
+  currentCashSummary = null;
+  renderCashRegister();
+  if (!currentAgent?.profileComplete || currentMode === "controle") return;
+  if (!(isGerantAgent() || isRestoAgent())) return;
+
+  try {
+    const result = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+      [Appwrite.Query.equal("agent_id", currentAgent.$id), Appwrite.Query.limit(100)]
+    );
+    currentCashSession = (result.documents || []).find(
+      (session) => session.poste === getCashPoste() && session.statut === "OUVERTE"
+    ) || null;
+    if (currentCashSession) currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+    renderCashRegister();
+  } catch (error) {
+    console.error("[CAISSE] Chargement impossible :", error);
+    showCashMessage("La caisse n’est pas encore disponible. Contactez l’administrateur.", "error");
+  }
+}
+
+async function ouvrirCaisse() {
+  if (!currentAgent || currentMode === "controle") return;
+  const fonds = Number($("cashOpeningFloat")?.value || 0);
+  if (!Number.isFinite(fonds) || fonds < 0) {
+    showCashMessage("Le fonds de départ est invalide.", "error");
+    return;
+  }
+
+  const button = $("btnOpenCash");
+  setButtonLoading(button, "Ouverture…");
+  try {
+    currentCashSession = await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        agent_id: currentAgent.$id,
+        agent_nom: currentAgent.nom,
+        poste: getCashPoste(),
+        statut: "OUVERTE",
+        ouverture: new Date().toISOString(),
+        fonds_depart: fonds
+      },
+      [
+        Appwrite.Permission.read(Appwrite.Role.team(CalypsoConfig.staffTeamId)),
+        Appwrite.Permission.update(Appwrite.Role.user(currentAgent.$id))
+      ]
+    );
+    currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+    renderCashRegister();
+    showCashMessage("Caisse ouverte. Les ventes peuvent commencer.", "success");
+  } catch (error) {
+    console.error("[CAISSE] Ouverture impossible :", error);
+    showCashMessage(error?.message || "Impossible d’ouvrir la caisse.", "error");
+  } finally {
+    resetButtonLoading(button);
+  }
+}
+
+async function ajouterMouvementCaisse() {
+  if (!currentCashSession) {
+    showCashMessage("Ouvrez d’abord votre caisse.", "error");
+    return;
+  }
+  const type = $("cashMovementType")?.value || "";
+  const montant = Number($("cashMovementAmount")?.value || 0);
+  const motif = $("cashMovementReason")?.value.trim() || "";
+  if (!type || montant <= 0 || !motif) {
+    showCashMessage("Type, montant et motif sont obligatoires.", "error");
+    return;
+  }
+
+  const button = $("btnAddCashMovement");
+  setButtonLoading(button, "Enregistrement…");
+  try {
+    await db.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        session_id: currentCashSession.$id,
+        agent_id: currentAgent.$id,
+        type,
+        montant,
+        motif,
+        date_mouvement: new Date().toISOString(),
+        statut: "EN_ATTENTE"
+      }
+    );
+    $("cashMovementAmount").value = "";
+    $("cashMovementReason").value = "";
+    currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+    renderCashRegister();
+    showCashMessage("Mouvement enregistré, en attente d’approbation.", "success");
+  } catch (error) {
+    console.error("[CAISSE] Mouvement impossible :", error);
+    showCashMessage(error?.message || "Impossible d’enregistrer ce mouvement.", "error");
+  } finally {
+    resetButtonLoading(button);
+  }
+}
+
+async function cloturerCaisse() {
+  if (!currentCashSession) return;
+  currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+  if (currentCashSummary.mouvementsEnAttente > 0) {
+    showCashMessage(
+      `${currentCashSummary.mouvementsEnAttente} mouvement(s) attendent encore l’approbation administrative.`,
+      "error"
+    );
+    return;
+  }
+  const especesDeclarees = Number($("cashActual")?.value);
+  const commentaire = $("cashCloseComment")?.value.trim() || "";
+  if (!Number.isFinite(especesDeclarees) || especesDeclarees < 0) {
+    showCashMessage("Saisissez les espèces réellement remises.", "error");
+    return;
+  }
+  const ecart = especesDeclarees - currentCashSummary.especes;
+  if (ecart !== 0 && !commentaire) {
+    showCashMessage("Un commentaire est obligatoire en cas d’écart.", "error");
+    return;
+  }
+
+  const button = $("btnCloseCash");
+  setButtonLoading(button, "Clôture…");
+  try {
+    await db.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+      currentCashSession.$id,
+      {
+        statut: "CLOTUREE",
+        fermeture: new Date().toISOString(),
+        especes_attendues: currentCashSummary.especes,
+        especes_declarees: especesDeclarees,
+        orange_money: currentCashSummary.orange,
+        mtn_money: currentCashSummary.mtn,
+        ecart,
+        commentaire
+      }
+    );
+    currentCashSession = null;
+    currentCashSummary = null;
+    $("cashActual").value = "";
+    $("cashCloseComment").value = "";
+    renderCashRegister();
+    showCashMessage(`Caisse clôturée. Écart : ${formatMontantGNF(ecart)}.`, ecart === 0 ? "success" : "error");
+  } catch (error) {
+    console.error("[CAISSE] Clôture impossible :", error);
+    showCashMessage(error?.message || "Impossible de clôturer la caisse.", "error");
+  } finally {
+    resetButtonLoading(button);
+  }
+}
 
 // ===============================
 //  UI MODES
@@ -117,6 +435,8 @@ function updateTarifEtudiantVisibility() {
         radioEtu && radioEtu.checked ? "block" : "none";
     }
   } else {
+    currentCashSession = null;
+    currentCashSummary = null;
     if (tarifZone) tarifZone.style.display = "none";
     if (etuZone) etuZone.style.display = "none";
   }
@@ -147,11 +467,11 @@ function updateReservationVisibility() {
 
 function switchMode(mode) {
   if (currentAgent) {
-    const roles = currentAgent.roles || [];
-    const isAdmin = roles.includes(CalypsoConfig.staffRoles.admin);
     const allowed = mode === "billets"
-      ? isAdmin || roles.includes(CalypsoConfig.staffRoles.billets)
-      : isAdmin || roles.includes(CalypsoConfig.staffRoles.resto);
+      ? isGerantAgent()
+      : mode === "controle"
+        ? isControleAgent()
+        : isRestoAgent();
 
     if (!allowed) return;
   }
@@ -159,9 +479,11 @@ function switchMode(mode) {
   currentMode = mode;
 
   const modeBillets = $("mode-billets");
+  const modeControle = $("mode-controle");
   const modeResto = $("mode-resto");
   const modeLabel = $("mode-label");
   const btnModeBillets = $("btnModeBillets");
+  const btnModeControle = $("btnModeControle");
   const btnModeResto = $("btnModeResto");
 
   if (modeBillets) {
@@ -172,9 +494,17 @@ function switchMode(mode) {
     modeResto.style.display = mode === "resto" ? "block" : "none";
   }
 
+  if (modeControle) {
+    modeControle.style.display = mode === "controle" ? "block" : "none";
+  }
+
   if (modeLabel) {
     modeLabel.textContent =
-      mode === "billets" ? "Contrôle billets" : "Restauration / Chicha";
+      mode === "billets"
+        ? "Caisse billets"
+        : mode === "controle"
+          ? "Contrôle entrée"
+          : "Restauration / Chicha";
   }
 
   if (btnModeBillets) {
@@ -189,10 +519,23 @@ function switchMode(mode) {
     btnModeResto.setAttribute("aria-pressed", String(mode === "resto"));
   }
 
+  if (btnModeControle) {
+    btnModeControle.classList.toggle("btn-primary", mode === "controle");
+    btnModeControle.classList.toggle("btn-secondary", mode !== "controle");
+    btnModeControle.setAttribute("aria-pressed", String(mode === "controle"));
+  }
+
   if (mode === "resto" && !restoLoaded) {
     restoLoaded = true;
     chargerProduitsResto();
   }
+
+
+  if (mode === "controle") {
+    window.setTimeout(() => $("controlTicketNumber")?.focus(), 0);
+  }
+
+  if (currentAgent?.profileComplete) chargerSessionCaisse();
 }
 
 function switchBilletsSubMode(mode) {
@@ -244,21 +587,24 @@ function appliquerEtatConnexion(agent) {
   const nameEl = $("agent-connected-name");
   const roleEl = $("agent-connected-role");
   const btnModeBillets = $("btnModeBillets");
+  const btnModeControle = $("btnModeControle");
   const btnModeResto = $("btnModeResto");
 
   if (agent) {
-    const roles = agent.roles || [];
-    const isAdmin = roles.includes(CalypsoConfig.staffRoles.admin);
-    const canBillets = isAdmin || roles.includes(CalypsoConfig.staffRoles.billets);
-    const canResto = isAdmin || roles.includes(CalypsoConfig.staffRoles.resto);
-    const operationalRoleCount = [canBillets, canResto].filter(Boolean).length;
+    const isAdmin = agent.roles.includes(CalypsoConfig.staffRoles.admin);
+    const canBillets = isGerantAgent();
+    const canControle = isControleAgent();
+    const canResto = isRestoAgent();
+    const operationalRoleCount = [canBillets, canControle, canResto].filter(Boolean).length;
 
     document.body.dataset.singleRole = String(operationalRoleCount === 1);
-    document.body.dataset.role = canBillets && canResto
-      ? "dual"
+    document.body.dataset.role = operationalRoleCount > 1
+      ? "multiple"
       : canBillets
-        ? "billets"
-        : "resto";
+        ? "gerant"
+        : canControle
+          ? "controle"
+          : "resto";
 
     if (loginCard) loginCard.style.display = "none";
     if (appZone) appZone.style.display = "block";
@@ -266,7 +612,8 @@ function appliquerEtatConnexion(agent) {
     if (nameEl) nameEl.textContent = agent.nom || "Profil à compléter";
     if (roleEl) {
       const labels = [];
-      if (canBillets) labels.push("Billets");
+      if (canBillets) labels.push("Gérant");
+      if (canControle) labels.push("Contrôle");
       if (canResto) labels.push("Restauration");
       if (isAdmin) labels.push("Admin");
       roleEl.textContent = [...new Set(labels)].join(" · ");
@@ -276,6 +623,11 @@ function appliquerEtatConnexion(agent) {
       btnModeBillets.style.display = canBillets ? "inline-flex" : "none";
     }
 
+
+    if (btnModeControle) {
+      btnModeControle.style.display = canControle ? "inline-flex" : "none";
+    }
+
     if (btnModeResto) {
       btnModeResto.style.display = canResto ? "inline-flex" : "none";
     }
@@ -283,8 +635,10 @@ function appliquerEtatConnexion(agent) {
     if (!agent.profileComplete) {
       if (profileCard) profileCard.style.display = "block";
       if (btnModeBillets) btnModeBillets.disabled = true;
+      if (btnModeControle) btnModeControle.disabled = true;
       if (btnModeResto) btnModeResto.disabled = true;
       if ($("mode-billets")) $("mode-billets").style.display = "none";
+      if ($("mode-controle")) $("mode-controle").style.display = "none";
       if ($("mode-resto")) $("mode-resto").style.display = "none";
       if ($("mode-label")) $("mode-label").textContent = "Profil à compléter";
       return;
@@ -292,11 +646,14 @@ function appliquerEtatConnexion(agent) {
 
     if (profileCard) profileCard.style.display = "none";
     if (btnModeBillets) btnModeBillets.disabled = false;
+    if (btnModeControle) btnModeControle.disabled = false;
     if (btnModeResto) btnModeResto.disabled = false;
 
     if (canBillets) {
       switchMode("billets");
       switchBilletsSubMode("ENTREE");
+    } else if (canControle) {
+      switchMode("controle");
     } else {
       switchMode("resto");
     }
@@ -309,10 +666,12 @@ function appliquerEtatConnexion(agent) {
     if (profileCard) profileCard.style.display = "none";
 
     if (btnModeBillets) btnModeBillets.style.display = "inline-flex";
+    if (btnModeControle) btnModeControle.style.display = "inline-flex";
     if (btnModeResto) btnModeResto.style.display = "inline-flex";
 
     setTicketCount(0);
     clearResult();
+    renderCashRegister();
   }
 }
 
@@ -368,6 +727,8 @@ async function connecterAgent() {
   try {
     const agent = await CalypsoAuth.login(email, password, [
       CalypsoConfig.staffRoles.admin,
+      CalypsoConfig.staffRoles.gerant,
+      CalypsoConfig.staffRoles.controle,
       CalypsoConfig.staffRoles.billets,
       CalypsoConfig.staffRoles.resto
     ]);
@@ -393,6 +754,8 @@ async function restaurerSessionAgent() {
   try {
     const agent = await CalypsoAuth.restore([
       CalypsoConfig.staffRoles.admin,
+      CalypsoConfig.staffRoles.gerant,
+      CalypsoConfig.staffRoles.controle,
       CalypsoConfig.staffRoles.billets,
       CalypsoConfig.staffRoles.resto
     ]);
@@ -536,6 +899,18 @@ async function verifierBillet() {
     return;
   }
 
+
+  if (!isGerantAgent()) {
+    showResult("Seul le gérant peut enregistrer une vente de billet.", "error");
+    return;
+  }
+
+
+  if (!currentCashSession || currentCashSession.poste !== "GERANT") {
+    showResult("Ouvrez la caisse du gérant avant d’enregistrer une vente.", "error");
+    return;
+  }
+
   if (!navigator.onLine) {
     showResult("Connexion requise pour valider un billet.", "error");
     return;
@@ -614,8 +989,25 @@ async function validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi) {
 
   billet = billetRes.documents[0];
 
-  if (billet.statut === "Validé") {
-    showResult(`Billet ${numeroBillet} déjà VALIDÉ ❌`, "error");
+  if (!CalypsoTicketWorkflow.canSell(billet.statut)) {
+    showResult(CalypsoTicketWorkflow.getSaleRefusal(billet.statut), "error");
+    return;
+  }
+
+
+  const ventesExistantes = await db.listDocuments(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_VALIDATIONS_TABLE_ID,
+    [
+      Appwrite.Query.equal("numero_billet", numeroBillet),
+      Appwrite.Query.limit(25)
+    ]
+  );
+  const venteDejaJournalisee = (ventesExistantes.documents || []).some(
+    (item) => ["VENTE_ENTREE", "ENTREE"].includes(item.poste_id)
+  );
+  if (venteDejaJournalisee) {
+    showResult(`Billet ${numeroBillet} déjà vendu ou utilisé.`, "error");
     return;
   }
 
@@ -632,13 +1024,30 @@ async function validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi) {
     if (!okEtudiant) return;
   }
 
-  const updateBilletData = {
-    statut: "Validé"
-  };
+  const montantBillet = tarifChoisi === "etudiant"
+    ? Number(billet.tarif_universite || 0)
+    : Number(billet.prix || 0);
+  let paiement;
+  try {
+    paiement = getCashDetails("ticketPayment", "ticketCashReceived", montantBillet);
+  } catch (error) {
+    showResult(error.message, "error");
+    return;
+  }
+
+  const updateBilletData = { statut: CalypsoConfig.ticketStatuses.vendu };
 
   if (useReservation) {
     updateBilletData.reservation = numeroReservation;
   }
+
+  await journaliserValidationEntree({
+    billet,
+    tarifChoisi,
+    numeroEtu,
+    paiement,
+    numeroReservation: useReservation ? numeroReservation : ""
+  });
 
   await db.updateDocument(
     APPWRITE_DATABASE_ID,
@@ -656,15 +1065,10 @@ async function validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi) {
     );
   }
 
-  await journaliserValidationEntree({
-    billet,
-    tarifChoisi,
-    numeroEtu,
-    numeroReservation: useReservation ? numeroReservation : ""
-  });
-
   const ticketInput = $("ticketNumber");
   if (ticketInput) ticketInput.value = "";
+  if ($("ticketCashReceived")) $("ticketCashReceived").value = "";
+  if ($("ticketChange")) $("ticketChange").textContent = "Monnaie à rendre : 0 GNF";
 
   if (useReservation) resetReservationForm();
 
@@ -673,10 +1077,14 @@ async function validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi) {
 
   showResult(
     useReservation
-      ? `Billet ${numeroBillet} VALIDÉ ✅ et affilié à la réservation ${numeroReservation}.`
-      : `Billet ${numeroBillet} VALIDÉ ✅.`,
+      ? `Billet ${numeroBillet} VENDU ✅ et lié à ${numeroReservation}. Monnaie : ${formatMontantGNF(paiement.monnaieRendue)}.`
+      : `Billet ${numeroBillet} VENDU ✅. Monnaie : ${formatMontantGNF(paiement.monnaieRendue)}.`,
     "success"
   );
+
+  currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+  renderCashRegister();
+  ticketInput?.focus();
 }
 
 async function verifierTarifEtudiantAvantValidation(numeroEtu) {
@@ -727,10 +1135,10 @@ async function journaliserValidationEntree({
   billet,
   tarifChoisi,
   numeroEtu,
+  paiement,
   numeroReservation
 }) {
-  try {
-    const nowIso = new Date().toISOString();
+  const nowIso = new Date().toISOString();
 
     const montantNormal = parseInt(billet.prix || 0, 10) || 0;
     const montantEtudiant = parseInt(billet.tarif_universite || 0, 10) || 0;
@@ -750,18 +1158,124 @@ async function journaliserValidationEntree({
       tarif_applique: tarifChoisi,
       montant_paye: montantPaye,
       agent_id: currentAgent.$id || "",
-      poste_id: "ENTREE",
-      numero_etudiant: numeroEtu || ""
+      poste_id: "VENTE_ENTREE",
+      numero_etudiant: numeroEtu || "",
+      moyen_paiement: paiement.moyenPaiement,
+      montant_recu: paiement.montantRecu,
+      monnaie_rendue: paiement.monnaieRendue,
+      session_caisse_id: currentCashSession.$id
     };
+
+  return db.createDocument(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_VALIDATIONS_TABLE_ID,
+    Appwrite.ID.unique(),
+    validationDoc
+  );
+}
+
+async function confirmerEntree() {
+  const input = $("controlTicketNumber");
+  const button = $("btnConfirmEntry");
+  const result = $("control-result");
+  const numeroBillet = input?.value.trim() || "";
+
+  function render(text, type) {
+    if (!result) return;
+    result.style.display = "block";
+    result.className = `result ${type}`;
+    result.textContent = text;
+  }
+
+  if (!currentAgent || !isControleAgent()) {
+    render("Votre rôle ne permet pas de confirmer une entrée.", "error");
+    return;
+  }
+  if (!navigator.onLine) {
+    render("Connexion requise pour confirmer l’entrée.", "error");
+    return;
+  }
+  if (!numeroBillet) {
+    render("Saisissez le numéro du billet.", "error");
+    input?.focus();
+    return;
+  }
+
+  setButtonLoading(button, "Contrôle…");
+  try {
+    const ticketResult = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      [Appwrite.Query.equal("numero_billet", numeroBillet), Appwrite.Query.limit(1)]
+    );
+    const billet = ticketResult.documents?.[0];
+    if (!billet) {
+      render(`Billet ${numeroBillet} inconnu : entrée refusée.`, "error");
+      return;
+    }
+
+    if (!CalypsoTicketWorkflow.canConfirm(billet.statut)) {
+      render(CalypsoTicketWorkflow.getConfirmationRefusal(billet.statut), "error");
+      return;
+    }
+
+    const journalResult = await db.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_VALIDATIONS_TABLE_ID,
+      [Appwrite.Query.equal("numero_billet", numeroBillet), Appwrite.Query.limit(25)]
+    );
+    const events = journalResult.documents || [];
+    const vente = events.find((item) => item.poste_id === "VENTE_ENTREE");
+    const dejaConfirme = events.some((item) => item.poste_id === "CONTROLE_ENTREE");
+    if (!vente) {
+      render("Vente introuvable dans le journal : entrée refusée et anomalie à vérifier.", "error");
+      return;
+    }
+    if (dejaConfirme) {
+      render("Double utilisation : cette entrée est déjà confirmée.", "error");
+      return;
+    }
 
     await db.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_VALIDATIONS_TABLE_ID,
       Appwrite.ID.unique(),
-      validationDoc
+      {
+        numero_billet: billet.numero_billet,
+        billet_id: billet.$id,
+        date_validation: new Date().toISOString(),
+        type_acces: billet.type_acces || "",
+        type_billet: billet.type_billet || "",
+        code_offre: billet.code_offre || "ENTREE",
+        tarif_normal: Number(billet.prix || 0),
+        tarif_etudiant: Number(billet.tarif_universite || 0),
+        tarif_applique: "controle",
+        montant_paye: 0,
+        agent_id: currentAgent.$id || "",
+        poste_id: "CONTROLE_ENTREE",
+        numero_etudiant: "",
+        moyen_paiement: vente.moyen_paiement || "",
+        montant_recu: 0,
+        monnaie_rendue: 0
+      }
     );
-  } catch (logErr) {
-    console.warn("[AGENT] Erreur journalisation validation entrée :", logErr);
+
+    await db.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BILLETS_TABLE_ID,
+      billet.$id,
+      { statut: CalypsoConfig.ticketStatuses.confirme }
+    );
+
+    input.value = "";
+    render(`Entrée confirmée ✅ — billet ${numeroBillet}.`, "ok");
+  } catch (error) {
+    console.error("[CONTROLE] Erreur :", error);
+    render(error?.message || "Impossible de confirmer ce billet.", "error");
+  } finally {
+    resetButtonLoading(button);
+    if (button) button.textContent = "Confirmer l’entrée";
+    input?.focus();
   }
 }
 
@@ -771,6 +1285,11 @@ async function journaliserValidationEntree({
 // ===============================
 
 async function validerBilletJeuInterne(numeroBillet) {
+  if (!isGerantAgent()) {
+    showResult("Seul le gérant peut vendre les billets de jeux internes.", "error");
+    return;
+  }
+
   const res = await db.listDocuments(
     APPWRITE_DATABASE_ID,
     APPWRITE_BILLETS_INTERNE_TABLE_ID,
@@ -787,8 +1306,8 @@ async function validerBilletJeuInterne(numeroBillet) {
 
   const billet = res.documents[0];
 
-  if (billet.statut === "Validé") {
-    showResult(`Billet jeu ${numeroBillet} déjà utilisé ❌`, "error");
+  if (!CalypsoTicketWorkflow.canSell(billet.statut)) {
+    showResult(`Billet jeu ${numeroBillet} déjà vendu ou utilisé ❌`, "error");
     return;
   }
 
@@ -809,6 +1328,13 @@ async function validerBilletJeuInterne(numeroBillet) {
 
   const montant = parseInt(billet.prix || 0, 10) || 0;
   const nowIso = new Date().toISOString();
+  let paiement;
+  try {
+    paiement = getCashDetails("ticketPayment", "ticketCashReceived", montant);
+  } catch (error) {
+    showResult(error.message, "error");
+    return;
+  }
 
   await db.createDocument(
     APPWRITE_DATABASE_ID,
@@ -827,7 +1353,11 @@ async function validerBilletJeuInterne(numeroBillet) {
       montant_paye: montant,
       agent_id: currentAgent.$id || "",
       poste_id: "INTERNE",
-      numero_etudiant: ""
+      numero_etudiant: "",
+      moyen_paiement: paiement.moyenPaiement,
+      montant_recu: paiement.montantRecu,
+      monnaie_rendue: paiement.monnaieRendue,
+      session_caisse_id: currentCashSession.$id
     }
   );
 
@@ -840,13 +1370,16 @@ async function validerBilletJeuInterne(numeroBillet) {
 
   const ticketInput = $("ticketNumber");
   if (ticketInput) ticketInput.value = "";
+  if ($("ticketCashReceived")) $("ticketCashReceived").value = "";
 
   chargerNombreBillets();
 
   showResult(
-    `Billet jeu ${numeroBillet} VALIDÉ ✅ (${billet.type_billet || "Jeu interne"} – ${formatMontantGNF(montant)})`,
+    `Billet jeu ${numeroBillet} VENDU ✅ (${billet.type_billet || "Jeu interne"} – ${formatMontantGNF(montant)}). Monnaie : ${formatMontantGNF(paiement.monnaieRendue)}.`,
     "success"
   );
+  currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+  renderCashRegister();
 }
 
 // ===============================
@@ -1209,6 +1742,18 @@ async function enregistrerVenteResto() {
     return;
   }
 
+
+  if (!isRestoAgent()) {
+    showTempMessage("❌ Votre rôle ne permet pas d’encaisser en restauration", "error");
+    return;
+  }
+
+
+  if (!currentCashSession || currentCashSession.poste !== "RESTO") {
+    showTempMessage("❌ Ouvrez la caisse restauration avant la vente", "error");
+    return;
+  }
+
   const numeroVente = genererNumeroVente();
   const nowIso = new Date().toISOString();
 
@@ -1218,10 +1763,22 @@ async function enregistrerVenteResto() {
 
   const notes = $("restoOrderNotes")?.value.trim() || "";
 
+  const totalCommande = restoPanier.reduce(
+    (total, item) => total + item.prix_unitaire * item.quantite,
+    0
+  );
+  let paiement;
+  try {
+    paiement = getCashDetails("restoPayment", "restoCashReceived", totalCommande);
+  } catch (error) {
+    showTempMessage(`❌ ${error.message}`, "error");
+    return;
+  }
+
   let totalGlobal = 0;
 
   try {
-    for (const item of restoPanier) {
+    for (const [index, item] of restoPanier.entries()) {
       const montant = item.prix_unitaire * item.quantite;
 
       totalGlobal += montant;
@@ -1237,12 +1794,23 @@ async function enregistrerVenteResto() {
           quantite: item.quantite,
           montant_total: montant,
           agent_id: currentAgent.$id,
-          poste_id: currentAgent.role || "resto_chicha"
+          poste_id: "RESTO",
+          moyen_paiement: paiement.moyenPaiement,
+          montant_recu: index === 0 ? paiement.montantRecu : 0,
+          monnaie_rendue: index === 0 ? paiement.monnaieRendue : 0,
+          session_caisse_id: currentCashSession.$id
         }
       );
     }
 
     afficherReçu(numeroVente, totalGlobal, orderType, notes);
+
+    if ($("restoCashReceived")) $("restoCashReceived").value = "";
+    if ($("restoChange")) {
+      $("restoChange").textContent = `Monnaie rendue : ${formatMontantGNF(paiement.monnaieRendue)}`;
+    }
+    currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+    renderCashRegister();
 
     const msg = $("restoResult");
     if (msg) msg.style.display = "none";
@@ -1359,7 +1927,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const btnModeBillets = $("btnModeBillets");
+  const btnModeControle = $("btnModeControle");
   const btnModeResto = $("btnModeResto");
+  const btnOpenCash = $("btnOpenCash");
+  const btnAddCashMovement = $("btnAddCashMovement");
+  const btnCloseCash = $("btnCloseCash");
+
+  if (btnOpenCash) btnOpenCash.addEventListener("click", ouvrirCaisse);
+  if (btnAddCashMovement) btnAddCashMovement.addEventListener("click", ajouterMouvementCaisse);
+  if (btnCloseCash) btnCloseCash.addEventListener("click", cloturerCaisse);
 
   if (btnModeBillets) {
     btnModeBillets.addEventListener("click", (e) => {
@@ -1373,6 +1949,14 @@ document.addEventListener("DOMContentLoaded", () => {
     btnModeResto.addEventListener("click", (e) => {
       e.preventDefault();
       switchMode("resto");
+    });
+  }
+
+
+  if (btnModeControle) {
+    btnModeControle.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchMode("controle");
     });
   }
 
@@ -1401,6 +1985,43 @@ document.addEventListener("DOMContentLoaded", () => {
       verifierBillet();
     });
   }
+
+
+  const ticketNumberInput = $("ticketNumber");
+  if (ticketNumberInput) {
+    ticketNumberInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        verifierBillet();
+      }
+    });
+  }
+
+  const btnConfirmEntry = $("btnConfirmEntry");
+  const controlTicketInput = $("controlTicketNumber");
+  if (btnConfirmEntry) {
+    btnConfirmEntry.addEventListener("click", (event) => {
+      event.preventDefault();
+      confirmerEntree();
+    });
+  }
+  if (controlTicketInput) {
+    controlTicketInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        confirmerEntree();
+      }
+    });
+  }
+
+  document.querySelectorAll('input[name="ticketPayment"]').forEach((input) => {
+    input.addEventListener("change", () => updatePaymentZone("ticketPayment", "ticket-cash-zone"));
+  });
+  document.querySelectorAll('input[name="restoPayment"]').forEach((input) => {
+    input.addEventListener("change", () => updatePaymentZone("restoPayment", "resto-cash-zone"));
+  });
+  updatePaymentZone("ticketPayment", "ticket-cash-zone");
+  updatePaymentZone("restoPayment", "resto-cash-zone");
 
   const btnCheckStudent = $("btnCheckStudent");
 

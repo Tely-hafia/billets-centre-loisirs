@@ -14,12 +14,29 @@
       etudiants: "etudiants",
       menuResto: "menu_resto",
       ventesResto: "ventes_resto",
-      reservations: "reservation"
+      reservations: "reservation",
+      sessionsCaisse: "sessions_caisse",
+      mouvementsCaisse: "mouvements_caisse",
+      remisesCaisse: "remises_caisse"
     }),
     staffRoles: Object.freeze({
       admin: "admin",
+      gerant: "gerant",
+      controle: "controle",
       billets: "billets",
       resto: "resto"
+    }),
+    paymentMethods: Object.freeze({
+      especes: "especes",
+      orangeMoney: "orange_money",
+      mtnMoney: "mtn_money"
+    }),
+    ticketStatuses: Object.freeze({
+      disponible: "Disponible",
+      vendu: "Vendu",
+      confirme: "Entrée confirmée",
+      legacyDisponible: "Non utilisé",
+      legacyConfirme: "Validé"
     })
   });
 })(window);
