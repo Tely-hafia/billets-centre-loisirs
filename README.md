@@ -41,6 +41,24 @@ Vérification JavaScript :
 for file in js/*.js; do node --check "$file"; done
 ```
 
+## Design mobile et PWA
+
+Les espaces professionnels utilisent une interface responsive adaptée au rôle de la
+session : billets, restauration ou administration. La PWA « Calypço Équipe » est
+décrite par `manifest.webmanifest` et pilotée par `service-worker.js`.
+
+- `css/app-v2.css` : identité visuelle et composants métiers ;
+- `js/pwa.js` : installation, état réseau et mises à jour ;
+- `offline.html` : écran de sécurité hors connexion ;
+- `assets/icons/` : icônes standard et maskable.
+
+Les pages et ressources statiques peuvent être relues depuis le cache. Les appels
+Appwrite, les validations de billets, les ventes et l’administration restent toujours
+en ligne afin d’éviter les doublons et les écritures non contrôlées.
+
+Pour tester l’installation, servir le projet par HTTPS ou sur `localhost`, puis
+utiliser l’audit PWA du navigateur.
+
 ## Mise en production
 
 Suivre intégralement [la procédure de migration Appwrite](docs/APPWRITE_MIGRATION.md).

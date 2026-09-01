@@ -7,11 +7,14 @@
   <title>Calypço - Centre de Loisirs</title>
 
   <!-- PWA base -->
-  <meta name="theme-color" content="#667eea" />
+  <meta name="theme-color" content="#0b1324" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Calypço" />
+  <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/app-v2.css" />
 
   <!-- Flatpickr -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -19,17 +22,23 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 </head>
 
-<body>
+<body class="public-page">
 
   <!-- HEADER -->
   <header class="site-header">
     <div class="header-inner">
-      <div class="logo-badge">C</div>
+      <img class="brand-logo" src="assets/icons/calypso.svg" alt="Calypço" width="52" height="52" />
 
       <div class="header-text">
         <h1>Calypço</h1>
         <p>Centre de Loisirs - Gaming, détente et aventure</p>
       </div>
+
+      <nav class="public-nav" aria-label="Navigation principale">
+        <a href="#experiences">Expériences</a>
+        <a href="#contact">Contact</a>
+        <a href="#reservation-block" class="nav-cta" id="navReservation">Réserver</a>
+      </nav>
     </div>
   </header>
 
@@ -57,10 +66,25 @@
     </div>
   </section>
 
+  <section class="public-proof" aria-label="Informations essentielles">
+    <div class="proof-item">
+      <strong>Une destination, plusieurs univers</strong>
+      <span>Gaming, piscine, défis et restauration au même endroit.</span>
+    </div>
+    <div class="proof-item">
+      <strong>Réservation simple</strong>
+      <span>Choisissez votre expérience et conservez votre ticket sur téléphone.</span>
+    </div>
+    <div class="proof-item">
+      <strong>À Hafia, Labé</strong>
+      <span>À proximité de l’université Hafia, avec accès cartographique direct.</span>
+    </div>
+  </section>
+
   <!-- POPUP RESERVATION -->
   <section id="reservation-block" class="reservation-overlay" aria-hidden="true">
     <div class="card reservation-card" role="dialog" aria-modal="true">
-      <button type="button" class="reservation-close" id="btnCloseReservation">
+      <button type="button" class="reservation-close" id="btnCloseReservation" aria-label="Fermer la réservation">
         ×
       </button>
 
@@ -161,7 +185,7 @@
     </section>
 
     <!-- SERVICES -->
-    <section class="services-section">
+    <section class="services-section" id="experiences">
       <div class="section-heading">
         <p class="section-kicker">✨ Expériences</p>
         <h2>Nos Expériences Uniques</h2>
@@ -368,7 +392,7 @@
   </main>
 
   <footer>
-    <p>© 2024 Calypço - Tous droits réservés</p>
+    <p>© Calypço - Tous droits réservés</p>
     <p>Votre destination gaming, aventure et détente à Labé</p>
   </footer>
 
@@ -389,8 +413,10 @@
     const dotsContainer = document.getElementById('carouselDots');
 
     slides.forEach((_, index) => {
-      const dot = document.createElement('div');
+      const dot = document.createElement('button');
+      dot.type = 'button';
       dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
+      dot.setAttribute('aria-label', `Afficher la vue ${index + 1}`);
       dot.addEventListener('click', () => goToSlide(index));
       dotsContainer.appendChild(dot);
     });
@@ -418,7 +444,14 @@
       updateCarousel();
     }
 
-    setInterval(nextSlide, 5000);
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setInterval(nextSlide, 5000);
+    }
+
+    document.getElementById('navReservation')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      document.getElementById('btnShowReservation')?.click();
+    });
 
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {

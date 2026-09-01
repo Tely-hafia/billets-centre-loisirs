@@ -3,13 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1324" />
   <title>Calypço – Invitation</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/app-v2.css" />
 </head>
-<body>
+<body class="auth-page">
   <header>
     <div class="header-inner">
-      <div class="logo-badge">CL</div>
+      <img class="brand-logo" src="assets/icons/calypso.svg" alt="" width="52" height="52" />
       <div>
         <h1>Rejoindre l’équipe Calypço</h1>
         <p>Activation sécurisée de votre accès professionnel.</p>
@@ -64,5 +69,6 @@
   <script src="js/appwrite-config.js?v=1"></script>
   <script src="js/appwrite-client.js?v=1"></script>
   <script src="js/invite.js?v=1"></script>
+  <script src="js/pwa.js?v=1"></script>
 </body>
 </html>

@@ -6,18 +6,26 @@
 
   <title>Calypço – Administration</title>
 
+  <meta name="theme-color" content="#0b1324" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Calypço Admin" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/app-v2.css" />
 </head>
 
-<body>
+<body class="admin-page">
 
 <header>
   <div class="header-inner">
-    <div class="logo-badge">CL</div>
+    <img class="brand-logo" src="assets/icons/calypso.svg" alt="" width="52" height="52" />
 
     <div>
+      <p class="header-eyebrow">Pilotage</p>
       <h1>Calypço – Administration</h1>
-      <p>Gestion des billets, étudiants, agents, réservations et statistiques.</p>
+      <p>Ventes, opérations, équipe et contrôles réunis au même endroit.</p>
     </div>
   </div>
 </header>
@@ -70,36 +78,133 @@
   <div id="admin-app-zone" style="display:none;">
 
     <!-- Bandeau admin + modes -->
-    <section class="card">
-      <h2>Panneau d'administration</h2>
+    <section class="card admin-shell-card">
+      <div class="admin-shell-top">
+        <div>
+          <p class="eyebrow">Administration</p>
+          <h2>Panneau de pilotage</h2>
+          <p class="status">
+            <strong id="admin-connected-name"></strong>
+            <span id="admin-connected-role" class="role-badge"></span>
+          </p>
+        </div>
 
-      <p class="status">
-        Connecté :
-        <strong id="admin-connected-name"></strong>
-        (<span id="admin-connected-role"></span>)
-      </p>
+        <div class="actions-row">
+          <a href="index.html" class="btn-link" title="Voir le site public">Site public</a>
+          <button id="btnAdminLogout" type="button" class="btn-danger">
+            Déconnexion
+          </button>
+        </div>
+      </div>
 
-      <div class="mode-navigation">
-        <a href="index.html" class="btn-secondary btn-link">
-          🏠 Accueil
-        </a>
-
-        <button id="btnAdminModeSaisie" type="button" class="mode-btn active">
-          Saisie / Enregistrement
+      <nav class="admin-primary-nav" aria-label="Sections de l’administration">
+        <button id="btnAdminModeDashboard" type="button" class="mode-btn active">
+          📊 Tableau de bord
         </button>
 
         <button id="btnAdminModeGestion" type="button" class="mode-btn">
-          Gestion & statistiques
+          🧾 Activité & statistiques
         </button>
 
-        <button id="btnAdminLogout" type="button" class="btn-danger">
-          Se déconnecter
+        <button id="btnAdminModeSaisie" type="button" class="mode-btn">
+          👥 Équipe & saisie
         </button>
-      </div>
+      </nav>
     </section>
 
+    <!-- === TABLEAU DE BORD === -->
+    <div id="admin-zone-dashboard" class="mode-content">
+      <section class="card dashboard-welcome">
+        <div>
+          <p class="header-eyebrow">Vue d’ensemble</p>
+          <h2>Les chiffres utiles, dès l’ouverture</h2>
+          <p>
+            Les indicateurs suivent la période sélectionnée dans les statistiques.
+            Les alertes signalent des incohérences à vérifier, jamais une culpabilité.
+          </p>
+        </div>
+
+        <div class="dashboard-actions">
+          <button id="btnDashboardRefresh" type="button" class="btn-secondary">
+            Actualiser les données
+          </button>
+          <button id="btnDashboardGoStats" type="button" class="btn-primary">
+            Voir le détail des ventes
+          </button>
+        </div>
+      </section>
+
+      <section class="dashboard-kpis" aria-label="Indicateurs principaux">
+        <article class="dashboard-kpi">
+          <p class="kpi-label">Chiffre d’affaires</p>
+          <p class="kpi-value" id="dashboard-revenue-total">0 GNF</p>
+          <p class="kpi-meta">Billets + restauration</p>
+        </article>
+
+        <article class="dashboard-kpi">
+          <p class="kpi-label">Billets validés</p>
+          <p class="kpi-value" id="dashboard-ticket-count">0</p>
+          <p class="kpi-meta">Sur la période active</p>
+        </article>
+
+        <article class="dashboard-kpi">
+          <p class="kpi-label">Commandes restauration</p>
+          <p class="kpi-value" id="dashboard-order-count">0</p>
+          <p class="kpi-meta">Tickets de commande distincts</p>
+        </article>
+
+        <article class="dashboard-kpi is-alert">
+          <p class="kpi-label">Anomalies à vérifier</p>
+          <p class="kpi-value" id="dashboard-alert-count">0</p>
+          <p class="kpi-meta">Contrôles automatiques de cohérence</p>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="card">
+          <div class="agent-workspace-heading">
+            <div>
+              <p class="eyebrow">Équipe</p>
+              <h2>Activité par agent</h2>
+              <p class="status">Validations, commandes et recettes observées sur la période.</p>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Billets</th>
+                  <th>Commandes</th>
+                  <th>Recettes</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-agent-body">
+                <tr><td colspan="4">Chargement des activités…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="agent-workspace-heading">
+            <div>
+              <p class="eyebrow">Contrôle</p>
+              <h2>Alertes de cohérence</h2>
+              <p class="status">Signaux techniques à examiner par un responsable.</p>
+            </div>
+          </div>
+
+          <div id="admin-alert-list" class="admin-alert-list">
+            <div class="empty-state">Analyse en cours…</div>
+          </div>
+        </article>
+      </section>
+    </div>
+
     <!-- === MODE 1 : Saisie / Enregistrement === -->
-    <div id="admin-zone-saisie" class="mode-content">
+    <div id="admin-zone-saisie" class="mode-content" style="display:none;">
 
       <!-- ENREGISTRER UN ÉTUDIANT -->
       <section class="card" id="admin-etudiants">
@@ -316,7 +421,7 @@
       </section>
 
       <!-- Statistiques Billets / Restauration -->
-      <section class="card">
+      <section class="card" id="admin-statistics">
         <h2>📊 Statistiques</h2>
 
         <div class="stats-tabs">
@@ -451,7 +556,7 @@
       </section>
 
       <!-- Maintenance -->
-      <section class="card">
+      <section class="card maintenance-card">
         <h2>🧹 Maintenance des données</h2>
 
         <p class="status">
@@ -485,6 +590,7 @@
 
 <!-- Script admin -->
 <script src="js/admin-appwrite.js?v=9"></script>
+<script src="js/pwa.js?v=1"></script>
 
 </body>
 </html>

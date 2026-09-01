@@ -57,7 +57,245 @@ function escapeHTML(value) {
 // =====================================
 
 let currentAdmin = null;
-let adminCurrentMode = "saisie";
+let adminCurrentMode = "dashboard";
+
+const adminDashboardState = {
+  validationDocs: [],
+  saleDocs: [],
+  billetsRevenue: 0,
+  restoRevenue: 0,
+  ticketCount: 0,
+  orderCount: 0,
+  billetsLoaded: false,
+  restoLoaded: false,
+  agentNames: {}
+};
+
+function getAgentLabel(agentId) {
+  if (!agentId) return "Agent non identifié";
+  return adminDashboardState.agentNames[agentId] || `Agent …${agentId.slice(-6)}`;
+}
+
+function renderAgentActivity() {
+  const tbody = $("dashboard-agent-body");
+  if (!tbody) return;
+
+  const activity = new Map();
+  const ensureAgent = (agentId) => {
+    const key = agentId || "unknown";
+    if (!activity.has(key)) {
+      activity.set(key, {
+        agentId,
+        tickets: 0,
+        orders: new Set(),
+        revenue: 0
+      });
+    }
+    return activity.get(key);
+  };
+
+  adminDashboardState.validationDocs.forEach((doc) => {
+    const entry = ensureAgent(doc.agent_id);
+    entry.tickets += 1;
+    entry.revenue += Number(doc.montant_paye) || 0;
+  });
+
+  adminDashboardState.saleDocs.forEach((doc) => {
+    const entry = ensureAgent(doc.agent_id);
+    entry.orders.add(doc.numero_vente || doc.$id);
+    entry.revenue += Number(doc.montant_total) || 0;
+  });
+
+  const rows = [...activity.values()].sort((a, b) => b.revenue - a.revenue);
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4">Aucune activité pour cette période.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((row) => `
+    <tr>
+      <td>${escapeHTML(getAgentLabel(row.agentId))}</td>
+      <td>${row.tickets}</td>
+      <td>${row.orders.size}</td>
+      <td>${formatGNF(row.revenue)}</td>
+    </tr>
+  `).join("");
+}
+
+function detectDashboardAlerts() {
+  const alerts = [];
+  const validationsByTicket = new Map();
+  const studentsByDay = new Map();
+  const salesByNumber = new Map();
+
+  adminDashboardState.validationDocs.forEach((doc) => {
+    const ticket = doc.numero_billet || "";
+    if (ticket) {
+      validationsByTicket.set(ticket, (validationsByTicket.get(ticket) || 0) + 1);
+    }
+
+    const student = doc.numero_etudiant || "";
+    if (student) {
+      const day = String(doc.date_validation || doc.$createdAt || "").slice(0, 10);
+      const key = `${student}|${day}`;
+      studentsByDay.set(key, (studentsByDay.get(key) || 0) + 1);
+    }
+  });
+
+  const duplicateTickets = [...validationsByTicket.values()].filter((count) => count > 1).length;
+  if (duplicateTickets > 0) {
+    alerts.push({
+      level: "high",
+      title: `${duplicateTickets} billet(s) journalisé(s) plusieurs fois`,
+      detail: "Vérifier les doublons de validation et l’état réel des billets."
+    });
+  }
+
+  const repeatedStudents = [...studentsByDay.values()].filter((count) => count >= 3).length;
+  if (repeatedStudents > 0) {
+    alerts.push({
+      level: "medium",
+      title: `${repeatedStudents} numéro(s) étudiant utilisé(s) au moins 3 fois dans une journée`,
+      detail: "Contrôler les justificatifs avant de conclure à une anomalie."
+    });
+  }
+
+  const missingValidationAgents = adminDashboardState.validationDocs.filter((doc) => !doc.agent_id).length;
+  if (missingValidationAgents > 0) {
+    alerts.push({
+      level: "high",
+      title: `${missingValidationAgents} validation(s) sans agent identifié`,
+      detail: "Une opération métier doit toujours être rattachée à une session."
+    });
+  }
+
+  const zeroValidationAmounts = adminDashboardState.validationDocs.filter(
+    (doc) => (Number(doc.montant_paye) || 0) <= 0
+  ).length;
+  if (zeroValidationAmounts > 0) {
+    alerts.push({
+      level: "medium",
+      title: `${zeroValidationAmounts} validation(s) avec un montant nul`,
+      detail: "Vérifier qu’il s’agit bien d’une gratuité autorisée."
+    });
+  }
+
+  adminDashboardState.saleDocs.forEach((doc) => {
+    const saleNumber = doc.numero_vente || doc.$id;
+    if (!salesByNumber.has(saleNumber)) {
+      salesByNumber.set(saleNumber, { agents: new Set(), dates: [] });
+    }
+    const group = salesByNumber.get(saleNumber);
+    if (doc.agent_id) group.agents.add(doc.agent_id);
+    const date = new Date(doc.date_vente || doc.$createdAt || 0).getTime();
+    if (Number.isFinite(date)) group.dates.push(date);
+  });
+
+  let conflictingSales = 0;
+  salesByNumber.forEach((group) => {
+    const minDate = group.dates.length ? Math.min(...group.dates) : 0;
+    const maxDate = group.dates.length ? Math.max(...group.dates) : 0;
+    if (group.agents.size > 1 || (maxDate - minDate) > 15 * 60 * 1000) conflictingSales += 1;
+  });
+
+  if (conflictingSales > 0) {
+    alerts.push({
+      level: "high",
+      title: `${conflictingSales} numéro(s) de vente réutilisé(s) de façon incohérente`,
+      detail: "Le numéro peut avoir été généré simultanément sur plusieurs appareils."
+    });
+  }
+
+  const invalidSaleLines = adminDashboardState.saleDocs.filter(
+    (doc) => (Number(doc.quantite) || 0) <= 0 || (Number(doc.montant_total) || 0) <= 0
+  ).length;
+  if (invalidSaleLines > 0) {
+    alerts.push({
+      level: "high",
+      title: `${invalidSaleLines} ligne(s) de vente avec quantité ou montant invalide`,
+      detail: "Contrôler l’intégrité de la commande concernée."
+    });
+  }
+
+  const missingSaleAgents = adminDashboardState.saleDocs.filter((doc) => !doc.agent_id).length;
+  if (missingSaleAgents > 0) {
+    alerts.push({
+      level: "high",
+      title: `${missingSaleAgents} ligne(s) de vente sans agent identifié`,
+      detail: "La vente doit être rattachée à une session authentifiée."
+    });
+  }
+
+  return alerts;
+}
+
+function renderDashboardAlerts() {
+  const container = $("admin-alert-list");
+  const count = $("dashboard-alert-count");
+  if (!container || !count) return;
+
+  if (!adminDashboardState.billetsLoaded || !adminDashboardState.restoLoaded) {
+    count.textContent = "…";
+    container.innerHTML = '<div class="empty-state">Analyse en cours…</div>';
+    return;
+  }
+
+  const alerts = detectDashboardAlerts();
+  count.textContent = alerts.length.toString();
+
+  if (alerts.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        Aucune incohérence détectée sur la période. Cela ne remplace pas le contrôle de caisse.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = alerts.slice(0, 6).map((alert) => `
+    <div class="admin-alert ${alert.level === "high" ? "is-high" : ""}">
+      <span class="admin-alert-dot" aria-hidden="true"></span>
+      <div>
+        <strong>${escapeHTML(alert.title)}</strong>
+        <p>${escapeHTML(alert.detail)}</p>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderDashboard() {
+  const totalRevenue = adminDashboardState.billetsRevenue + adminDashboardState.restoRevenue;
+  const revenueEl = $("dashboard-revenue-total");
+  const ticketEl = $("dashboard-ticket-count");
+  const orderEl = $("dashboard-order-count");
+
+  if (revenueEl) revenueEl.textContent = formatGNF(totalRevenue);
+  if (ticketEl) ticketEl.textContent = adminDashboardState.ticketCount.toString();
+  if (orderEl) orderEl.textContent = adminDashboardState.orderCount.toString();
+
+  renderAgentActivity();
+  renderDashboardAlerts();
+}
+
+async function chargerRepertoireAgents() {
+  try {
+    const result = await CalypsoAppwrite.teams.listMemberships(
+      CalypsoConfig.staffTeamId,
+      [Appwrite.Query.limit(100)]
+    );
+
+    const names = {};
+    (result.memberships || []).forEach((membership) => {
+      if (!membership.userId) return;
+      names[membership.userId] = membership.userName || membership.userEmail || membership.userId;
+    });
+    adminDashboardState.agentNames = names;
+    renderAgentActivity();
+  } catch (error) {
+    console.warn("[ADMIN] Répertoire agents indisponible :", error);
+  }
+}
 
 // =====================================
 //  UI Connexion Admin
@@ -89,8 +327,9 @@ function appliquerEtatConnexionAdmin(admin) {
     if (nameEl) nameEl.textContent = admin.nom || admin.login || "";
     if (roleEl) roleEl.textContent = admin.role || "";
 
-    switchAdminMode("saisie");
+    switchAdminMode("dashboard");
 
+    chargerRepertoireAgents();
     chargerStatsBillets();
     chargerStatsResto();
     chargerHistoriqueReservations();
@@ -157,16 +396,24 @@ async function restaurerSessionAdmin() {
 function switchAdminMode(mode) {
   adminCurrentMode = mode;
 
+  const btnDashboard = $("btnAdminModeDashboard");
   const btnSaisie = $("btnAdminModeSaisie");
   const btnGestion = $("btnAdminModeGestion");
+  const zoneDashboard = $("admin-zone-dashboard");
   const zoneSaisie = $("admin-zone-saisie");
   const zoneGestion = $("admin-zone-gestion");
 
+  if (btnDashboard) btnDashboard.classList.toggle("active", mode === "dashboard");
   if (btnSaisie) btnSaisie.classList.toggle("active", mode === "saisie");
   if (btnGestion) btnGestion.classList.toggle("active", mode === "gestion");
 
+  if (zoneDashboard) zoneDashboard.style.display = mode === "dashboard" ? "grid" : "none";
   if (zoneSaisie) zoneSaisie.style.display = mode === "saisie" ? "block" : "none";
   if (zoneGestion) zoneGestion.style.display = mode === "gestion" ? "block" : "none";
+
+  if (mode === "dashboard") {
+    renderDashboard();
+  }
 
   if (mode === "gestion") {
     chargerHistoriqueReservations();
@@ -526,6 +773,12 @@ async function chargerStatsBillets() {
       parType[type].montant += montant;
     });
 
+    adminDashboardState.validationDocs = docs;
+    adminDashboardState.billetsRevenue = recetteTotale;
+    adminDashboardState.ticketCount = totalValidations;
+    adminDashboardState.billetsLoaded = true;
+    renderDashboard();
+
     if ($("stat-validations-count")) $("stat-validations-count").textContent = totalValidations.toString();
     if ($("stat-revenue-total")) $("stat-revenue-total").textContent = formatGNF(recetteTotale);
     if ($("stat-revenue-normal")) $("stat-revenue-normal").textContent = formatGNF(recetteNormal);
@@ -559,6 +812,8 @@ async function chargerStatsBillets() {
       msg.className = "message message-success";
     }
   } catch (err) {
+    adminDashboardState.billetsLoaded = false;
+    renderDashboard();
     console.error("[ADMIN] Erreur chargement stats billets :", err);
 
     if (msg) {
@@ -654,6 +909,12 @@ async function chargerStatsResto() {
       parProduit[code].montant += montant;
     });
 
+    adminDashboardState.saleDocs = docs;
+    adminDashboardState.restoRevenue = totalMontant;
+    adminDashboardState.orderCount = numeros.size;
+    adminDashboardState.restoLoaded = true;
+    renderDashboard();
+
     if ($("stat-resto-tickets")) $("stat-resto-tickets").textContent = numeros.size.toString();
     if ($("stat-resto-plates")) $("stat-resto-plates").textContent = totalPlats.toString();
     if ($("stat-resto-total")) $("stat-resto-total").textContent = formatGNF(totalMontant);
@@ -694,6 +955,8 @@ async function chargerStatsResto() {
       msg.className = "message message-success";
     }
   } catch (err) {
+    adminDashboardState.restoLoaded = false;
+    renderDashboard();
     console.error("[ADMIN] Erreur chargement stats restauration :", err);
 
     if (msg) {
@@ -927,8 +1190,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const btnDashboard = $("btnAdminModeDashboard");
   const btnSaisie = $("btnAdminModeSaisie");
   const btnGestion = $("btnAdminModeGestion");
+
+  if (btnDashboard) {
+    btnDashboard.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAdminMode("dashboard");
+    });
+  }
 
   if (btnSaisie) {
     btnSaisie.addEventListener("click", (e) => {
@@ -941,6 +1212,27 @@ document.addEventListener("DOMContentLoaded", () => {
     btnGestion.addEventListener("click", (e) => {
       e.preventDefault();
       switchAdminMode("gestion");
+    });
+  }
+
+  const btnDashboardRefresh = $("btnDashboardRefresh");
+  const btnDashboardGoStats = $("btnDashboardGoStats");
+
+  if (btnDashboardRefresh) {
+    btnDashboardRefresh.addEventListener("click", (e) => {
+      e.preventDefault();
+      chargerStatsBillets();
+      chargerStatsResto();
+      chargerHistoriqueReservations();
+      chargerRepertoireAgents();
+    });
+  }
+
+  if (btnDashboardGoStats) {
+    btnDashboardGoStats.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAdminMode("gestion");
+      $("admin-statistics")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 

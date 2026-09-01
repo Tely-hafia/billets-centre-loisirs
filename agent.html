@@ -6,18 +6,26 @@
 
   <title>Calypço – Poste agent</title>
 
+  <meta name="theme-color" content="#0b1324" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Calypço Équipe" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/app-v2.css" />
 </head>
 
-<body>
+<body class="staff-page">
 
 <header>
   <div class="header-inner">
-    <div class="logo-badge">CL</div>
+    <img class="brand-logo" src="assets/icons/calypso.svg" alt="" width="52" height="52" />
 
     <div>
+      <p class="header-eyebrow">Espace équipe</p>
       <h1>Calypço – Poste agent</h1>
-      <p>Connexion, contrôle des billets et ventes restauration/chicha.</p>
+      <p>Un poste simple, adapté automatiquement à votre rôle.</p>
     </div>
   </div>
 </header>
@@ -69,41 +77,57 @@
   <div id="app-zone" style="display:none;">
 
     <!-- Bandeau agent -->
-    <section class="card">
-      <h2>Poste agent</h2>
+    <section class="card staff-session-card">
+      <div class="staff-session-copy">
+        <p class="eyebrow">Session active</p>
+        <h2>Votre poste</h2>
 
-      <p id="agent-connected-info" class="status">
-        Connecté :
-        <strong id="agent-connected-name"></strong>
-        (<span id="agent-connected-role"></span>)
-      </p>
+        <p id="agent-connected-info" class="status">
+          <strong id="agent-connected-name"></strong>
+          <span id="agent-connected-role" class="role-badge"></span>
+        </p>
+
+        <p class="status mode-status-line">
+          Mode actif : <strong id="mode-label">Contrôle billets</strong>
+        </p>
+      </div>
 
       <div class="agent-toolbar">
-        <a href="index.html" class="btn-secondary btn-link">
-          🏠 Accueil
+        <a href="index.html" class="btn-secondary btn-link" title="Voir le site public">
+          Site public
         </a>
 
-        <button id="btnModeBillets" type="button" class="btn-secondary">
-          🎫 Contrôle billets
-        </button>
+        <div class="agent-role-switch">
+          <button id="btnModeBillets" type="button" class="btn-secondary">
+            🎫 Billets
+          </button>
 
-        <button id="btnModeResto" type="button" class="btn-primary">
-          🍽️ Restauration / Chicha
-        </button>
+          <button id="btnModeResto" type="button" class="btn-primary">
+            🍽️ Restauration
+          </button>
+        </div>
 
         <button id="btnLogout" type="button" class="btn-danger">
           Se déconnecter
         </button>
       </div>
-
-      <p class="status">
-        Mode actif : <strong id="mode-label">Contrôle billets</strong>
-      </p>
     </section>
 
     <!-- MODE 1 : Contrôle billets -->
     <section class="card" id="mode-billets">
-      <h2>Contrôle des billets</h2>
+      <div class="agent-workspace-heading">
+        <div>
+          <p class="eyebrow">Poste billets</p>
+          <h2>Contrôle des billets</h2>
+          <p id="billetsSubHint" class="status">
+            Mode : billets d’entrée. Saisir le numéro du billet attribué au client.
+          </p>
+        </div>
+
+        <p class="ticket-count-line">
+          Disponibles : <span id="ticketCount">0</span>
+        </p>
+      </div>
 
       <!-- Sous-onglets -->
       <div class="submode-row">
@@ -115,14 +139,6 @@
           Billets Jeux internes
         </button>
       </div>
-
-      <p id="billetsSubHint" class="status">
-        Mode : billets d’entrée. Saisir le numéro du billet attribué au client.
-      </p>
-
-      <p class="ticket-count-line">
-        Billets non utilisés : <span id="ticketCount">0</span>
-      </p>
 
       <!-- Tarif uniquement pour billets d'entrée -->
       <div id="tarif-zone" class="agent-block">
@@ -209,11 +225,22 @@
       </button>
 
       <div id="result-message" class="result" style="display:none;"></div>
+
+      <p class="operation-security-note">
+        <span aria-hidden="true">🔒</span>
+        <span>Chaque validation est associée à votre session. Une connexion est obligatoire.</span>
+      </p>
     </section>
 
     <!-- MODE 2 : Restauration / Chicha -->
     <section class="card" id="mode-resto" style="display:none;">
-      <h2>🍽️ Restauration / Chicha</h2>
+      <div class="agent-workspace-heading">
+        <div>
+          <p class="eyebrow">Poste restauration</p>
+          <h2>Restauration / Chicha</h2>
+          <p class="status">Sélectionnez les produits, vérifiez le panier puis validez la commande.</p>
+        </div>
+      </div>
 
       <div class="resto-container">
 
@@ -302,6 +329,11 @@
       </div>
 
       <div id="restoResult" class="result" style="margin-top:1rem; display:none;"></div>
+
+      <p class="operation-security-note">
+        <span aria-hidden="true">🔒</span>
+        <span>Le montant est calculé depuis le menu. La vente nécessite une connexion active.</span>
+      </p>
     </section>
 
   </div>
@@ -322,6 +354,7 @@
 
 <!-- Script agent -->
 <script src="js/agent-appwrite.js?v=9"></script>
+<script src="js/pwa.js?v=1"></script>
 
 </body>
 </html>
