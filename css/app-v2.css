@@ -307,6 +307,19 @@ body.staff-page main { max-width: 1180px; }
 .staff-session-card h2 { margin-bottom: 0.3rem; }
 .staff-session-card .agent-toolbar { margin: 0; }
 
+.identity-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.staff-profile-card {
+  border-color: #f0c36b;
+  background: #fffaf0;
+}
+
+.staff-profile-card > .status { max-width: 720px; }
+
 .agent-role-switch {
   display: inline-flex;
   gap: 0.55rem;
@@ -531,6 +544,7 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
   .staff-session-card .agent-toolbar { width: 100%; }
   .agent-role-switch { width: 100%; }
   .agent-role-switch button { flex: 1; }
+  .identity-fields { grid-template-columns: 1fr; gap: 0; }
   .agent-workspace-heading { flex-direction: column; }
 
   .admin-shell-card { padding: 0.9rem; }

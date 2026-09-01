@@ -297,9 +297,34 @@
           />
         </div>
 
-        <div class="form-row">
-          <label for="admin-agent-nom">Nom / prénom</label>
-          <input type="text" id="admin-agent-nom" placeholder="Nom de l'agent" />
+        <div class="identity-fields">
+          <div class="form-row">
+            <label for="admin-agent-prenom">
+              Prénom <span style="color:#ef4444;">*</span>
+            </label>
+            <input
+              type="text"
+              id="admin-agent-prenom"
+              placeholder="Prénom de l’agent"
+              autocomplete="given-name"
+              maxlength="64"
+              required
+            />
+          </div>
+
+          <div class="form-row">
+            <label for="admin-agent-nom">
+              Nom <span style="color:#ef4444;">*</span>
+            </label>
+            <input
+              type="text"
+              id="admin-agent-nom"
+              placeholder="Nom de l’agent"
+              autocomplete="family-name"
+              maxlength="64"
+              required
+            />
+          </div>
         </div>
 
         <div class="form-row">
@@ -586,10 +611,10 @@
 <!-- Configuration et authentification partagées -->
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
-<script src="js/auth-service.js?v=1"></script>
+<script src="js/auth-service.js?v=2"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=9"></script>
+<script src="js/admin-appwrite.js?v=10"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>

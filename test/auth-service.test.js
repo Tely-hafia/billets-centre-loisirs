@@ -8,8 +8,13 @@ const root = path.resolve(__dirname, "..");
 const configSource = fs.readFileSync(path.join(root, "js/appwrite-config.js"), "utf8");
 const authSource = fs.readFileSync(path.join(root, "js/auth-service.js"), "utf8");
 
-function createAuthFixture({ membershipRoles = ["billets"], confirmed = true } = {}) {
+function createAuthFixture({
+  membershipRoles = ["billets"],
+  confirmed = true,
+  initialName = "Agent Test"
+} = {}) {
   const calls = [];
+  let userName = initialName;
   const account = {
     async createEmailSession(email) {
       calls.push(["createEmailSession", email]);
@@ -19,7 +24,12 @@ function createAuthFixture({ membershipRoles = ["billets"], confirmed = true } =
     },
     async get() {
       calls.push(["account.get"]);
-      return { $id: "user-1", email: "agent@example.com", name: "Agent Test" };
+      return { $id: "user-1", email: "agent@example.com", name: userName };
+    },
+    async updateName(name) {
+      calls.push(["updateName", name]);
+      userName = name;
+      return { $id: "user-1", email: "agent@example.com", name: userName };
     }
   };
   const teams = {
@@ -95,7 +105,8 @@ test("seul un administrateur peut envoyer une invitation", async () => {
 
   await auth.inviteStaff({
     email: "nouveau@example.com",
-    name: "Nouvel Agent",
+    prenom: "Nouvel",
+    nom: "Agent",
     roles: ["billets"]
   });
 
@@ -104,4 +115,27 @@ test("seul un administrateur peut envoyer une invitation", async () => {
   assert.deepEqual([...invitation[2]], ["billets"]);
   assert.equal(invitation[3], "nouveau@example.com");
   assert.match(invitation[6], /accept-invite\.html$/);
+  assert.equal(invitation[7], "Nouvel Agent");
+});
+
+test("signale un ancien compte sans identité puis enregistre prénom et nom", async () => {
+  const { auth, calls } = createAuthFixture({ initialName: "user-1" });
+
+  const incomplete = await auth.restore(["billets"]);
+  assert.equal(incomplete.profileComplete, false);
+  assert.equal(incomplete.nom, "");
+
+  const updated = await auth.updateStaffName({ prenom: "Alpha", nom: "Baldé" });
+  assert.equal(updated.profileComplete, true);
+  assert.equal(updated.nom, "Alpha Baldé");
+  assert.ok(calls.some(([name, value]) => name === "updateName" && value === "Alpha Baldé"));
+});
+
+test("refuse une invitation sans prénom et nom", async () => {
+  const { auth } = createAuthFixture({ membershipRoles: ["admin"] });
+
+  await assert.rejects(
+    () => auth.inviteStaff({ email: "nouveau@example.com", roles: ["billets"] }),
+    /prénom et le nom/
+  );
 });

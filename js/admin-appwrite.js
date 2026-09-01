@@ -73,7 +73,7 @@ const adminDashboardState = {
 
 function getAgentLabel(agentId) {
   if (!agentId) return "Agent non identifié";
-  return adminDashboardState.agentNames[agentId] || `Agent …${agentId.slice(-6)}`;
+  return adminDashboardState.agentNames[agentId] || `Profil à compléter · …${agentId.slice(-6)}`;
 }
 
 function renderAgentActivity() {
@@ -288,7 +288,15 @@ async function chargerRepertoireAgents() {
     const names = {};
     (result.memberships || []).forEach((membership) => {
       if (!membership.userId) return;
-      names[membership.userId] = membership.userName || membership.userEmail || membership.userId;
+      const candidate = String(membership.userName || "").trim();
+      const email = String(membership.userEmail || "").trim().toLowerCase();
+      if (
+        candidate &&
+        candidate !== membership.userId &&
+        candidate.toLowerCase() !== email
+      ) {
+        names[membership.userId] = candidate;
+      }
     });
     adminDashboardState.agentNames = names;
     renderAgentActivity();
@@ -1135,20 +1143,25 @@ async function creerEtudiantDepuisAdmin() {
 
 async function creerAgentDepuisAdmin() {
   const emailEl = $("admin-agent-email");
+  const prenomEl = $("admin-agent-prenom");
   const nomEl = $("admin-agent-nom");
   const roleEls = document.querySelectorAll(".admin-agent-role:checked");
 
   const email = emailEl?.value.trim();
+  const prenom = prenomEl?.value.trim() || "";
   const nom = nomEl?.value.trim() || "";
   const roles = [...roleEls].map((element) => element.value);
 
-  if (!email || roles.length === 0) {
-    showAdminAgentMessage("Veuillez saisir un e-mail et choisir au moins un rôle.", "error");
+  if (!email || !prenom || !nom || roles.length === 0) {
+    showAdminAgentMessage(
+      "Veuillez saisir l’e-mail, le prénom, le nom et au moins un rôle.",
+      "error"
+    );
     return;
   }
 
   try {
-    await CalypsoAuth.inviteStaff({ email, name: nom, roles });
+    await CalypsoAuth.inviteStaff({ email, prenom, nom, roles });
 
     showAdminAgentMessage(
       "Invitation envoyée. L’agent devra l’accepter puis définir son mot de passe.",
@@ -1156,6 +1169,7 @@ async function creerAgentDepuisAdmin() {
     );
 
     if (emailEl) emailEl.value = "";
+    if (prenomEl) prenomEl.value = "";
     if (nomEl) nomEl.value = "";
     roleEls.forEach((element) => {
       element.checked = false;
