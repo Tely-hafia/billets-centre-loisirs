@@ -306,7 +306,9 @@ async function ouvrirCaisse() {
         fonds_depart: fonds
       },
       [
-        Appwrite.Permission.read(Appwrite.Role.team(CalypsoConfig.staffTeamId)),
+        // L'agent ne doit attribuer que des droits qu'il possède directement.
+        // Les droits de table donnent déjà à l'équipe et à l'admin la visibilité requise.
+        Appwrite.Permission.read(Appwrite.Role.user(currentAgent.$id)),
         Appwrite.Permission.update(Appwrite.Role.user(currentAgent.$id))
       ]
     );
