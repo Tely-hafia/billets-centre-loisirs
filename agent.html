@@ -24,8 +24,8 @@
 
     <div>
       <p class="header-eyebrow">Espace équipe</p>
-      <h1>Calypço – Poste agent</h1>
-      <p>Un poste simple, adapté automatiquement à votre rôle.</p>
+      <h1>Calypço – Caisse et contrôle</h1>
+      <p>Vente, contrôle d’entrée et restauration selon votre rôle.</p>
     </div>
   </div>
 </header>
@@ -99,7 +99,11 @@
 
         <div class="agent-role-switch">
           <button id="btnModeBillets" type="button" class="btn-secondary">
-            🎫 Billets
+            🎫 Caisse billets
+          </button>
+
+          <button id="btnModeControle" type="button" class="btn-secondary">
+            ✅ Contrôle entrée
           </button>
 
           <button id="btnModeResto" type="button" class="btn-primary">
@@ -151,14 +155,87 @@
       <p id="agent-profile-message" class="status" aria-live="polite"></p>
     </section>
 
-    <!-- MODE 1 : Contrôle billets -->
+    <section id="cash-register-card" class="card cash-register-card" style="display:none;">
+      <div class="cash-register-header">
+        <div>
+          <p class="eyebrow">Caisse par service</p>
+          <h2 id="cash-register-title">Ma caisse</h2>
+          <p id="cash-register-status" class="status">Aucune caisse ouverte.</p>
+        </div>
+        <span id="cash-session-badge" class="role-badge">Fermée</span>
+      </div>
+
+      <div id="cash-open-zone">
+        <div class="cash-open-form">
+          <div class="form-row">
+            <label for="cashOpeningFloat">Fonds de caisse au départ</label>
+            <input id="cashOpeningFloat" type="number" min="0" step="500" inputmode="numeric" value="0" />
+          </div>
+          <button id="btnOpenCash" type="button" class="btn-primary">Ouvrir ma caisse</button>
+        </div>
+      </div>
+
+      <div id="cash-active-zone" style="display:none;">
+        <div class="cash-kpis">
+          <article><span>Espèces attendues</span><strong id="cashExpected">0 GNF</strong></article>
+          <article><span>Orange Money</span><strong id="cashOrange">0 GNF</strong></article>
+          <article><span>MTN Money</span><strong id="cashMtn">0 GNF</strong></article>
+          <article><span>Opérations</span><strong id="cashOperations">0</strong></article>
+        </div>
+
+        <details class="cash-details">
+          <summary>Enregistrer un mouvement de caisse</summary>
+          <div class="cash-movement-form">
+            <div class="form-row">
+              <label for="cashMovementType">Type</label>
+              <select id="cashMovementType">
+                <option value="DEPENSE">Dépense</option>
+                <option value="REMBOURSEMENT">Remboursement</option>
+                <option value="AVANCE">Avance</option>
+                <option value="AJOUT_CAISSE">Ajout de caisse</option>
+                <option value="REMISE_GERANT">Remise au gérant</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="cashMovementAmount">Montant</label>
+              <input id="cashMovementAmount" type="number" min="1" step="500" inputmode="numeric" />
+            </div>
+            <div class="form-row cash-movement-reason">
+              <label for="cashMovementReason">Motif obligatoire</label>
+              <input id="cashMovementReason" type="text" maxlength="500" placeholder="Expliquer précisément le mouvement" />
+            </div>
+            <button id="btnAddCashMovement" type="button" class="btn-secondary">Soumettre le mouvement</button>
+          </div>
+          <p class="status">Le mouvement reste en attente jusqu’à l’approbation administrative.</p>
+        </details>
+
+        <details class="cash-details cash-close-details">
+          <summary>Clôturer mon service</summary>
+          <div class="cash-close-form">
+            <div class="form-row">
+              <label for="cashActual">Espèces réellement remises</label>
+              <input id="cashActual" type="number" min="0" step="500" inputmode="numeric" />
+            </div>
+            <div class="form-row">
+              <label for="cashCloseComment">Commentaire</label>
+              <textarea id="cashCloseComment" rows="2" maxlength="1000" placeholder="Obligatoire en cas d’écart"></textarea>
+            </div>
+            <button id="btnCloseCash" type="button" class="btn-danger">Clôturer la caisse</button>
+          </div>
+        </details>
+      </div>
+
+      <p id="cash-register-message" class="status" aria-live="polite"></p>
+    </section>
+
+    <!-- MODE 1 : Caisse billets du gérant -->
     <section class="card" id="mode-billets">
       <div class="agent-workspace-heading">
         <div>
-          <p class="eyebrow">Poste billets</p>
-          <h2>Contrôle des billets</h2>
+          <p class="eyebrow">Poste gérant</p>
+          <h2>Caisse billets</h2>
           <p id="billetsSubHint" class="status">
-            Mode : billets d’entrée. Saisir le numéro du billet attribué au client.
+            Vendez le billet au client. L’agent de contrôle confirmera ensuite son entrée.
           </p>
         </div>
 
@@ -166,6 +243,29 @@
           Disponibles : <span id="ticketCount">0</span>
         </p>
       </div>
+
+      <fieldset class="payment-panel">
+        <legend>Moyen de paiement</legend>
+        <div class="payment-methods">
+          <label class="payment-choice">
+            <input type="radio" name="ticketPayment" value="especes" checked />
+            <span>💵 Espèces</span>
+          </label>
+          <label class="payment-choice">
+            <input type="radio" name="ticketPayment" value="orange_money" />
+            <span>Orange Money</span>
+          </label>
+          <label class="payment-choice">
+            <input type="radio" name="ticketPayment" value="mtn_money" />
+            <span>MTN Money</span>
+          </label>
+        </div>
+        <div id="ticket-cash-zone" class="cash-change-row">
+          <label for="ticketCashReceived">Espèces reçues</label>
+          <input id="ticketCashReceived" type="number" min="0" step="500" inputmode="numeric" placeholder="Montant reçu" />
+          <output id="ticketChange">Monnaie à rendre : 0 GNF</output>
+        </div>
+      </fieldset>
 
       <!-- Sous-onglets -->
       <div class="submode-row">
@@ -255,11 +355,13 @@
           type="text"
           id="ticketNumber"
           placeholder="Ex : 26-0001 ou J-0001"
+          inputmode="numeric"
+          autocomplete="off"
         />
       </div>
 
       <button id="btnCheckTicket" type="button" class="btn-primary">
-        Valider le billet ▶▶
+        Enregistrer la vente
       </button>
 
       <div id="result-message" class="result" style="display:none;"></div>
@@ -270,7 +372,35 @@
       </p>
     </section>
 
-    <!-- MODE 2 : Restauration / Chicha -->
+    <!-- MODE 2 : confirmation d'entrée -->
+    <section class="card control-entry-card" id="mode-controle" style="display:none;">
+      <div class="agent-workspace-heading">
+        <div>
+          <p class="eyebrow">Poste contrôle</p>
+          <h2>Confirmer une entrée</h2>
+          <p class="status">Saisissez le numéro. Seul un billet déjà vendu par le gérant peut être confirmé.</p>
+        </div>
+      </div>
+
+      <div class="control-fast-form">
+        <label for="controlTicketNumber">Numéro du billet</label>
+        <input
+          id="controlTicketNumber"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="Numéro du billet"
+        />
+        <button id="btnConfirmEntry" type="button" class="btn-primary">Confirmer l’entrée</button>
+      </div>
+      <div id="control-result" class="result" style="display:none;" aria-live="assertive"></div>
+      <p class="operation-security-note">
+        <span aria-hidden="true">🔒</span>
+        <span>Un billet non vendu, inconnu ou déjà confirmé est automatiquement refusé et signalé.</span>
+      </p>
+    </section>
+
+    <!-- MODE 3 : Restauration / Chicha -->
     <section class="card" id="mode-resto" style="display:none;">
       <div class="agent-workspace-heading">
         <div>
@@ -336,6 +466,29 @@
           </div>
 
           <div class="resto-cart-actions">
+            <fieldset class="payment-panel resto-payment-panel">
+              <legend>Moyen de paiement</legend>
+              <div class="payment-methods">
+                <label class="payment-choice">
+                  <input type="radio" name="restoPayment" value="especes" checked />
+                  <span>💵 Espèces</span>
+                </label>
+                <label class="payment-choice">
+                  <input type="radio" name="restoPayment" value="orange_money" />
+                  <span>Orange Money</span>
+                </label>
+                <label class="payment-choice">
+                  <input type="radio" name="restoPayment" value="mtn_money" />
+                  <span>MTN Money</span>
+                </label>
+              </div>
+              <div id="resto-cash-zone" class="cash-change-row">
+                <label for="restoCashReceived">Espèces reçues</label>
+                <input id="restoCashReceived" type="number" min="0" step="500" inputmode="numeric" placeholder="Montant reçu" />
+                <output id="restoChange">Monnaie à rendre : 0 GNF</output>
+              </div>
+            </fieldset>
+
             <button id="btnRestoValider" type="button" class="btn-primary" disabled>
               ✅ Valider la commande
             </button>
@@ -389,6 +542,7 @@
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
 <script src="js/auth-service.js?v=2"></script>
+<script src="js/ticket-workflow.js?v=1"></script>
 
 <!-- Script agent -->
 <script src="js/agent-appwrite.js?v=10"></script>

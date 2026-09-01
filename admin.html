@@ -331,8 +331,12 @@
           <label>Rôles autorisés <span style="color:#ef4444;">*</span></label>
           <div class="radio-group">
             <label class="radio-inline">
-              <input class="admin-agent-role" type="checkbox" value="billets" />
-              <span>Billets et réservations</span>
+              <input class="admin-agent-role" type="checkbox" value="gerant" />
+              <span>Gérant – caisse billets et jeux</span>
+            </label>
+            <label class="radio-inline">
+              <input class="admin-agent-role" type="checkbox" value="controle" />
+              <span>Contrôle des entrées</span>
             </label>
             <label class="radio-inline">
               <input class="admin-agent-role" type="checkbox" value="resto" />
@@ -421,6 +425,14 @@
           </div>
         </div>
 
+        <div class="stats-date-range reservation-date-range">
+          <label for="reservationStartDate">Du</label>
+          <input type="date" id="reservationStartDate" />
+          <label for="reservationEndDate">au</label>
+          <input type="date" id="reservationEndDate" />
+          <button id="btnResetReservationDates" type="button" class="btn-secondary">Réinitialiser</button>
+        </div>
+
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
@@ -442,7 +454,41 @@
           </table>
         </div>
 
+        <div class="reservation-pagination">
+          <button id="btnReservationPrev" type="button" class="btn-secondary">Page précédente</button>
+          <span id="reservationPageInfo">Page 1</span>
+          <button id="btnReservationNext" type="button" class="btn-secondary">Page suivante</button>
+        </div>
+
         <p id="reservations-history-message" class="message" style="display:none;"></p>
+      </section>
+
+      <section class="card" id="admin-cash-control">
+        <div class="agent-workspace-heading">
+          <div>
+            <p class="eyebrow">Comptabilité</p>
+            <h2>Contrôle des caisses</h2>
+            <p class="status">Clôtures, écarts et mouvements soumis par l’équipe.</p>
+          </div>
+          <button id="btnRefreshCashAdmin" type="button" class="btn-primary">Actualiser</button>
+        </div>
+
+        <h3>Dernières caisses</h3>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Agent</th><th>Poste</th><th>Ouverture</th><th>Attendu</th><th>Remis</th><th>Écart</th><th>Statut</th><th>Action</th></tr></thead>
+            <tbody id="admin-cash-sessions-body"><tr><td colspan="8">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:1.5rem;">Mouvements à approuver</h3>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Agent</th><th>Type</th><th>Montant</th><th>Motif</th><th>Statut</th><th>Action</th></tr></thead>
+            <tbody id="admin-cash-movements-body"><tr><td colspan="7">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+        <p id="admin-cash-message" class="status" aria-live="polite"></p>
       </section>
 
       <!-- Statistiques Billets / Restauration -->
@@ -470,7 +516,9 @@
             <label for="statsPeriod">Période :</label>
             <select id="statsPeriod">
               <option value="today">Aujourd'hui</option>
-              <option value="week" selected>Semaine en cours</option>
+              <option value="yesterday">Hier</option>
+              <option value="last7" selected>7 derniers jours</option>
+              <option value="week">Semaine en cours</option>
               <option value="month">Mois en cours</option>
               <option value="custom">Période personnalisée</option>
             </select>
@@ -497,8 +545,18 @@
         <div id="stats-billets-panel">
           <div class="stats-grid">
             <div class="stat-item">
-              <h3>Billets validés</h3>
+              <h3>Billets vendus</h3>
               <p id="stat-validations-count">0</p>
+            </div>
+
+            <div class="stat-item">
+              <h3>Entrées confirmées</h3>
+              <p id="stat-confirmations-count">0</p>
+            </div>
+
+            <div class="stat-item">
+              <h3>Vendues non confirmées</h3>
+              <p id="stat-unconfirmed-count">0</p>
             </div>
 
             <div class="stat-item">
@@ -514,6 +572,21 @@
             <div class="stat-item">
               <h3>Recette tarif étudiant</h3>
               <p id="stat-revenue-etudiant">0 GNF</p>
+            </div>
+
+            <div class="stat-item">
+              <h3>Espèces</h3>
+              <p id="stat-payment-cash">0 GNF</p>
+            </div>
+
+            <div class="stat-item">
+              <h3>Orange Money</h3>
+              <p id="stat-payment-orange">0 GNF</p>
+            </div>
+
+            <div class="stat-item">
+              <h3>MTN Money</h3>
+              <p id="stat-payment-mtn">0 GNF</p>
             </div>
           </div>
 
@@ -582,17 +655,13 @@
 
       <!-- Maintenance -->
       <section class="card maintenance-card">
-        <h2>🧹 Maintenance des données</h2>
+        <h2>🔒 Conservation des données</h2>
 
         <p class="status">
-          Ce bouton supprime tous les billets d'entrée et billets internes dans Appwrite
-          (<strong>billets</strong> + <strong>billets_interne</strong>).<br />
-          Les validations ne sont pas supprimées.
+          La suppression globale des billets est désactivée en production. Une vente ou un
+          mouvement validé doit rester dans l’historique ; toute correction passera par une
+          annulation motivée et traçable.
         </p>
-
-        <button id="clearDataBtn" class="btn-danger" type="button">
-          Effacer TOUS les billets
-        </button>
       </section>
 
     </div>

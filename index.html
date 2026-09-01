@@ -35,8 +35,8 @@
       </div>
 
       <nav class="public-nav" aria-label="Navigation principale">
-        <a href="#experiences">Expériences</a>
-        <a href="#contact">Contact</a>
+        <a href="experiences.html">Expériences</a>
+        <a href="contact.html">Infos & contact</a>
         <a href="#reservation-block" class="nav-cta" id="navReservation">Réserver</a>
       </nav>
     </div>
@@ -59,7 +59,7 @@
           🏆 Réservation
         </button>
 
-        <a href="#contact" class="btn-secondary btn-large">
+        <a href="contact.html" class="btn-secondary btn-large">
           📞 Nous contacter
         </a>
       </div>
@@ -452,6 +452,10 @@
       event.preventDefault();
       document.getElementById('btnShowReservation')?.click();
     });
+
+    if (window.location.hash === '#reservation-block') {
+      window.setTimeout(() => document.getElementById('btnShowReservation')?.click(), 0);
+    }
 
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {

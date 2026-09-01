@@ -12,6 +12,8 @@ const APPWRITE_ETUDIANTS_TABLE_ID = CalypsoConfig.tables.etudiants;
 const APPWRITE_MENU_RESTO_COLLECTION_ID = CalypsoConfig.tables.menuResto;
 const APPWRITE_VENTES_RESTO_COLLECTION_ID = CalypsoConfig.tables.ventesResto;
 const APPWRITE_RESERVATION_COLLECTION_ID = CalypsoConfig.tables.reservations;
+const APPWRITE_SESSIONS_CAISSE_TABLE_ID = CalypsoConfig.tables.sessionsCaisse;
+const APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID = CalypsoConfig.tables.mouvementsCaisse;
 const adminDB = CalypsoAppwrite.databases;
 
 // Helpers DOM
@@ -58,6 +60,8 @@ function escapeHTML(value) {
 
 let currentAdmin = null;
 let adminCurrentMode = "dashboard";
+let reservationHistoryPage = 0;
+const RESERVATIONS_PER_PAGE = 50;
 
 const adminDashboardState = {
   validationDocs: [],
@@ -125,14 +129,20 @@ function renderAgentActivity() {
 
 function detectDashboardAlerts() {
   const alerts = [];
-  const validationsByTicket = new Map();
+  const salesByTicket = new Map();
+  const pendingSalesByTicket = new Set();
+  const confirmationsByTicket = new Map();
   const studentsByDay = new Map();
   const salesByNumber = new Map();
 
   adminDashboardState.validationDocs.forEach((doc) => {
     const ticket = doc.numero_billet || "";
-    if (ticket) {
-      validationsByTicket.set(ticket, (validationsByTicket.get(ticket) || 0) + 1);
+    if (ticket && ["ENTREE", "VENTE_ENTREE"].includes(doc.poste_id)) {
+      salesByTicket.set(ticket, (salesByTicket.get(ticket) || 0) + 1);
+      if (doc.poste_id === "VENTE_ENTREE") pendingSalesByTicket.add(ticket);
+    }
+    if (ticket && doc.poste_id === "CONTROLE_ENTREE") {
+      confirmationsByTicket.set(ticket, (confirmationsByTicket.get(ticket) || 0) + 1);
     }
 
     const student = doc.numero_etudiant || "";
@@ -143,12 +153,39 @@ function detectDashboardAlerts() {
     }
   });
 
-  const duplicateTickets = [...validationsByTicket.values()].filter((count) => count > 1).length;
+  const duplicateTickets = [...salesByTicket.values()].filter((count) => count > 1).length;
   if (duplicateTickets > 0) {
     alerts.push({
       level: "high",
-      title: `${duplicateTickets} billet(s) journalisé(s) plusieurs fois`,
-      detail: "Vérifier les doublons de validation et l’état réel des billets."
+      title: `${duplicateTickets} billet(s) vendu(s) plusieurs fois`,
+      detail: "Vérifier le journal de vente et l’état réel des billets."
+    });
+  }
+
+  const duplicateConfirmations = [...confirmationsByTicket.values()].filter((count) => count > 1).length;
+  if (duplicateConfirmations > 0) {
+    alerts.push({
+      level: "high",
+      title: `${duplicateConfirmations} double(s) confirmation(s) d’entrée`,
+      detail: "Contrôler l’agent de contrôle et les numéros concernés."
+    });
+  }
+
+  const unconfirmed = [...pendingSalesByTicket].filter((ticket) => !confirmationsByTicket.has(ticket)).length;
+  if (unconfirmed > 0) {
+    alerts.push({
+      level: "medium",
+      title: `${unconfirmed} billet(s) vendu(s) sans entrée confirmée`,
+      detail: "Résumé de clôture à vérifier ; ce résultat ne signifie pas automatiquement un vol."
+    });
+  }
+
+  const confirmationsWithoutSale = [...confirmationsByTicket.keys()].filter((ticket) => !salesByTicket.has(ticket)).length;
+  if (confirmationsWithoutSale > 0) {
+    alerts.push({
+      level: "high",
+      title: `${confirmationsWithoutSale} entrée(s) sans vente correspondante`,
+      detail: "Anomalie importante : rapprocher immédiatement le billet et la caisse du gérant."
     });
   }
 
@@ -171,7 +208,7 @@ function detectDashboardAlerts() {
   }
 
   const zeroValidationAmounts = adminDashboardState.validationDocs.filter(
-    (doc) => (Number(doc.montant_paye) || 0) <= 0
+    (doc) => doc.poste_id !== "CONTROLE_ENTREE" && (Number(doc.montant_paye) || 0) <= 0
   ).length;
   if (zeroValidationAmounts > 0) {
     alerts.push({
@@ -341,6 +378,7 @@ function appliquerEtatConnexionAdmin(admin) {
     chargerStatsBillets();
     chargerStatsResto();
     chargerHistoriqueReservations();
+    chargerControleCaisses();
   } else {
     if (loginCard) loginCard.style.display = "block";
     if (appZone) appZone.style.display = "none";
@@ -425,6 +463,7 @@ function switchAdminMode(mode) {
 
   if (mode === "gestion") {
     chargerHistoriqueReservations();
+    chargerControleCaisses();
   }
 }
 
@@ -592,6 +631,8 @@ function clearReservationHistoryMessage() {
 async function chargerHistoriqueReservations() {
   const tbody = $("reservations-history-body");
   const filter = $("reservationFilter")?.value || "all";
+  const startDate = $("reservationStartDate")?.value || "";
+  const endDate = $("reservationEndDate")?.value || "";
 
   if (!tbody) return;
 
@@ -606,14 +647,12 @@ async function chargerHistoriqueReservations() {
   try {
     const queries = [
       Appwrite.Query.orderDesc("$createdAt"),
-      Appwrite.Query.limit(100)
+      Appwrite.Query.limit(RESERVATIONS_PER_PAGE),
+      Appwrite.Query.offset(reservationHistoryPage * RESERVATIONS_PER_PAGE)
     ];
 
-    if (filter === "active") {
-      queries.unshift(Appwrite.Query.equal("actif", true));
-    } else if (filter === "used") {
-      queries.unshift(Appwrite.Query.equal("actif", false));
-    }
+    if (startDate) queries.unshift(Appwrite.Query.greaterThanEqual("date_reservation", `${startDate}T00:00:00.000Z`));
+    if (endDate) queries.unshift(Appwrite.Query.lessThanEqual("date_reservation", `${endDate}T23:59:59.999Z`));
 
     const res = await adminDB.listDocuments(
       APPWRITE_DATABASE_ID,
@@ -621,7 +660,20 @@ async function chargerHistoriqueReservations() {
       queries
     );
 
-    const docs = res.documents || [];
+    const allDocs = res.documents || [];
+    const docs = allDocs.filter((reservation) => {
+      if (filter === "active") return reservation.actif !== false;
+      if (filter === "used") return reservation.actif === false;
+      return true;
+    });
+    const pageInfo = $("reservationPageInfo");
+    const prevButton = $("btnReservationPrev");
+    const nextButton = $("btnReservationNext");
+    if (pageInfo) pageInfo.textContent = `Page ${reservationHistoryPage + 1} · ${res.total || 0} réservation(s)`;
+    if (prevButton) prevButton.disabled = reservationHistoryPage === 0;
+    if (nextButton) {
+      nextButton.disabled = (reservationHistoryPage + 1) * RESERVATIONS_PER_PAGE >= (res.total || 0);
+    }
 
     if (docs.length === 0) {
       tbody.innerHTML = `
@@ -629,7 +681,7 @@ async function chargerHistoriqueReservations() {
           <td colspan="6">Aucune réservation trouvée.</td>
         </tr>
       `;
-      showReservationHistoryMessage("Aucune réservation pour ce filtre.", "info");
+      showReservationHistoryMessage("Aucune réservation pour ces dates et ce statut.", "info");
       return;
     }
 
@@ -658,7 +710,7 @@ async function chargerHistoriqueReservations() {
     }).join("");
 
     showReservationHistoryMessage(
-      `${docs.length} réservation(s) affichée(s).`,
+      `${docs.length} réservation(s) affichée(s) sur cette page.`,
       "success"
     );
   } catch (err) {
@@ -678,6 +730,105 @@ async function chargerHistoriqueReservations() {
 }
 
 // =====================================
+//  CONTRÔLE COMPTABLE DES CAISSES
+// =====================================
+
+function showAdminCashMessage(text, type = "info") {
+  const message = $("admin-cash-message");
+  if (!message) return;
+  message.textContent = text || "";
+  message.style.color = type === "error" ? "#b91c1c" : type === "success" ? "#15803d" : "#64748b";
+}
+
+async function chargerControleCaisses() {
+  const sessionsBody = $("admin-cash-sessions-body");
+  const movementsBody = $("admin-cash-movements-body");
+  if (!sessionsBody || !movementsBody || !currentAdmin) return;
+
+  sessionsBody.innerHTML = '<tr><td colspan="8">Chargement…</td></tr>';
+  movementsBody.innerHTML = '<tr><td colspan="7">Chargement…</td></tr>';
+
+  try {
+    const [sessionsResult, movementsResult] = await Promise.all([
+      adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, [
+        Appwrite.Query.orderDesc("$createdAt"),
+        Appwrite.Query.limit(100)
+      ]),
+      adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID, [
+        Appwrite.Query.orderDesc("$createdAt"),
+        Appwrite.Query.limit(100)
+      ])
+    ]);
+
+    const sessions = sessionsResult.documents || [];
+    sessionsBody.innerHTML = sessions.length ? sessions.map((session) => {
+      const closed = session.statut === "CLOTUREE";
+      const validated = Boolean(session.valide_admin_id);
+      const ecart = Number(session.ecart || 0);
+      return `<tr>
+        <td>${escapeHTML(session.agent_nom || getAgentLabel(session.agent_id))}</td>
+        <td>${escapeHTML(session.poste || "-")}</td>
+        <td>${formatDateFR(session.ouverture)}</td>
+        <td>${closed ? formatGNF(session.especes_attendues) : "En cours"}</td>
+        <td>${closed ? formatGNF(session.especes_declarees) : "-"}</td>
+        <td><span class="${ecart === 0 ? "badge-success" : "badge-warning"}">${closed ? formatGNF(ecart) : "-"}</span></td>
+        <td>${validated ? "Validée admin" : closed ? "À valider" : "Ouverte"}</td>
+        <td>${closed && !validated ? `<button class="btn-secondary admin-validate-cash" data-id="${session.$id}">Valider</button>` : "-"}</td>
+      </tr>`;
+    }).join("") : '<tr><td colspan="8">Aucune caisse enregistrée.</td></tr>';
+
+    const movements = movementsResult.documents || [];
+    movementsBody.innerHTML = movements.length ? movements.map((movement) => {
+      const pending = movement.statut === "EN_ATTENTE";
+      return `<tr>
+        <td>${formatDateFR(movement.date_mouvement)}</td>
+        <td>${escapeHTML(getAgentLabel(movement.agent_id))}</td>
+        <td>${escapeHTML(movement.type || "-")}</td>
+        <td>${formatGNF(movement.montant)}</td>
+        <td>${escapeHTML(movement.motif || "-")}</td>
+        <td>${escapeHTML(movement.statut || "-")}</td>
+        <td>${pending ? `<div class="compact-actions"><button class="btn-secondary admin-cash-movement" data-action="APPROUVE" data-id="${movement.$id}">Approuver</button><button class="btn-danger admin-cash-movement" data-action="REJETE" data-id="${movement.$id}">Refuser</button></div>` : "-"}</td>
+      </tr>`;
+    }).join("") : '<tr><td colspan="7">Aucun mouvement enregistré.</td></tr>';
+
+    showAdminCashMessage("Contrôle des caisses actualisé.", "success");
+  } catch (error) {
+    console.error("[ADMIN CAISSE] Chargement impossible :", error);
+    sessionsBody.innerHTML = '<tr><td colspan="8">Impossible de charger les caisses.</td></tr>';
+    movementsBody.innerHTML = '<tr><td colspan="7">Impossible de charger les mouvements.</td></tr>';
+    showAdminCashMessage(error?.message || "Erreur de chargement.", "error");
+  }
+}
+
+async function traiterActionCaisse(event) {
+  const movementButton = event.target.closest(".admin-cash-movement");
+  const sessionButton = event.target.closest(".admin-validate-cash");
+  if (!movementButton && !sessionButton) return;
+
+  try {
+    if (movementButton) {
+      await adminDB.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID,
+        movementButton.dataset.id,
+        { statut: movementButton.dataset.action, approbateur_id: currentAdmin.$id }
+      );
+    } else {
+      await adminDB.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+        sessionButton.dataset.id,
+        { valide_admin_id: currentAdmin.$id }
+      );
+    }
+    await chargerControleCaisses();
+  } catch (error) {
+    console.error("[ADMIN CAISSE] Action impossible :", error);
+    showAdminCashMessage(error?.message || "Action impossible.", "error");
+  }
+}
+
+// =====================================
 //  3. STATS : gestion de la période
 // =====================================
 
@@ -692,7 +843,12 @@ function getSelectedPeriod() {
   let end = new Date(today);
   end.setDate(end.getDate() + 1);
 
-  if (mode === "week") {
+  if (mode === "yesterday") {
+    start.setDate(today.getDate() - 1);
+    end = new Date(today);
+  } else if (mode === "last7") {
+    start.setDate(today.getDate() - 6);
+  } else if (mode === "week") {
     const day = today.getDay();
     const diff = (day + 6) % 7;
     start = new Date(today);
@@ -758,8 +914,12 @@ async function chargerStatsBillets() {
     );
 
     const docs = res.documents || [];
-
-    const totalValidations = docs.length;
+    const ventes = docs.filter((doc) => ["ENTREE", "VENTE_ENTREE", "INTERNE"].includes(doc.poste_id));
+    const confirmations = docs.filter((doc) => doc.poste_id === "CONTROLE_ENTREE");
+    const confirmationsNumbers = new Set(confirmations.map((doc) => doc.numero_billet).filter(Boolean));
+    const ventesEntree = ventes.filter((doc) => doc.poste_id === "VENTE_ENTREE");
+    const nonConfirmees = ventesEntree.filter((doc) => !confirmationsNumbers.has(doc.numero_billet));
+    const totalValidations = ventes.length;
 
     let recetteTotale = 0;
     let recetteNormal = 0;
@@ -767,7 +927,9 @@ async function chargerStatsBillets() {
 
     const parType = {};
 
-    docs.forEach((d) => {
+    const paiements = { especes: 0, orange_money: 0, mtn_money: 0 };
+
+    ventes.forEach((d) => {
       const montant = parseInt(d.montant_paye || 0, 10) || 0;
       recetteTotale += montant;
 
@@ -779,6 +941,8 @@ async function chargerStatsBillets() {
 
       parType[type].count += 1;
       parType[type].montant += montant;
+      const moyen = d.moyen_paiement || "especes";
+      if (Object.hasOwn(paiements, moyen)) paiements[moyen] += montant;
     });
 
     adminDashboardState.validationDocs = docs;
@@ -788,9 +952,14 @@ async function chargerStatsBillets() {
     renderDashboard();
 
     if ($("stat-validations-count")) $("stat-validations-count").textContent = totalValidations.toString();
+    if ($("stat-confirmations-count")) $("stat-confirmations-count").textContent = confirmations.length.toString();
+    if ($("stat-unconfirmed-count")) $("stat-unconfirmed-count").textContent = nonConfirmees.length.toString();
     if ($("stat-revenue-total")) $("stat-revenue-total").textContent = formatGNF(recetteTotale);
     if ($("stat-revenue-normal")) $("stat-revenue-normal").textContent = formatGNF(recetteNormal);
     if ($("stat-revenue-etudiant")) $("stat-revenue-etudiant").textContent = formatGNF(recetteEtudiant);
+    if ($("stat-payment-cash")) $("stat-payment-cash").textContent = formatGNF(paiements.especes);
+    if ($("stat-payment-orange")) $("stat-payment-orange").textContent = formatGNF(paiements.orange_money);
+    if ($("stat-payment-mtn")) $("stat-payment-mtn").textContent = formatGNF(paiements.mtn_money);
 
     const tbody = $("stats-type-body");
 
@@ -1238,6 +1407,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chargerStatsBillets();
       chargerStatsResto();
       chargerHistoriqueReservations();
+      chargerControleCaisses();
       chargerRepertoireAgents();
     });
   }
@@ -1310,19 +1480,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const btnRefreshReservations = $("btnRefreshReservations");
   const reservationFilter = $("reservationFilter");
+  const reservationStartDate = $("reservationStartDate");
+  const reservationEndDate = $("reservationEndDate");
+  const btnResetReservationDates = $("btnResetReservationDates");
+  const btnReservationPrev = $("btnReservationPrev");
+  const btnReservationNext = $("btnReservationNext");
+  const btnRefreshCashAdmin = $("btnRefreshCashAdmin");
+  const adminCashControl = $("admin-cash-control");
+
+  btnRefreshCashAdmin?.addEventListener("click", chargerControleCaisses);
+  adminCashControl?.addEventListener("click", traiterActionCaisse);
 
   if (btnRefreshReservations) {
     btnRefreshReservations.addEventListener("click", (e) => {
       e.preventDefault();
+      reservationHistoryPage = 0;
       chargerHistoriqueReservations();
     });
   }
 
   if (reservationFilter) {
     reservationFilter.addEventListener("change", () => {
+      reservationHistoryPage = 0;
       chargerHistoriqueReservations();
     });
   }
+
+  [reservationStartDate, reservationEndDate].forEach((input) => {
+    input?.addEventListener("change", () => {
+      reservationHistoryPage = 0;
+      chargerHistoriqueReservations();
+    });
+  });
+
+  btnResetReservationDates?.addEventListener("click", () => {
+    if (reservationStartDate) reservationStartDate.value = "";
+    if (reservationEndDate) reservationEndDate.value = "";
+    reservationHistoryPage = 0;
+    chargerHistoriqueReservations();
+  });
+
+  btnReservationPrev?.addEventListener("click", () => {
+    if (reservationHistoryPage > 0) reservationHistoryPage -= 1;
+    chargerHistoriqueReservations();
+  });
+
+  btnReservationNext?.addEventListener("click", () => {
+    reservationHistoryPage += 1;
+    chargerHistoriqueReservations();
+  });
 
   const clearDataBtn = $("clearDataBtn");
 
