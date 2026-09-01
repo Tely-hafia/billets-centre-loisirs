@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_VERSION = "calypso-equipe-v1";
+const CACHE_VERSION = "calypso-equipe-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const APP_SHELL = [
@@ -60,10 +60,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(async () => {
-          const cached = await caches.match(request, { ignoreSearch: true });
-          return cached || caches.match("./offline.html");
-        })
+        .catch(() => caches.match("./offline.html"))
     );
     return;
   }
@@ -77,6 +74,6 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(() => caches.match(request, { ignoreSearch: true }))
   );
 });
