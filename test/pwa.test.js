@@ -13,7 +13,7 @@ test("le manifeste PWA contient les informations d'installation", () => {
   const manifest = JSON.parse(read("manifest.webmanifest"));
 
   assert.equal(manifest.display, "standalone");
-  assert.match(manifest.start_url, /agent\.html/);
+  assert.match(manifest.start_url, /connexion\.html/);
   assert.ok(manifest.icons.some((icon) => icon.sizes === "192x192"));
   assert.ok(manifest.icons.some((icon) => icon.sizes === "512x512"));
 
@@ -23,7 +23,7 @@ test("le manifeste PWA contient les informations d'installation", () => {
 });
 
 test("les pages professionnelles chargent le manifeste et le gestionnaire PWA", () => {
-  for (const page of ["agent.html", "admin.html", "accept-invite.html", "reset-password.html"]) {
+  for (const page of ["connexion.html", "agent.html", "admin.html", "accept-invite.html", "reset-password.html"]) {
     const html = read(page);
     assert.match(html, /rel="manifest" href="manifest\.webmanifest"/);
     assert.match(html, /src="js\/pwa\.js\?v=1"/);

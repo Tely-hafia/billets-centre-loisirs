@@ -1,10 +1,11 @@
 "use strict";
 
-const CACHE_VERSION = "calypso-equipe-v9";
+const CACHE_VERSION = "calypso-equipe-v10";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const APP_SHELL = [
   "./offline.html",
+  "./connexion.html",
   "./agent.html",
   "./admin.html",
   "./experiences.html",
@@ -15,6 +16,7 @@ const APP_SHELL = [
   "./js/appwrite-config.js",
   "./js/appwrite-client.js",
   "./js/auth-service.js",
+  "./js/connexion.js",
   "./js/ticket-workflow.js",
   "./js/agent-appwrite.js",
   "./js/admin-appwrite.js",

@@ -1,11 +1,11 @@
 {
-  "id": "./agent.html",
+  "id": "./connexion.html",
   "name": "Calypço Équipe",
   "short_name": "Calypço",
   "description": "Poste mobile sécurisé pour les équipes billets, restauration et administration de Calypço.",
   "lang": "fr",
   "dir": "ltr",
-  "start_url": "./agent.html?source=pwa",
+  "start_url": "./connexion.html?source=pwa",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
@@ -34,15 +34,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Poste agent",
-      "short_name": "Agent",
-      "url": "./agent.html",
-      "icons": [{ "src": "assets/icons/calypso-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Administration",
-      "short_name": "Admin",
-      "url": "./admin.html",
+      "name": "Connexion équipe",
+      "short_name": "Connexion",
+      "url": "./connexion.html",
       "icons": [{ "src": "assets/icons/calypso-192.png", "sizes": "192x192" }]
     }
   ]

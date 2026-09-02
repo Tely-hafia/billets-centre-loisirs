@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calypço – Connexion équipe</title>
+  <meta name="theme-color" content="#0b1324" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/app-v2.css" />
+</head>
+<body class="staff-page auth-page">
+  <header>
+    <div class="header-inner">
+      <img class="brand-logo" src="assets/icons/calypso.svg" alt="" width="52" height="52" />
+      <div>
+        <p class="header-eyebrow">Espace équipe</p>
+        <h1>Connexion Calypço</h1>
+        <p>Un seul accès pour l’administration, la caisse, le contrôle et la restauration.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-main">
+    <section class="card auth-card">
+      <p class="eyebrow">Connexion sécurisée</p>
+      <h2>Accéder à mon poste</h2>
+      <p class="status">Saisissez vos identifiants, puis appuyez sur « Se connecter ».</p>
+
+      <form id="staffLoginForm" novalidate>
+        <div class="form-row">
+          <label for="staffEmail">E-mail</label>
+          <input id="staffEmail" type="email" autocomplete="username" required />
+        </div>
+        <div class="form-row">
+          <label for="staffPassword">Mot de passe</label>
+          <input id="staffPassword" type="password" autocomplete="current-password" required />
+        </div>
+        <div class="actions-row">
+          <button id="btnStaffLogin" type="submit" class="btn-primary">Se connecter</button>
+          <a href="index.html" class="btn-secondary btn-link">Accueil</a>
+        </div>
+      </form>
+      <p id="staffLoginMessage" class="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+  <script src="js/appwrite-config.js?v=1"></script>
+  <script src="js/appwrite-client.js?v=1"></script>
+  <script src="js/auth-service.js?v=4"></script>
+  <script src="js/connexion.js?v=1"></script>
+  <script src="js/pwa.js?v=1"></script>
+</body>
+</html>

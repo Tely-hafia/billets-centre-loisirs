@@ -32,48 +32,6 @@
 
 <main>
 
-  <!-- 1. Connexion ADMIN -->
-  <section id="admin-login-card" class="card">
-    <h2>Connexion administrateur</h2>
-
-    <p class="status">
-      Accès réservé aux membres de l’équipe Calypço ayant le rôle
-      <strong>administrateur</strong>.
-    </p>
-
-    <div class="form-row">
-      <label for="adminEmail">E-mail :</label>
-      <input
-        type="email"
-        id="adminEmail"
-        placeholder="admin@exemple.com"
-        autocomplete="username"
-      />
-    </div>
-
-    <div class="form-row">
-      <label for="adminPassword">Mot de passe :</label>
-      <input
-        type="password"
-        id="adminPassword"
-        placeholder="Mot de passe"
-        autocomplete="current-password"
-      />
-    </div>
-
-    <div class="actions-row">
-      <button id="btnAdminLogin" type="button" class="btn-primary">
-        Se connecter
-      </button>
-
-      <a href="index.html" class="btn-secondary btn-link">
-        🏠 Accueil
-      </a>
-    </div>
-
-    <p id="admin-login-message" class="status"></p>
-  </section>
-
   <!-- 2. Zone après connexion ADMIN -->
   <div id="admin-app-zone" style="display:none;">
 
@@ -99,15 +57,19 @@
 
       <nav class="admin-primary-nav" aria-label="Sections de l’administration">
         <button id="btnAdminModeDashboard" type="button" class="mode-btn active">
-          📊 Tableau de bord
+          Aujourd’hui
         </button>
 
-        <button id="btnAdminModeGestion" type="button" class="mode-btn">
-          🧾 Activité & statistiques
+        <button id="btnAdminModeHistory" type="button" class="mode-btn">
+          Historique & comptabilité
         </button>
 
-        <button id="btnAdminModeSaisie" type="button" class="mode-btn">
-          👥 Équipe & saisie
+        <button id="btnAdminModeTickets" type="button" class="mode-btn">
+          Gestion des billets
+        </button>
+
+        <button id="btnAdminModeTeam" type="button" class="mode-btn">
+          Équipe & accès
         </button>
       </nav>
     </section>
@@ -116,10 +78,10 @@
     <div id="admin-zone-dashboard" class="mode-content">
       <section class="card dashboard-welcome">
         <div>
-          <p class="header-eyebrow">Vue d’ensemble</p>
-          <h2>Les chiffres utiles, dès l’ouverture</h2>
+          <p class="header-eyebrow">Suivi journalier</p>
+          <h2>Activité d’aujourd’hui</h2>
           <p>
-            Les indicateurs suivent la période sélectionnée dans les statistiques.
+            Les indicateurs présentent uniquement la journée en cours.
             Les alertes signalent des incohérences à vérifier, jamais une culpabilité.
           </p>
         </div>
@@ -129,7 +91,7 @@
             Actualiser les données
           </button>
           <button id="btnDashboardGoStats" type="button" class="btn-primary">
-            Voir le détail des ventes
+            Ouvrir l’historique
           </button>
         </div>
       </section>
@@ -166,7 +128,7 @@
             <div>
               <p class="eyebrow">Équipe</p>
               <h2>Activité par agent</h2>
-              <p class="status">Validations, commandes et recettes observées sur la période.</p>
+              <p class="status">Ventes, contrôles et recettes observés aujourd’hui.</p>
             </div>
           </div>
 
@@ -175,13 +137,16 @@
               <thead>
                 <tr>
                   <th>Agent</th>
-                  <th>Billets</th>
+                  <th>Billets vendus</th>
+                  <th>Entrées</th>
                   <th>Commandes</th>
                   <th>Recettes</th>
+                  <th>Dernière action</th>
+                  <th>Alertes</th>
                 </tr>
               </thead>
               <tbody id="dashboard-agent-body">
-                <tr><td colspan="4">Chargement des activités…</td></tr>
+                <tr><td colspan="7">Chargement des activités…</td></tr>
               </tbody>
             </table>
           </div>
@@ -204,7 +169,7 @@
     </div>
 
     <!-- === MODE 1 : Saisie / Enregistrement === -->
-    <div id="admin-zone-saisie" class="mode-content" style="display:none;">
+    <div id="admin-zone-team" class="mode-content" style="display:none;">
 
       <!-- ENREGISTRER UN ÉTUDIANT -->
       <section class="card" id="admin-etudiants">
@@ -361,9 +326,23 @@
     <!-- === MODE 2 : Gestion & statistiques === -->
     <div id="admin-zone-gestion" class="mode-content" style="display:none;">
 
+      <section id="admin-history-filter" class="card">
+        <p class="eyebrow">Historique & comptabilité</p>
+        <h2>Choisir la période à consulter</h2>
+        <p class="status">Aucune ancienne donnée n’est chargée tant que vous n’avez pas choisi les dates.</p>
+        <div class="stats-date-range is-visible">
+          <label for="historyStartDate">Du</label>
+          <input id="historyStartDate" type="date" required />
+          <label for="historyEndDate">au</label>
+          <input id="historyEndDate" type="date" required />
+          <button id="btnLoadAdminHistory" type="button" class="btn-primary">Afficher la période</button>
+        </div>
+        <p id="admin-history-message" class="status" aria-live="polite"></p>
+      </section>
+
       <!-- Gestion des billets CSV -->
-      <section class="card">
-        <h2>📂 Gestion des billets CSV</h2>
+      <section class="card" id="admin-ticket-management">
+        <h2>Gestion des billets</h2>
 
         <h3>Import de billets</h3>
 
@@ -400,6 +379,27 @@
         </button>
 
         <p id="importStatus" class="status"></p>
+
+        <hr class="section-divider" />
+        <h3>Billets d’une journée</h3>
+        <p class="status">Chargez une liste courte, puis modifiez ou supprimez uniquement les billets encore inutilisés. Les billets vendus restent conservés pour la comptabilité.</p>
+        <div class="stats-date-range is-visible">
+          <label for="ticketManagementDate">Date d’ajout</label>
+          <input id="ticketManagementDate" type="date" />
+          <label for="ticketManagementType">Type</label>
+          <select id="ticketManagementType">
+            <option value="entree">Billets d’entrée</option>
+            <option value="interne">Billets jeux internes</option>
+          </select>
+          <button id="btnLoadTickets" type="button" class="btn-primary">Afficher les billets</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Numéro</th><th>Type</th><th>Prix</th><th>Tarif étudiant</th><th>Statut</th><th>Action</th></tr></thead>
+            <tbody id="admin-tickets-body"><tr><td colspan="6">Choisissez une date, puis affichez les billets.</td></tr></tbody>
+          </table>
+        </div>
+        <p id="admin-tickets-message" class="status" aria-live="polite"></p>
       </section>
 
       <!-- Historique des réservations -->
@@ -491,7 +491,7 @@
           </div>
         </div>
 
-        <h3>Dernières caisses</h3>
+        <h3>Caisses de la période</h3>
         <div class="table-wrapper">
           <table class="data-table">
             <thead><tr><th>Agent</th><th>Poste</th><th>Ouverture</th><th>Attendu</th><th>Remis</th><th>Écart</th><th>Statut</th><th>Action</th></tr></thead>
@@ -507,6 +507,18 @@
           </table>
         </div>
         <p id="admin-cash-message" class="status" aria-live="polite"></p>
+      </section>
+
+      <section class="card" id="admin-action-journal">
+        <p class="eyebrow">Traçabilité</p>
+        <h2>Journal des actions par agent</h2>
+        <p class="status">Ventes et contrôles de la période, avec l’agent concerné.</p>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Date et heure</th><th>Agent</th><th>Action</th><th>Référence</th><th>Montant</th></tr></thead>
+            <tbody id="admin-action-journal-body"><tr><td colspan="5">Choisissez une période pour afficher le journal.</td></tr></tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Statistiques Billets / Restauration -->
@@ -535,10 +547,10 @@
             <select id="statsPeriod">
               <option value="today">Aujourd'hui</option>
               <option value="yesterday">Hier</option>
-              <option value="last7" selected>7 derniers jours</option>
+              <option value="last7">7 derniers jours</option>
               <option value="week">Semaine en cours</option>
               <option value="month">Mois en cours</option>
-              <option value="custom">Période personnalisée</option>
+              <option value="custom" selected>Période personnalisée</option>
             </select>
           </div>
         </div>
@@ -662,7 +674,7 @@
       </section>
 
       <!-- Maintenance -->
-      <section class="card maintenance-card">
+      <section class="card maintenance-card" id="admin-conservation-card">
         <h2>🔒 Conservation des données</h2>
 
         <p class="status">
@@ -676,6 +688,23 @@
 
   </div>
 
+  <dialog id="ticketEditDialog" class="ticket-edit-dialog">
+    <form id="ticketEditForm" method="dialog" class="card">
+      <p class="eyebrow">Billet inutilisé</p>
+      <h2>Modifier le billet</h2>
+      <input id="ticketEditId" type="hidden" />
+      <input id="ticketEditKind" type="hidden" />
+      <div class="form-row"><label for="ticketEditNumber">Numéro</label><input id="ticketEditNumber" required /></div>
+      <div class="form-row"><label for="ticketEditType">Type</label><input id="ticketEditType" required /></div>
+      <div class="form-row"><label for="ticketEditPrice">Prix</label><input id="ticketEditPrice" type="number" min="0" step="500" required /></div>
+      <div class="form-row" id="ticketEditStudentRow"><label for="ticketEditStudentPrice">Tarif étudiant</label><input id="ticketEditStudentPrice" type="number" min="0" step="500" /></div>
+      <div class="actions-row">
+        <button id="btnSaveTicket" type="submit" class="btn-primary" value="save">Enregistrer</button>
+        <button type="button" class="btn-secondary" onclick="document.getElementById('ticketEditDialog').close()">Annuler</button>
+      </div>
+    </form>
+  </dialog>
+
 </main>
 
 <footer>
@@ -688,10 +717,11 @@
 <!-- Configuration et authentification partagées -->
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
-<script src="js/auth-service.js?v=3"></script>
+<script src="js/auth-service.js?v=4"></script>
+<script src="js/ticket-workflow.js?v=2"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=11"></script>
+<script src="js/admin-appwrite.js?v=12"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>

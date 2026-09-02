@@ -151,12 +151,24 @@ function getLocalCashKey() {
   return currentAgent ? `calypso-caisse-${currentAgent.$id}` : "";
 }
 
+function getDayKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function loadLocalCashSession() {
   const key = getLocalCashKey();
   if (!key) return null;
   try {
     const value = JSON.parse(localStorage.getItem(key) || "null");
-    return value?.statut === "OUVERTE" ? value : null;
+    const isToday = getDayKey(value?.ouverture) === getDayKey();
+    if (value?.statut === "OUVERTE" && isToday) return value;
+    localStorage.removeItem(key);
+    return null;
   } catch (_) {
     return null;
   }
@@ -178,6 +190,7 @@ function createLocalCashSession(fonds) {
     poste: getCashPoste(),
     statut: "OUVERTE",
     ouverture: date.toISOString(),
+    date_journee: getDayKey(date),
     fonds_depart: fonds,
     localFallback: true
   };
@@ -264,7 +277,7 @@ function renderCashRegister() {
   badge.textContent = currentCashSession ? "Ouverte" : "Fermée";
 
   if (!currentCashSession) {
-    status.textContent = "Ouvrez une caisse avant la première vente du service.";
+    status.textContent = "Indiquez les espèces reçues au départ avant la première vente.";
     return;
   }
 
@@ -296,7 +309,9 @@ async function chargerSessionCaisse() {
       APPWRITE_SESSIONS_CAISSE_TABLE_ID,
       [Appwrite.Query.equal("agent_id", currentAgent.$id), Appwrite.Query.limit(100)]
     );
-    currentCashSession = (result.documents || []).find((session) => session.statut === "OUVERTE") || null;
+    currentCashSession = (result.documents || []).find(
+      (session) => session.statut === "OUVERTE" && getDayKey(session.ouverture || session.$createdAt) === getDayKey()
+    ) || null;
     if (currentCashSession) currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
     renderCashRegister();
   } catch (error) {
@@ -340,7 +355,7 @@ async function ouvrirCaisse() {
     saveLocalCashSession(currentCashSession);
     currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
     renderCashRegister();
-    showCashMessage("Caisse ouverte. Vous pouvez commencer les ventes.", "success");
+    showCashMessage("Caisse du jour créée. Vous pouvez commencer les ventes.", "success");
   } catch (error) {
     console.error("[CAISSE] Ouverture impossible :", error);
     showCashMessage(error?.message || "Impossible d’ouvrir la caisse.", "error");
@@ -754,8 +769,8 @@ async function deconnexionAgent() {
   try {
     await CalypsoAuth.logout();
   } finally {
-    appliquerEtatConnexion(null);
-    showLoginMessage("Déconnecté.", "info");
+    sessionStorage.removeItem("calypso_access_granted");
+    window.location.replace("connexion.html");
   }
 }
 
@@ -771,10 +786,8 @@ async function restaurerSessionAgent() {
     appliquerEtatConnexion(agent);
     showLoginMessage("Session restaurée.", "success");
   } catch (error) {
-    appliquerEtatConnexion(null);
-    if (error?.code && error.code !== 401) {
-      showLoginMessage(error.message, "error");
-    }
+    sessionStorage.removeItem("calypso_access_granted");
+    window.location.replace("connexion.html");
   }
 }
 
@@ -2162,21 +2175,18 @@ function nouvelleCommandeResto() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[AGENT] DOMContentLoaded - RESERVATION ENTREE UNIQUEMENT");
 
+  if (sessionStorage.getItem("calypso_access_granted") !== "1") {
+    window.location.replace("connexion.html");
+    return;
+  }
+
   appliquerEtatConnexion(null);
   updateTarifEtudiantVisibility();
   updateReservationVisibility();
   renderTicketCart();
 
-  const btnLogin = $("btnLogin");
   const btnLogout = $("btnLogout");
   const btnSaveAgentProfile = $("btnSaveAgentProfile");
-
-  if (btnLogin) {
-    btnLogin.addEventListener("click", (e) => {
-      e.preventDefault();
-      connecterAgent();
-    });
-  }
 
   if (btnLogout) {
     btnLogout.addEventListener("click", (e) => {
@@ -2196,10 +2206,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnModeControle = $("btnModeControle");
   const btnModeResto = $("btnModeResto");
   const btnOpenCash = $("btnOpenCash");
-  const btnCloseCash = $("btnCloseCash");
 
   if (btnOpenCash) btnOpenCash.addEventListener("click", ouvrirCaisse);
-  if (btnCloseCash) btnCloseCash.addEventListener("click", cloturerCaisse);
 
   if (btnModeBillets) {
     btnModeBillets.addEventListener("click", (e) => {
@@ -2403,4 +2411,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.print();
     });
   }
+
+  restaurerSessionAgent();
 });
