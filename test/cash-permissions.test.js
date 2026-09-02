@@ -8,21 +8,11 @@ const agentSource = fs.readFileSync(
   "utf8"
 );
 
-test("la caisse est attribuée directement à l'agent qui l'ouvre", () => {
+test("Appwrite attribue automatiquement la caisse à l'agent qui l'ouvre", () => {
   const start = agentSource.indexOf("async function ouvrirCaisse()");
   const end = agentSource.indexOf("async function ajouterMouvementCaisse()", start);
   const ouvrirCaisseSource = agentSource.slice(start, end);
 
-  assert.match(
-    ouvrirCaisseSource,
-    /Permission\.read\(Appwrite\.Role\.user\(currentAgent\.\$id\)\)/
-  );
-  assert.match(
-    ouvrirCaisseSource,
-    /Permission\.update\(Appwrite\.Role\.user\(currentAgent\.\$id\)\)/
-  );
-  assert.doesNotMatch(
-    ouvrirCaisseSource,
-    /Permission\.read\(Appwrite\.Role\.team/
-  );
+  assert.match(ouvrirCaisseSource, /db\.createDocument\(/);
+  assert.doesNotMatch(ouvrirCaisseSource, /Appwrite\.Permission/);
 });
