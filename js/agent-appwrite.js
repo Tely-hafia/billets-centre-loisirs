@@ -304,13 +304,7 @@ async function ouvrirCaisse() {
         statut: "OUVERTE",
         ouverture: new Date().toISOString(),
         fonds_depart: fonds
-      },
-      [
-        // L'agent ne doit attribuer que des droits qu'il possède directement.
-        // Les droits de table donnent déjà à l'équipe et à l'admin la visibilité requise.
-        Appwrite.Permission.read(Appwrite.Role.user(currentAgent.$id)),
-        Appwrite.Permission.update(Appwrite.Role.user(currentAgent.$id))
-      ]
+      }
     );
     currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
     renderCashRegister();
