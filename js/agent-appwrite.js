@@ -123,6 +123,7 @@ function resetButtonLoading(button) {
 // ===============================
 
 let currentAgent = null;
+let loginRequestInProgress = false;
 
 let restoProduitsCache = [];
 let restoPanier = [];
@@ -710,14 +711,19 @@ async function enregistrerProfilAgent() {
 }
 
 async function connecterAgent() {
+  if (loginRequestInProgress) return;
+
   const email = $("agentEmail")?.value.trim();
-  const password = $("agentPassword")?.value.trim();
+  const password = $("agentPassword")?.value || "";
+  const button = $("btnLogin");
 
   if (!email || !password) {
     showLoginMessage("Veuillez saisir votre e-mail et votre mot de passe.", "error");
     return;
   }
 
+  loginRequestInProgress = true;
+  setButtonLoading(button, "Connexion…");
   showLoginMessage("Vérification en cours...", "info");
 
   try {
@@ -733,7 +739,16 @@ async function connecterAgent() {
     appliquerEtatConnexion(agent);
   } catch (err) {
     console.error("[AGENT] Erreur connexion agent :", err);
-    showLoginMessage(err?.message || "Identifiants invalides.", "error");
+    const limited = err?.code === 429 || /rate limit/i.test(err?.message || "");
+    showLoginMessage(
+      limited
+        ? "Trop de tentatives rapprochées. Attendez quelques minutes, puis cliquez une seule fois sur Se connecter."
+        : err?.message || "Identifiants invalides.",
+      "error"
+    );
+  } finally {
+    loginRequestInProgress = false;
+    resetButtonLoading(button);
   }
 }
 

@@ -41,8 +41,8 @@
     );
   }
 
-  async function getStaffContext(requiredRoles = []) {
-    const user = await account.get();
+  async function getStaffContext(requiredRoles = [], authenticatedUser = null) {
+    const user = authenticatedUser || await account.get();
     const memberships = await teams.listMemberships(
       config.staffTeamId,
       [global.Appwrite.Query.equal("userId", user.$id)]
@@ -80,10 +80,28 @@
   }
 
   async function login(email, password, requiredRoles = []) {
+    let authenticatedUser = null;
+
     try {
+      authenticatedUser = await account.get();
+    } catch (error) {
+      if (error?.code !== 401) throw error;
+    }
+
+    if (authenticatedUser) {
+      const requestedEmail = String(email || "").trim().toLowerCase();
+      const sessionEmail = String(authenticatedUser.email || "").trim().toLowerCase();
+
+      if (requestedEmail === sessionEmail) {
+        try {
+          return await getStaffContext(requiredRoles, authenticatedUser);
+        } catch (error) {
+          await logout();
+          throw error;
+        }
+      }
+
       await account.deleteSession("current");
-    } catch (_) {
-      // Aucune session existante : rien à supprimer.
     }
 
     await account.createEmailSession(email, password);

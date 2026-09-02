@@ -11,19 +11,28 @@ const authSource = fs.readFileSync(path.join(root, "js/auth-service.js"), "utf8"
 function createAuthFixture({
   membershipRoles = ["billets"],
   confirmed = true,
-  initialName = "Agent Test"
+  initialName = "Agent Test",
+  authenticated = true
 } = {}) {
   const calls = [];
   let userName = initialName;
+  let hasSession = authenticated;
   const account = {
     async createEmailSession(email) {
       calls.push(["createEmailSession", email]);
+      hasSession = true;
     },
     async deleteSession(sessionId) {
       calls.push(["deleteSession", sessionId]);
+      hasSession = false;
     },
     async get() {
       calls.push(["account.get"]);
+      if (!hasSession) {
+        const error = new Error("Session absente");
+        error.code = 401;
+        throw error;
+      }
       return { $id: "user-1", email: "agent@example.com", name: userName };
     },
     async updateName(name) {
@@ -89,15 +98,29 @@ test("refuse un espace lorsque le rôle requis manque", async () => {
 });
 
 test("une connexion non autorisée est immédiatement révoquée", async () => {
-  const { auth, calls } = createAuthFixture({ membershipRoles: ["resto"] });
+  const { auth, calls } = createAuthFixture({
+    membershipRoles: ["resto"],
+    authenticated: false
+  });
 
   await assert.rejects(() => auth.login("agent@example.com", "secret", ["admin"]));
 
   assert.ok(calls.some(([name]) => name === "createEmailSession"));
   assert.equal(
     calls.filter(([name, value]) => name === "deleteSession" && value === "current").length,
-    2
+    1
   );
+});
+
+test("réutilise une session valide sans recréer une connexion", async () => {
+  const { auth, calls } = createAuthFixture({ membershipRoles: ["billets"] });
+
+  const context = await auth.login("agent@example.com", "secret", ["billets"]);
+
+  assert.equal(context.$id, "user-1");
+  assert.equal(calls.filter(([name]) => name === "account.get").length, 1);
+  assert.equal(calls.filter(([name]) => name === "createEmailSession").length, 0);
+  assert.equal(calls.filter(([name]) => name === "deleteSession").length, 0);
 });
 
 test("seul un administrateur peut envoyer une invitation", async () => {
