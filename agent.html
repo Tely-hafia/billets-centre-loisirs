@@ -32,47 +32,6 @@
 
 <main>
 
-  <!-- Connexion agent -->
-  <section id="card-login" class="card">
-    <h2>Connexion agent</h2>
-
-    <p class="status">
-      Saisissez l’adresse e-mail associée à votre compte Calypço.
-    </p>
-
-    <div class="form-row">
-      <label for="agentEmail">E-mail :</label>
-      <input
-        type="email"
-        id="agentEmail"
-        placeholder="agent@exemple.com"
-        autocomplete="username"
-      />
-    </div>
-
-    <div class="form-row">
-      <label for="agentPassword">Mot de passe :</label>
-      <input
-        type="password"
-        id="agentPassword"
-        placeholder="Mot de passe"
-        autocomplete="current-password"
-      />
-    </div>
-
-    <div class="actions-row">
-      <button id="btnLogin" type="button" class="btn-primary">
-        Se connecter
-      </button>
-
-      <a href="index.html" class="btn-secondary btn-link">
-        🏠 Accueil
-      </a>
-    </div>
-
-    <p id="login-message" class="status"></p>
-  </section>
-
   <!-- Zone après connexion -->
   <div id="app-zone" style="display:none;">
 
@@ -158,7 +117,7 @@
     <section id="cash-register-card" class="card cash-register-card" style="display:none;">
       <div class="cash-register-header">
         <div>
-          <p class="eyebrow">Caisse par service</p>
+          <p class="eyebrow">Caisse du jour</p>
           <h2 id="cash-register-title">Ma caisse</h2>
           <p id="cash-register-status" class="status">Aucune caisse ouverte.</p>
         </div>
@@ -168,10 +127,10 @@
       <div id="cash-open-zone">
         <div class="cash-open-form">
           <div class="form-row">
-            <label for="cashOpeningFloat">Fonds de caisse au départ</label>
+            <label for="cashOpeningFloat">Espèces reçues pour démarrer</label>
             <input id="cashOpeningFloat" type="number" min="0" step="500" inputmode="numeric" value="0" />
           </div>
-          <button id="btnOpenCash" type="button" class="btn-primary">Ouvrir ma caisse</button>
+          <button id="btnOpenCash" type="button" class="btn-primary">Commencer la journée</button>
         </div>
       </div>
 
@@ -181,20 +140,6 @@
           <article><span>Opérations</span><strong id="cashOperations">0</strong></article>
         </div>
 
-        <details class="cash-details cash-close-details">
-          <summary>Clôturer mon service</summary>
-          <div class="cash-close-form">
-            <div class="form-row">
-              <label for="cashActual">Espèces réellement remises</label>
-              <input id="cashActual" type="number" min="0" step="500" inputmode="numeric" />
-            </div>
-            <div class="form-row">
-              <label for="cashCloseComment">Commentaire</label>
-              <textarea id="cashCloseComment" rows="2" maxlength="1000" placeholder="Obligatoire en cas d’écart"></textarea>
-            </div>
-            <button id="btnCloseCash" type="button" class="btn-danger">Clôturer la caisse</button>
-          </div>
-        </details>
       </div>
 
       <p id="cash-register-message" class="status" aria-live="polite"></p>
@@ -511,11 +456,11 @@
 <!-- Configuration et authentification partagées -->
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
-<script src="js/auth-service.js?v=3"></script>
+<script src="js/auth-service.js?v=4"></script>
 <script src="js/ticket-workflow.js?v=2"></script>
 
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=14"></script>
+<script src="js/agent-appwrite.js?v=15"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>

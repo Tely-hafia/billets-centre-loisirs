@@ -27,8 +27,7 @@ test("les pages publiques proposent les accès importants en haut", () => {
     assert.match(nav, /experiences\.html/);
     assert.match(nav, /contact\.html/);
     assert.match(nav, /Réserver/);
-    assert.match(nav, /agent\.html/);
-    assert.match(nav, /admin\.html/);
+    assert.match(nav, /connexion\.html/);
   }
 });
 
