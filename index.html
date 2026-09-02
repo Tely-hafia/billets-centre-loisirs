@@ -3,93 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Calypço - Centre de Loisirs</title>
 
-  <!-- PWA base -->
   <meta name="theme-color" content="#0b1324" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Calypço" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/app-v2.css" />
-
-  <!-- Flatpickr -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 </head>
 
-<body class="public-page">
-
-  <!-- HEADER -->
+<body class="public-page home-showcase-page">
   <header class="site-header">
     <div class="header-inner">
-      <img class="brand-logo" src="assets/icons/calypso.svg" alt="Calypço" width="52" height="52" />
-
-      <div class="header-text">
-        <h1>Calypço</h1>
-        <p>Centre de Loisirs - Gaming, détente et aventure</p>
-      </div>
+      <a class="public-brand-link" href="index.html" aria-label="Accueil Calypço">
+        <img class="brand-logo" src="assets/icons/calypso.svg" alt="" width="52" height="52" />
+        <span><strong>Calypço</strong><small>Centre de loisirs</small></span>
+      </a>
 
       <nav class="public-nav" aria-label="Navigation principale">
         <a href="experiences.html">Expériences</a>
         <a href="contact.html">Infos & contact</a>
         <a href="#reservation-block" class="nav-cta" id="navReservation">Réserver</a>
+        <a href="agent.html">Connexion</a>
+        <a href="admin.html">Admin</a>
       </nav>
     </div>
   </header>
 
-  <!-- HERO -->
-  <section class="hero-section">
-    <div class="hero-content">
-      <p class="hero-kicker">🎮 Loisirs • Gaming • Piscine • Aventure</p>
-
-      <h1 class="hero-title">Bienvenue au Calypço</h1>
-
-      <p class="hero-subtitle">
-        Votre destination gaming, détente et aventure : PS5, réalité virtuelle,
-        piscine, défis, restauration et événements.
-      </p>
-
-      <div class="access-buttons">
-        <button id="btnShowReservation" class="btn-primary btn-large" type="button">
-          🏆 Réservation
-        </button>
-
-        <a href="contact.html" class="btn-secondary btn-large">
-          📞 Nous contacter
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <section class="public-proof" aria-label="Informations essentielles">
-    <div class="proof-item">
-      <strong>Une destination, plusieurs univers</strong>
-      <span>Gaming, piscine, défis et restauration au même endroit.</span>
-    </div>
-    <div class="proof-item">
-      <strong>Réservation simple</strong>
-      <span>Choisissez votre expérience et conservez votre ticket sur téléphone.</span>
-    </div>
-    <div class="proof-item">
-      <strong>À Hafia, Labé</strong>
-      <span>À proximité de l’université Hafia, avec accès cartographique direct.</span>
-    </div>
-  </section>
-
-  <!-- POPUP RESERVATION -->
   <section id="reservation-block" class="reservation-overlay" aria-hidden="true">
-    <div class="card reservation-card" role="dialog" aria-modal="true">
-      <button type="button" class="reservation-close" id="btnCloseReservation" aria-label="Fermer la réservation">
-        ×
-      </button>
+    <div class="card reservation-card" role="dialog" aria-modal="true" aria-labelledby="reservationTitle">
+      <button type="button" class="reservation-close" id="btnCloseReservation" aria-label="Fermer la réservation">×</button>
 
-      <h2>Réserver votre expérience</h2>
-
+      <h2 id="reservationTitle">Réserver votre expérience</h2>
       <p class="message message-warning reservation-warning">
         Attention : votre réservation n’est pas confirmée tant que vous n’avez pas cliqué sur
         <strong>Confirmer la réservation</strong>.
@@ -139,272 +91,45 @@
           </select>
         </div>
 
-        <button id="btnSubmitReservation" type="submit" class="btn-primary">
-          ✅ Confirmer la réservation
-        </button>
-
+        <button id="btnSubmitReservation" type="submit" class="btn-primary">✅ Confirmer la réservation</button>
         <p id="reservationMessage" class="message" style="display:none;"></p>
       </form>
     </div>
   </section>
 
-  <main class="home-main">
-
-    <!-- GALERIE -->
-    <section class="gallery-section section-cardless">
-      <div class="section-heading">
+  <main class="home-main home-showcase-main">
+    <section class="gallery-section section-cardless" aria-labelledby="discoverTitle">
+      <div class="section-heading home-gallery-heading">
         <p class="section-kicker">📸 Galerie</p>
-        <h2>Découvrez le Calypço</h2>
-        <p>Parcourez notre univers gaming et détente en images</p>
+        <h1 id="discoverTitle">Découvrez le Calypço</h1>
+        <p>Gaming, détente, piscine et aventure en images.</p>
       </div>
 
-      <div class="gallery-carousel">
+      <div class="gallery-carousel" aria-roledescription="carrousel" aria-label="Découvrir les activités du Calypço">
         <div class="carousel-track" id="carouselTrack">
-          <div class="carousel-slide slide-gaming">
-            <span>🎮 Espace Gaming & E-sport PS5/VR</span>
-          </div>
-
-          <div class="carousel-slide slide-force">
-            <span>💪 Jeux de Force & Défis Physiques</span>
-          </div>
-
-          <div class="carousel-slide slide-tir">
-            <span>🎯 Tir de Précision & Adresse</span>
-          </div>
-
-          <div class="carousel-slide slide-piscine">
-            <span>🏊 Piscine & Toboggan Aquatique</span>
-          </div>
+          <div class="carousel-slide slide-gaming"><span>🎮 Espace Gaming & E-sport PS5/VR</span></div>
+          <div class="carousel-slide slide-force"><span>💪 Jeux de Force & Défis Physiques</span></div>
+          <div class="carousel-slide slide-tir"><span>🎯 Tir de Précision & Adresse</span></div>
+          <div class="carousel-slide slide-piscine"><span>🏊 Piscine & Toboggan Aquatique</span></div>
         </div>
 
-        <button class="carousel-nav carousel-prev" type="button" onclick="prevSlide()">❮</button>
-        <button class="carousel-nav carousel-next" type="button" onclick="nextSlide()">❯</button>
+        <button class="carousel-nav carousel-prev" type="button" onclick="prevSlide()" aria-label="Image précédente">❮</button>
+        <button class="carousel-nav carousel-next" type="button" onclick="nextSlide()" aria-label="Image suivante">❯</button>
       </div>
 
-      <div class="carousel-dots" id="carouselDots"></div>
+      <div class="carousel-dots" id="carouselDots" aria-label="Choisir une image"></div>
     </section>
-
-    <!-- SERVICES -->
-    <section class="services-section" id="experiences">
-      <div class="section-heading">
-        <p class="section-kicker">✨ Expériences</p>
-        <h2>Nos Expériences Uniques</h2>
-        <p>Découvrez tous les univers du Calypço : gaming, aventure, détente et convivialité.</p>
-      </div>
-
-      <div class="features-grid">
-        <article class="feature-card">
-          <span class="feature-icon">🎮</span>
-          <h3 class="feature-title">Gaming & E-sport</h3>
-          <p>Plongez dans l’univers du gaming nouvelle génération avec nos équipements high-tech.</p>
-
-          <div class="feature-list">
-            <strong>Activités :</strong>
-            <ul>
-              <li>PS5 et consoles dernière génération</li>
-              <li>Réalité Virtuelle immersive</li>
-              <li>Jeux d’arcade rétro et modernes</li>
-              <li>Tournois e-sport et compétitions</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="feature-card">
-          <span class="feature-icon">💪</span>
-          <h3 class="feature-title">Jeux de Force & Défis</h3>
-          <p>Testez vos limites et défiez vos amis dans des activités physiques fun et sécurisées.</p>
-
-          <div class="feature-list">
-            <strong>Défis :</strong>
-            <ul>
-              <li>Boxe arcade électronique</li>
-              <li>Marteau testeur de force</li>
-              <li>Compétitions amicales</li>
-              <li>Défis en équipe</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="feature-card">
-          <span class="feature-icon">🎯</span>
-          <h3 class="feature-title">Tir de Précision</h3>
-          <p>Développez votre adresse et votre concentration avec nos activités de tir sécurisées.</p>
-
-          <div class="feature-list">
-            <strong>Activités :</strong>
-            <ul>
-              <li>Tir à l’arbalète</li>
-              <li>Carabine laser</li>
-              <li>Tir à l’arc</li>
-              <li>Compétitions de précision</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="feature-card">
-          <span class="feature-icon">👥</span>
-          <h3 class="feature-title">Jeux de Groupe</h3>
-          <p>Partagez des moments de complicité et de rires avec nos jeux conviviaux.</p>
-
-          <div class="feature-list">
-            <strong>Activités :</strong>
-            <ul>
-              <li>Baby-foot compétitif</li>
-              <li>Mini-jeux variés</li>
-              <li>Jeux de société géants</li>
-              <li>Animations de groupe</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="feature-card">
-          <span class="feature-icon">🏊</span>
-          <h3 class="feature-title">Espace Aquatique</h3>
-          <p>Détendez-vous et amusez-vous dans notre espace piscine avec toboggan aquatique.</p>
-
-          <div class="feature-list">
-            <strong>Équipements :</strong>
-            <ul>
-              <li>Piscine rafraîchissante</li>
-              <li>Toboggan aquatique fun</li>
-              <li>Espace détente pool</li>
-              <li>Ambiance tropicale</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="feature-card">
-          <span class="feature-icon">🍹</span>
-          <h3 class="feature-title">Détente & Restauration</h3>
-          <p>Savourez des moments de détente avec notre cuisine variée et nos cocktails signature.</p>
-
-          <div class="feature-list">
-            <strong>Services :</strong>
-            <ul>
-              <li>Cuisine internationale</li>
-              <li>Milkshakes et cocktails</li>
-              <li>Espace détente lounge</li>
-              <li>Teepees privatifs</li>
-            </ul>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- INFOS -->
-    <section class="info-section">
-      <div class="section-heading">
-        <p class="section-kicker">ℹ️ Infos</p>
-        <h2>Informations Pratiques</h2>
-        <p>Tout ce que vous devez savoir pour profiter au maximum de notre centre.</p>
-      </div>
-
-      <div class="stats-container">
-        <div class="stat-card">
-          <div class="stat-number">7j/7</div>
-          <div class="stat-label">Jours d’ouverture</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-number">10h-02h</div>
-          <div class="stat-label">Horaires étendus</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-number">WiFi</div>
-          <div class="stat-label">Haut débit gratuit</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-number">🎉</div>
-          <div class="stat-label">Événements spéciaux</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- CONTACT -->
-    <section id="contact" class="whatsapp-contact">
-      <span class="whatsapp-icon">📱</span>
-      <h2>Contactez-nous sur WhatsApp</h2>
-      <p>Réponse rapide garantie ! Cliquez pour nous envoyer un message.</p>
-
-      <a
-        href="https://wa.me/22400000000?text=Bonjour,%20je%20souhaite%20avoir%20des%20informations%20sur%20les%20activités%20du%20Calypço"
-        class="whatsapp-btn"
-        target="_blank"
-      >
-        💬 Nous écrire sur WhatsApp
-      </a>
-    </section>
-
-    <!-- MAP -->
-    <section class="map-section">
-      <h2>📍 Nous trouver</h2>
-      <p>Hafia Labé, proche université Hafia</p>
-
-      <div class="map-frame">
-        <iframe
-          src="https://www.openstreetmap.org/export/embed.html?bbox=-12.387032,11.222501,-12.383032,11.224501&layer=mapnik&marker=11.223501,-12.385032"
-          width="100%"
-          height="300"
-          loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade"
-          title="Calypço Centre de Loisirs - Hafia Labé">
-        </iframe>
-      </div>
-
-      <div class="gps-buttons">
-        <a href="https://maps.google.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-google" target="_blank">
-          🗺️ Google Maps
-        </a>
-
-        <a href="https://waze.com/ul?ll=11.223501,-12.385032&navigate=yes" class="gps-btn gps-btn-waze" target="_blank">
-          🚗 Waze
-        </a>
-
-        <a href="https://maps.apple.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-apple" target="_blank">
-          🍎 Apple Plans
-        </a>
-      </div>
-
-      <div class="address-box">
-        <p><strong>📍 Adresse :</strong> Hafia Labé, proche université Hafia</p>
-        <p><strong>📞 Téléphone :</strong> +224 00 00 00 00</p>
-      </div>
-    </section>
-
-    <!-- ACCES PRO -->
-    <section class="admin-access">
-      <h3>Accès Professionnel</h3>
-      <p>Personnel et administrateurs du centre</p>
-
-      <div class="admin-buttons">
-        <a href="agent.html" class="admin-btn admin-btn-agent">
-          🎫 Espace Agent
-        </a>
-
-        <a href="admin.html" class="admin-btn admin-btn-admin">
-          ⚙️ Administration
-        </a>
-      </div>
-    </section>
-
   </main>
 
   <footer>
-    <p>© Calypço - Tous droits réservés</p>
-    <p>Votre destination gaming, aventure et détente à Labé</p>
+    <p>© Calypço - Centre de loisirs à Hafia, Labé</p>
   </footer>
 
-  <!-- SDK Appwrite -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
-
-  <!-- Configuration Appwrite partagée -->
   <script src="js/appwrite-config.js?v=1"></script>
   <script src="js/appwrite-client.js?v=1"></script>
-
-  <!-- Script page d'accueil / réservation -->
   <script src="js/index.js?v=11"></script>
+  <script src="js/pwa.js?v=1"></script>
 
   <script>
     let currentSlide = 0;
@@ -416,14 +141,13 @@
       const dot = document.createElement('button');
       dot.type = 'button';
       dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
-      dot.setAttribute('aria-label', `Afficher la vue ${index + 1}`);
+      dot.setAttribute('aria-label', `Afficher l’image ${index + 1}`);
       dot.addEventListener('click', () => goToSlide(index));
       dotsContainer.appendChild(dot);
     });
 
     function updateCarousel() {
       track.style.transform = `translateX(-${currentSlide * 100}%)`;
-
       document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
         dot.classList.toggle('active', index === currentSlide);
       });
@@ -450,27 +174,12 @@
 
     document.getElementById('navReservation')?.addEventListener('click', (event) => {
       event.preventDefault();
-      document.getElementById('btnShowReservation')?.click();
+      openReservationPopup();
     });
 
     if (window.location.hash === '#reservation-block') {
-      window.setTimeout(() => document.getElementById('btnShowReservation')?.click(), 0);
+      window.setTimeout(openReservationPopup, 0);
     }
-
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        const target = document.querySelector(this.getAttribute('href'));
-
-        if (target) {
-          target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-        }
-      });
-    });
   </script>
 </body>
 </html>

@@ -10,15 +10,26 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/app-v2.css" />
 </head>
+
 <body class="public-page public-inner-page">
   <header class="site-header">
     <div class="header-inner">
-      <a class="public-brand-link" href="index.html"><img class="brand-logo" src="assets/icons/calypso.svg" alt="" width="52" height="52" /><span><strong>Calypço</strong><small>Centre de loisirs</small></span></a>
+      <a class="public-brand-link" href="index.html" aria-label="Accueil Calypço">
+        <img class="brand-logo" src="assets/icons/calypso.svg" alt="" width="52" height="52" />
+        <span><strong>Calypço</strong><small>Centre de loisirs</small></span>
+      </a>
+
       <nav class="public-nav" aria-label="Navigation principale">
-        <a href="index.html">Accueil</a><a href="contact.html">Infos & contact</a><a href="index.html#reservation-block" class="nav-cta">Réserver</a>
+        <a href="index.html">Accueil</a>
+        <a href="experiences.html" aria-current="page">Expériences</a>
+        <a href="contact.html">Infos & contact</a>
+        <a href="index.html#reservation-block" class="nav-cta">Réserver</a>
+        <a href="agent.html">Connexion</a>
+        <a href="admin.html">Admin</a>
       </nav>
     </div>
   </header>
+
   <main class="public-inner-main">
     <section class="public-page-intro">
       <p class="section-kicker">✨ Expériences</p>
@@ -26,16 +37,101 @@
       <p>Gaming, défis, précision, piscine et restauration au Calypço de Hafia, Labé.</p>
       <a href="index.html#reservation-block" class="btn-primary btn-link">Réserver une activité</a>
     </section>
+
     <section class="features-grid" aria-label="Activités du centre">
-      <article class="feature-card"><span class="feature-icon">🎮</span><h2 class="feature-title">Gaming & E-sport</h2><p>PS5, réalité virtuelle, arcade et tournois entre amis.</p></article>
-      <article class="feature-card"><span class="feature-icon">💪</span><h2 class="feature-title">Force & défis</h2><p>Boxe arcade, marteau de force et compétitions en équipe.</p></article>
-      <article class="feature-card"><span class="feature-icon">🎯</span><h2 class="feature-title">Tir de précision</h2><p>Adresse, concentration et défis de précision sécurisés.</p></article>
-      <article class="feature-card"><span class="feature-icon">🏊</span><h2 class="feature-title">Piscine & détente</h2><p>Piscine, toboggan aquatique et espace détente.</p></article>
-      <article class="feature-card"><span class="feature-icon">🍹</span><h2 class="feature-title">Restauration</h2><p>Menus, boissons et espace lounge pour prolonger l’expérience.</p></article>
-      <article class="feature-card"><span class="feature-icon">🎉</span><h2 class="feature-title">Événements</h2><p>Anniversaires, sorties de groupe et événements personnalisés.</p></article>
+      <article class="feature-card">
+        <span class="feature-icon">🎮</span>
+        <h2 class="feature-title">Gaming & E-sport</h2>
+        <p>Plongez dans l’univers du gaming nouvelle génération avec nos équipements.</p>
+        <div class="feature-list">
+          <strong>Activités :</strong>
+          <ul>
+            <li>PS5 et consoles dernière génération</li>
+            <li>Réalité virtuelle immersive</li>
+            <li>Jeux d’arcade rétro et modernes</li>
+            <li>Tournois e-sport et compétitions</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="feature-card">
+        <span class="feature-icon">💪</span>
+        <h2 class="feature-title">Jeux de force & défis</h2>
+        <p>Testez vos limites et défiez vos amis avec des activités physiques amusantes et sécurisées.</p>
+        <div class="feature-list">
+          <strong>Défis :</strong>
+          <ul>
+            <li>Boxe arcade électronique</li>
+            <li>Marteau testeur de force</li>
+            <li>Compétitions amicales</li>
+            <li>Défis en équipe</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="feature-card">
+        <span class="feature-icon">🎯</span>
+        <h2 class="feature-title">Tir de précision</h2>
+        <p>Développez votre adresse et votre concentration avec nos activités de précision sécurisées.</p>
+        <div class="feature-list">
+          <strong>Activités :</strong>
+          <ul>
+            <li>Tir à l’arbalète</li>
+            <li>Carabine laser</li>
+            <li>Tir à l’arc</li>
+            <li>Compétitions de précision</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="feature-card">
+        <span class="feature-icon">👥</span>
+        <h2 class="feature-title">Jeux de groupe</h2>
+        <p>Partagez des moments de complicité et de rire avec nos jeux conviviaux.</p>
+        <div class="feature-list">
+          <strong>Activités :</strong>
+          <ul>
+            <li>Baby-foot compétitif</li>
+            <li>Mini-jeux variés</li>
+            <li>Jeux de société géants</li>
+            <li>Animations de groupe</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="feature-card">
+        <span class="feature-icon">🏊</span>
+        <h2 class="feature-title">Piscine & détente</h2>
+        <p>Détendez-vous et amusez-vous dans notre espace piscine avec toboggan aquatique.</p>
+        <div class="feature-list">
+          <strong>Équipements :</strong>
+          <ul>
+            <li>Piscine rafraîchissante</li>
+            <li>Toboggan aquatique</li>
+            <li>Espace détente</li>
+            <li>Ambiance tropicale</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="feature-card">
+        <span class="feature-icon">🍹</span>
+        <h2 class="feature-title">Détente & restauration</h2>
+        <p>Profitez d’une pause gourmande et prolongez votre moment de détente au centre.</p>
+        <div class="feature-list">
+          <strong>Services :</strong>
+          <ul>
+            <li>Cuisine variée</li>
+            <li>Boissons et cocktails</li>
+            <li>Espace lounge</li>
+            <li>Espaces privatifs</li>
+          </ul>
+        </div>
+      </article>
     </section>
   </main>
-  <footer><p>© Calypço – Centre de loisirs</p></footer>
+
+  <footer><p>© Calypço – Centre de loisirs à Hafia, Labé</p></footer>
   <script src="js/pwa.js?v=1"></script>
 </body>
 </html>
