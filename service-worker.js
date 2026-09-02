@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_VERSION = "calypso-equipe-v8";
+const CACHE_VERSION = "calypso-equipe-v9";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const APP_SHELL = [

@@ -663,7 +663,7 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 .cash-register-card { border-top: 4px solid #0f9f9a; }
 .cash-register-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
 .cash-open-form { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 1rem; align-items: end; }
-.cash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0; }
+.cash-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0; }
 .cash-kpis article { padding: .9rem; border: 1px solid #dce5ee; border-radius: 14px; background: #f8fafc; }
 .cash-kpis span { display: block; margin-bottom: .25rem; color: #64748b; font-size: .82rem; }
 .cash-kpis strong { color: #0b1324; font-size: 1.05rem; }
@@ -671,6 +671,32 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 .cash-details summary { cursor: pointer; font-weight: 800; color: #0f314d; }
 .cash-movement-form { display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: .75rem; align-items: end; margin-top: .8rem; }
 .cash-close-form { display: grid; grid-template-columns: 1fr 1.5fr auto; gap: .75rem; align-items: end; margin-top: .8rem; }
+.ticket-sale-workspace { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr); gap: 1rem; margin-top: 1rem; align-items: start; }
+.ticket-lookup-panel,
+.ticket-cart-panel { padding: 1rem; border: 1px solid #dce5ee; border-radius: 16px; background: #f8fafc; }
+.ticket-lookup-panel > label { display: block; margin-bottom: .5rem; font-weight: 850; }
+.ticket-lookup-panel input { min-height: 58px; font-size: 1.2rem; font-weight: 800; }
+.ticket-preview { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; padding: 1rem; border-radius: 14px; background: #fff; border: 2px solid #0f9f9a; }
+.ticket-preview div span { display: block; color: #64748b; font-size: .8rem; }
+.ticket-preview div strong { display: block; margin-top: .2rem; color: #0b1324; }
+.ticket-preview button { grid-column: 1 / -1; }
+.ticket-cart-heading,
+.ticket-cart-total,
+.ticket-cart-item { display: flex; justify-content: space-between; gap: .75rem; align-items: center; }
+.ticket-cart-heading { padding-bottom: .75rem; border-bottom: 1px solid #dce5ee; }
+.ticket-cart-heading h3 { margin: 0; }
+.ticket-cart-items { display: grid; gap: .6rem; padding: .75rem 0; max-height: 300px; overflow: auto; }
+.ticket-cart-item { padding: .75rem; border: 1px solid #dce5ee; border-radius: 12px; background: #fff; }
+.ticket-cart-item div { display: grid; gap: .2rem; }
+.ticket-cart-item span { color: #64748b; font-size: .8rem; }
+.ticket-cart-remove { border: 0; background: transparent; color: #b91c1c; font-weight: 800; cursor: pointer; }
+.ticket-cart-total { padding: .85rem 0; border-top: 1px solid #dce5ee; font-size: 1.05rem; }
+.ticket-cart-total strong { color: #0f766e; font-size: 1.25rem; }
+.ticket-cash-row { grid-template-columns: 1fr; }
+.ticket-cart-actions { display: grid; grid-template-columns: auto 1fr; gap: .65rem; margin-top: .9rem; }
+.admin-refund-panel { margin: 1rem 0 1.5rem; padding: 1rem; border: 1px solid #fecaca; border-radius: 16px; background: #fff7f7; }
+.admin-refund-panel h3 { margin: 0; }
+.admin-refund-form { display: grid; grid-template-columns: 1fr 2fr auto; gap: .75rem; align-items: end; margin-top: .75rem; }
 
 @media (max-width: 768px) {
   .payment-methods,
@@ -684,6 +710,10 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
   .cash-close-form { display: grid; grid-template-columns: 1fr; }
   .cash-kpis { grid-template-columns: 1fr 1fr; }
   .cash-movement-form { grid-template-columns: 1fr; }
+  .ticket-sale-workspace,
+  .ticket-preview,
+  .ticket-cart-actions,
+  .admin-refund-form { grid-template-columns: 1fr; }
   .contact-info-grid { grid-template-columns: 1fr; }
   .contact-job-card { grid-column: auto; }
   body.public-page .carousel-nav { width: 44px; height: 44px; }

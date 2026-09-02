@@ -178,36 +178,8 @@
       <div id="cash-active-zone" style="display:none;">
         <div class="cash-kpis">
           <article><span>Espèces attendues</span><strong id="cashExpected">0 GNF</strong></article>
-          <article><span>Orange Money</span><strong id="cashOrange">0 GNF</strong></article>
-          <article><span>MTN Money</span><strong id="cashMtn">0 GNF</strong></article>
           <article><span>Opérations</span><strong id="cashOperations">0</strong></article>
         </div>
-
-        <details class="cash-details">
-          <summary>Enregistrer un mouvement de caisse</summary>
-          <div class="cash-movement-form">
-            <div class="form-row">
-              <label for="cashMovementType">Type</label>
-              <select id="cashMovementType">
-                <option value="DEPENSE">Dépense</option>
-                <option value="REMBOURSEMENT">Remboursement</option>
-                <option value="AVANCE">Avance</option>
-                <option value="AJOUT_CAISSE">Ajout de caisse</option>
-                <option value="REMISE_GERANT">Remise au gérant</option>
-              </select>
-            </div>
-            <div class="form-row">
-              <label for="cashMovementAmount">Montant</label>
-              <input id="cashMovementAmount" type="number" min="1" step="500" inputmode="numeric" />
-            </div>
-            <div class="form-row cash-movement-reason">
-              <label for="cashMovementReason">Motif obligatoire</label>
-              <input id="cashMovementReason" type="text" maxlength="500" placeholder="Expliquer précisément le mouvement" />
-            </div>
-            <button id="btnAddCashMovement" type="button" class="btn-secondary">Soumettre le mouvement</button>
-          </div>
-          <p class="status">Le mouvement reste en attente jusqu’à l’approbation administrative.</p>
-        </details>
 
         <details class="cash-details cash-close-details">
           <summary>Clôturer mon service</summary>
@@ -243,29 +215,6 @@
           Disponibles : <span id="ticketCount">0</span>
         </p>
       </div>
-
-      <fieldset class="payment-panel">
-        <legend>Moyen de paiement</legend>
-        <div class="payment-methods">
-          <label class="payment-choice">
-            <input type="radio" name="ticketPayment" value="especes" checked />
-            <span>💵 Espèces</span>
-          </label>
-          <label class="payment-choice">
-            <input type="radio" name="ticketPayment" value="orange_money" />
-            <span>Orange Money</span>
-          </label>
-          <label class="payment-choice">
-            <input type="radio" name="ticketPayment" value="mtn_money" />
-            <span>MTN Money</span>
-          </label>
-        </div>
-        <div id="ticket-cash-zone" class="cash-change-row">
-          <label for="ticketCashReceived">Espèces reçues</label>
-          <input id="ticketCashReceived" type="number" min="0" step="500" inputmode="numeric" placeholder="Montant reçu" />
-          <output id="ticketChange">Monnaie à rendre : 0 GNF</output>
-        </div>
-      </fieldset>
 
       <!-- Sous-onglets -->
       <div class="submode-row">
@@ -348,21 +297,51 @@
         </div>
       </div>
 
-      <!-- Numéro de billet -->
-      <div class="form-row">
-        <label for="ticketNumber">Numéro du billet à attribuer :</label>
-        <input
-          type="text"
-          id="ticketNumber"
-          placeholder="Ex : 26-0001 ou J-0001"
-          inputmode="numeric"
-          autocomplete="off"
-        />
-      </div>
+      <div class="ticket-sale-workspace">
+        <div class="ticket-lookup-panel">
+          <label for="ticketNumber">Numéro du billet</label>
+          <div class="inline-input-actions">
+            <input
+              type="text"
+              id="ticketNumber"
+              placeholder="Ex : 26-0001 ou J-0001"
+              inputmode="numeric"
+              autocomplete="off"
+            />
+            <button id="btnLookupTicket" type="button" class="btn-secondary">Afficher</button>
+          </div>
 
-      <button id="btnCheckTicket" type="button" class="btn-primary">
-        Enregistrer la vente
-      </button>
+          <div id="ticketPreview" class="ticket-preview" style="display:none;">
+            <div><span>Billet</span><strong id="ticketPreviewNumber">—</strong></div>
+            <div><span>Type</span><strong id="ticketPreviewType">—</strong></div>
+            <div><span>Prix</span><strong id="ticketPreviewPrice">0 GNF</strong></div>
+            <button id="btnAddTicket" type="button" class="btn-primary">Ajouter au panier</button>
+          </div>
+        </div>
+
+        <aside class="ticket-cart-panel">
+          <div class="ticket-cart-heading">
+            <h3>Panier billets</h3>
+            <span id="ticketCartCount">0 billet</span>
+          </div>
+          <div id="ticketCartItems" class="ticket-cart-items">
+            <p class="status">Aucun billet ajouté.</p>
+          </div>
+          <div class="ticket-cart-total">
+            <span>Total à payer</span>
+            <strong id="ticketCartTotal">0 GNF</strong>
+          </div>
+          <div class="cash-change-row ticket-cash-row">
+            <label for="ticketCashReceived">Espèces reçues</label>
+            <input id="ticketCashReceived" type="number" min="0" step="500" inputmode="numeric" placeholder="Montant reçu" />
+            <output id="ticketChange">Monnaie à rendre : 0 GNF</output>
+          </div>
+          <div class="ticket-cart-actions">
+            <button id="btnClearTicketCart" type="button" class="btn-secondary">Vider</button>
+            <button id="btnValidateTicketCart" type="button" class="btn-primary" disabled>Valider le panier</button>
+          </div>
+        </aside>
+      </div>
 
       <div id="result-message" class="result" style="display:none;"></div>
 
@@ -470,16 +449,7 @@
               <legend>Moyen de paiement</legend>
               <div class="payment-methods">
                 <label class="payment-choice">
-                  <input type="radio" name="restoPayment" value="especes" checked />
                   <span>💵 Espèces</span>
-                </label>
-                <label class="payment-choice">
-                  <input type="radio" name="restoPayment" value="orange_money" />
-                  <span>Orange Money</span>
-                </label>
-                <label class="payment-choice">
-                  <input type="radio" name="restoPayment" value="mtn_money" />
-                  <span>MTN Money</span>
                 </label>
               </div>
               <div id="resto-cash-zone" class="cash-change-row">
@@ -542,10 +512,10 @@
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
 <script src="js/auth-service.js?v=3"></script>
-<script src="js/ticket-workflow.js?v=1"></script>
+<script src="js/ticket-workflow.js?v=2"></script>
 
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=13"></script>
+<script src="js/agent-appwrite.js?v=14"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>

@@ -73,36 +73,18 @@ function getTarifChoisi() {
   return "normal";
 }
 
-function getSelectedPayment(groupName) {
-  return document.querySelector(`input[name="${groupName}"]:checked`)?.value ||
-    CalypsoConfig.paymentMethods.especes;
-}
-
-function getCashDetails(groupName, inputId, total) {
-  const moyenPaiement = getSelectedPayment(groupName);
-  if (moyenPaiement !== CalypsoConfig.paymentMethods.especes) {
-    return { moyenPaiement, montantRecu: total, monnaieRendue: 0 };
-  }
-
+function getCashDetails(inputId, total) {
   const raw = $(inputId)?.value;
-  const montantRecu = raw === "" || raw == null ? total : Number(raw);
+  const montantRecu = Number(raw);
   if (!Number.isFinite(montantRecu) || montantRecu < total) {
     throw new Error(`Espèces insuffisantes : ${formatMontantGNF(total)} attendus.`);
   }
 
   return {
-    moyenPaiement,
+    moyenPaiement: CalypsoConfig.paymentMethods.especes,
     montantRecu,
     monnaieRendue: montantRecu - total
   };
-}
-
-function updatePaymentZone(groupName, zoneId) {
-  const zone = $(zoneId);
-  if (!zone) return;
-  zone.style.display = getSelectedPayment(groupName) === CalypsoConfig.paymentMethods.especes
-    ? "grid"
-    : "none";
 }
 
 function setButtonLoading(button, text) {
@@ -128,6 +110,8 @@ let loginRequestInProgress = false;
 let restoProduitsCache = [];
 let restoPanier = [];
 let restoLoaded = false;
+let ticketPanier = [];
+let ticketEnApercu = null;
 
 let currentMode = "billets";
 let currentBilletsSubMode = "ENTREE";
@@ -160,7 +144,43 @@ function isRestoAgent() {
 }
 
 function getCashPoste() {
-  return currentMode === "resto" ? "RESTO" : "GERANT";
+  return isGerantAgent() ? "GERANT" : "RESTO";
+}
+
+function getLocalCashKey() {
+  return currentAgent ? `calypso-caisse-${currentAgent.$id}` : "";
+}
+
+function loadLocalCashSession() {
+  const key = getLocalCashKey();
+  if (!key) return null;
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "null");
+    return value?.statut === "OUVERTE" ? value : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveLocalCashSession(session) {
+  const key = getLocalCashKey();
+  if (!key) return;
+  if (session) localStorage.setItem(key, JSON.stringify(session));
+  else localStorage.removeItem(key);
+}
+
+function createLocalCashSession(fonds) {
+  const date = new Date();
+  return {
+    $id: `CS-${Date.now()}-${currentAgent.$id.slice(0, 12)}`,
+    agent_id: currentAgent.$id,
+    agent_nom: currentAgent.nom,
+    poste: getCashPoste(),
+    statut: "OUVERTE",
+    ouverture: date.toISOString(),
+    fonds_depart: fonds,
+    localFallback: true
+  };
 }
 
 function showCashMessage(text, type = "info") {
@@ -175,15 +195,15 @@ async function calculerSyntheseCaisse(session) {
     db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VALIDATIONS_TABLE_ID, [
       Appwrite.Query.equal("session_caisse_id", session.$id),
       Appwrite.Query.limit(5000)
-    ]),
+    ]).catch(() => ({ documents: [] })),
     db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VENTES_RESTO_COLLECTION_ID, [
       Appwrite.Query.equal("session_caisse_id", session.$id),
       Appwrite.Query.limit(5000)
-    ]),
+    ]).catch(() => ({ documents: [] })),
     db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID, [
       Appwrite.Query.equal("session_id", session.$id),
       Appwrite.Query.limit(5000)
-    ])
+    ]).catch(() => ({ documents: [] }))
   ]);
 
   const ventesBillets = (validationsResult.documents || []).filter(
@@ -219,8 +239,6 @@ async function calculerSyntheseCaisse(session) {
 
   return {
     especes: Number(session.fonds_depart || 0) + especesVentes + ajouts - sorties,
-    orange: sumByPayment("orange_money"),
-    mtn: sumByPayment("mtn_money"),
     operations: new Set(ventes.map((sale) => sale.id)).size,
     mouvementsEnAttente: (movementsResult.documents || []).filter((item) => item.statut === "EN_ATTENTE").length
   };
@@ -239,7 +257,7 @@ function renderCashRegister() {
   if (!canCash) return;
 
   if ($("cash-register-title")) {
-    $("cash-register-title").textContent = getCashPoste() === "GERANT" ? "Caisse du gérant" : "Caisse restauration";
+    $("cash-register-title").textContent = "Ma caisse";
   }
   openZone.style.display = currentCashSession ? "none" : "block";
   activeZone.style.display = currentCashSession ? "block" : "none";
@@ -253,8 +271,6 @@ function renderCashRegister() {
   status.textContent = `Ouverte le ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} — fonds : ${formatMontantGNF(currentCashSession.fonds_depart)}.`;
   if (currentCashSummary) {
     $("cashExpected").textContent = formatMontantGNF(currentCashSummary.especes);
-    $("cashOrange").textContent = formatMontantGNF(currentCashSummary.orange);
-    $("cashMtn").textContent = formatMontantGNF(currentCashSummary.mtn);
     $("cashOperations").textContent = String(currentCashSummary.operations);
   }
 }
@@ -266,20 +282,26 @@ async function chargerSessionCaisse() {
   if (!currentAgent?.profileComplete || currentMode === "controle") return;
   if (!(isGerantAgent() || isRestoAgent())) return;
 
+  const localSession = loadLocalCashSession();
+  if (localSession) {
+    currentCashSession = localSession;
+    currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+    renderCashRegister();
+    return;
+  }
+
   try {
     const result = await db.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_SESSIONS_CAISSE_TABLE_ID,
       [Appwrite.Query.equal("agent_id", currentAgent.$id), Appwrite.Query.limit(100)]
     );
-    currentCashSession = (result.documents || []).find(
-      (session) => session.poste === getCashPoste() && session.statut === "OUVERTE"
-    ) || null;
+    currentCashSession = (result.documents || []).find((session) => session.statut === "OUVERTE") || null;
     if (currentCashSession) currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
     renderCashRegister();
   } catch (error) {
     console.error("[CAISSE] Chargement impossible :", error);
-    showCashMessage("La caisse n’est pas encore disponible. Contactez l’administrateur.", "error");
+    renderCashRegister();
   }
 }
 
@@ -294,68 +316,34 @@ async function ouvrirCaisse() {
   const button = $("btnOpenCash");
   setButtonLoading(button, "Ouverture…");
   try {
-    currentCashSession = await db.createDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_SESSIONS_CAISSE_TABLE_ID,
-      Appwrite.ID.unique(),
-      {
-        agent_id: currentAgent.$id,
-        agent_nom: currentAgent.nom,
-        poste: getCashPoste(),
-        statut: "OUVERTE",
-        ouverture: new Date().toISOString(),
-        fonds_depart: fonds
-      }
-    );
+    const sessionData = {
+      agent_id: currentAgent.$id,
+      agent_nom: currentAgent.nom,
+      poste: getCashPoste(),
+      statut: "OUVERTE",
+      ouverture: new Date().toISOString(),
+      fonds_depart: fonds
+    };
+    try {
+      currentCashSession = await db.createDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+        Appwrite.ID.unique(),
+        sessionData
+      );
+    } catch (remoteError) {
+      const permissionDenied = [401, 403].includes(remoteError?.code) || /not authorized/i.test(remoteError?.message || "");
+      if (!permissionDenied) throw remoteError;
+      console.warn("[CAISSE] Table sessions indisponible, utilisation du registre de ventes.");
+      currentCashSession = createLocalCashSession(fonds);
+    }
+    saveLocalCashSession(currentCashSession);
     currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
     renderCashRegister();
-    showCashMessage("Caisse ouverte. Les ventes peuvent commencer.", "success");
+    showCashMessage("Caisse ouverte. Vous pouvez commencer les ventes.", "success");
   } catch (error) {
     console.error("[CAISSE] Ouverture impossible :", error);
     showCashMessage(error?.message || "Impossible d’ouvrir la caisse.", "error");
-  } finally {
-    resetButtonLoading(button);
-  }
-}
-
-async function ajouterMouvementCaisse() {
-  if (!currentCashSession) {
-    showCashMessage("Ouvrez d’abord votre caisse.", "error");
-    return;
-  }
-  const type = $("cashMovementType")?.value || "";
-  const montant = Number($("cashMovementAmount")?.value || 0);
-  const motif = $("cashMovementReason")?.value.trim() || "";
-  if (!type || montant <= 0 || !motif) {
-    showCashMessage("Type, montant et motif sont obligatoires.", "error");
-    return;
-  }
-
-  const button = $("btnAddCashMovement");
-  setButtonLoading(button, "Enregistrement…");
-  try {
-    await db.createDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID,
-      Appwrite.ID.unique(),
-      {
-        session_id: currentCashSession.$id,
-        agent_id: currentAgent.$id,
-        type,
-        montant,
-        motif,
-        date_mouvement: new Date().toISOString(),
-        statut: "EN_ATTENTE"
-      }
-    );
-    $("cashMovementAmount").value = "";
-    $("cashMovementReason").value = "";
-    currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
-    renderCashRegister();
-    showCashMessage("Mouvement enregistré, en attente d’approbation.", "success");
-  } catch (error) {
-    console.error("[CAISSE] Mouvement impossible :", error);
-    showCashMessage(error?.message || "Impossible d’enregistrer ce mouvement.", "error");
   } finally {
     resetButtonLoading(button);
   }
@@ -386,21 +374,23 @@ async function cloturerCaisse() {
   const button = $("btnCloseCash");
   setButtonLoading(button, "Clôture…");
   try {
-    await db.updateDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_SESSIONS_CAISSE_TABLE_ID,
-      currentCashSession.$id,
-      {
-        statut: "CLOTUREE",
-        fermeture: new Date().toISOString(),
-        especes_attendues: currentCashSummary.especes,
-        especes_declarees: especesDeclarees,
-        orange_money: currentCashSummary.orange,
-        mtn_money: currentCashSummary.mtn,
-        ecart,
-        commentaire
-      }
-    );
+    const closingData = {
+      statut: "CLOTUREE",
+      fermeture: new Date().toISOString(),
+      especes_attendues: currentCashSummary.especes,
+      especes_declarees: especesDeclarees,
+      ecart,
+      commentaire
+    };
+    if (!currentCashSession.localFallback) {
+      await db.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+        currentCashSession.$id,
+        closingData
+      );
+    }
+    saveLocalCashSession(null);
     currentCashSession = null;
     currentCashSummary = null;
     $("cashActual").value = "";
@@ -537,6 +527,8 @@ function switchMode(mode) {
 
 function switchBilletsSubMode(mode) {
   currentBilletsSubMode = mode;
+  ticketEnApercu = null;
+  renderTicketPreview();
 
   const btnEntree = $("btnBilletsEntree");
   const btnJeux = $("btnBilletsJeux");
@@ -655,6 +647,10 @@ function appliquerEtatConnexion(agent) {
       switchMode("resto");
     }
   } else {
+    currentCashSession = null;
+    currentCashSummary = null;
+    ticketPanier = [];
+    ticketEnApercu = null;
     delete document.body.dataset.singleRole;
     delete document.body.dataset.role;
 
@@ -668,6 +664,8 @@ function appliquerEtatConnexion(agent) {
 
     setTicketCount(0);
     clearResult();
+    renderTicketPreview();
+    renderTicketCart();
     renderCashRegister();
   }
 }
@@ -900,10 +898,72 @@ async function verifierReservationDejaLiee(numeroReservation) {
 //  VALIDATION BILLETS
 // ===============================
 
+function renderTicketPreview() {
+  const preview = $("ticketPreview");
+  if (!preview) return;
+  preview.style.display = ticketEnApercu ? "grid" : "none";
+  if (!ticketEnApercu) return;
+  $("ticketPreviewNumber").textContent = ticketEnApercu.numero_billet;
+  $("ticketPreviewType").textContent = ticketEnApercu.type;
+  $("ticketPreviewPrice").textContent = formatMontantGNF(ticketEnApercu.prix);
+}
+
+function renderTicketCart() {
+  const container = $("ticketCartItems");
+  const total = CalypsoTicketWorkflow.getCartTotal(ticketPanier);
+  if ($("ticketCartCount")) {
+    $("ticketCartCount").textContent = `${ticketPanier.length} billet${ticketPanier.length > 1 ? "s" : ""}`;
+  }
+  if ($("ticketCartTotal")) $("ticketCartTotal").textContent = formatMontantGNF(total);
+  if ($("btnValidateTicketCart")) $("btnValidateTicketCart").disabled = ticketPanier.length === 0;
+
+  if (container) {
+    container.replaceChildren();
+    if (ticketPanier.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "status";
+      empty.textContent = "Aucun billet ajouté.";
+      container.appendChild(empty);
+    } else {
+      ticketPanier.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "ticket-cart-item";
+        const copy = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = `${item.numero_billet} — ${item.type}`;
+        const detail = document.createElement("span");
+        detail.textContent = `${item.mode === "ENTREE" ? "Entrée" : "Jeu interne"} · ${formatMontantGNF(item.prix)}`;
+        copy.append(title, detail);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "ticket-cart-remove";
+        remove.dataset.index = String(index);
+        remove.setAttribute("aria-label", `Retirer le billet ${item.numero_billet}`);
+        remove.textContent = "Retirer";
+        row.append(copy, remove);
+        container.appendChild(row);
+      });
+    }
+  }
+  updateTicketChange();
+}
+
+function updateTicketChange() {
+  const output = $("ticketChange");
+  if (!output) return;
+  const total = CalypsoTicketWorkflow.getCartTotal(ticketPanier);
+  const received = $("ticketCashReceived")?.value;
+  const change = CalypsoTicketWorkflow.getCashChange(total, received);
+  output.textContent = change == null
+    ? `Reste à recevoir : ${formatMontantGNF(Math.max(0, total - Number(received || 0)))}`
+    : `Monnaie à rendre : ${formatMontantGNF(change)}`;
+}
+
 async function verifierBillet() {
   clearResult();
-
-  const btnCheckTicket = $("btnCheckTicket");
+  ticketEnApercu = null;
+  renderTicketPreview();
+  const button = $("btnLookupTicket");
 
   if (!currentAgent) {
     showResult("Veuillez d'abord vous connecter.", "error");
@@ -917,8 +977,8 @@ async function verifierBillet() {
   }
 
 
-  if (!currentCashSession || currentCashSession.poste !== "GERANT") {
-    showResult("Ouvrez la caisse du gérant avant d’enregistrer une vente.", "error");
+  if (!currentCashSession) {
+    showResult("Ouvrez votre caisse avant d’ajouter un billet.", "error");
     return;
   }
 
@@ -928,28 +988,210 @@ async function verifierBillet() {
   }
 
   const numeroBillet = $("ticketNumber")?.value.trim();
-  const numeroEtu = $("etuNumber")?.value.trim();
-  const tarifChoisi = getTarifChoisi();
-
   if (!numeroBillet) {
     showResult("Veuillez saisir un numéro de billet.", "error");
     return;
   }
 
-  setButtonLoading(btnCheckTicket, "Validation en cours...");
+  if (ticketPanier.some((item) => item.numero_billet === numeroBillet && item.mode === currentBilletsSubMode)) {
+    showResult(`Le billet ${numeroBillet} est déjà dans le panier.`, "warn");
+    return;
+  }
+
+  setButtonLoading(button, "Recherche…");
 
   try {
-    if (currentBilletsSubMode === "ENTREE") {
-      await validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi);
+    const tableId = currentBilletsSubMode === "ENTREE"
+      ? APPWRITE_BILLETS_TABLE_ID
+      : APPWRITE_BILLETS_INTERNE_TABLE_ID;
+    const result = await db.listDocuments(APPWRITE_DATABASE_ID, tableId, [
+      Appwrite.Query.equal("numero_billet", numeroBillet),
+      Appwrite.Query.limit(1)
+    ]);
+    const billet = result.documents?.[0];
+    if (!billet) {
+      showResult(`Billet ${numeroBillet} introuvable.`, "error");
+      return;
+    }
+    if (!CalypsoTicketWorkflow.canSell(billet.statut)) {
+      showResult(CalypsoTicketWorkflow.getSaleRefusal(billet.statut) || "Ce billet a déjà été utilisé.", "error");
       return;
     }
 
-    if (currentBilletsSubMode === "JEU") {
-      await validerBilletJeuInterne(numeroBillet);
+    const existing = await db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VALIDATIONS_TABLE_ID, [
+      Appwrite.Query.equal("numero_billet", numeroBillet),
+      Appwrite.Query.limit(25)
+    ]);
+    const salePosts = currentBilletsSubMode === "ENTREE" ? ["VENTE_ENTREE", "ENTREE"] : ["INTERNE"];
+    if ((existing.documents || []).some((item) => salePosts.includes(item.poste_id))) {
+      showResult(`Billet ${numeroBillet} déjà vendu ou utilisé.`, "error");
       return;
     }
+
+    const tarifChoisi = currentBilletsSubMode === "ENTREE" ? getTarifChoisi() : "normal";
+    const numeroEtu = $("etuNumber")?.value.trim() || "";
+    const reservationInfo = currentBilletsSubMode === "ENTREE"
+      ? getReservationInfoFromForm()
+      : { useReservation: false, numeroReservation: "" };
+
+    if (currentBilletsSubMode === "ENTREE" && billet.reservation) {
+      showResult(`Ce billet est déjà affilié à la réservation ${billet.reservation}.`, "error");
+      return;
+    }
+    if (tarifChoisi === "etudiant" && !(await verifierTarifEtudiantAvantValidation(numeroEtu))) return;
+    if (reservationInfo.useReservation) {
+      const reservation = await verifierReservationActive(reservationInfo.numeroReservation);
+      if (!reservation) return;
+      const dejaLiee = await verifierReservationDejaLiee(reservationInfo.numeroReservation);
+      if (dejaLiee === "ERROR") return;
+      if (dejaLiee) {
+        showResult(`Cette réservation est déjà affiliée au billet ${dejaLiee.numero_billet || ""}.`, "error");
+        return;
+      }
+    }
+
+    const prix = CalypsoTicketWorkflow.getTicketPrice(billet, tarifChoisi);
+    ticketEnApercu = {
+      documentId: billet.$id,
+      numero_billet: billet.numero_billet,
+      type: billet.type_acces || billet.type_billet || billet.code_offre || "Billet",
+      prix,
+      mode: currentBilletsSubMode,
+      tarifChoisi,
+      numeroEtu,
+      numeroReservation: reservationInfo.useReservation ? reservationInfo.numeroReservation : ""
+    };
+    renderTicketPreview();
+    showResult("Type et prix chargés depuis Appwrite. Ajoutez le billet au panier.", "success");
+  } catch (error) {
+    console.error("[BILLETS] Recherche impossible :", error);
+    showResult(error?.message || "Impossible de charger ce billet.", "error");
   } finally {
-    resetButtonLoading(btnCheckTicket);
+    resetButtonLoading(button);
+  }
+}
+
+function ajouterBilletAuPanier() {
+  if (!ticketEnApercu) return;
+  ticketPanier.push(ticketEnApercu);
+  ticketEnApercu = null;
+  if ($("ticketNumber")) $("ticketNumber").value = "";
+  renderTicketPreview();
+  renderTicketCart();
+  clearResult();
+  $("ticketNumber")?.focus();
+}
+
+async function enregistrerBilletDuPanier(item, paiement) {
+  const tableId = item.mode === "ENTREE" ? APPWRITE_BILLETS_TABLE_ID : APPWRITE_BILLETS_INTERNE_TABLE_ID;
+  const ticketResult = await db.listDocuments(APPWRITE_DATABASE_ID, tableId, [
+    Appwrite.Query.equal("numero_billet", item.numero_billet),
+    Appwrite.Query.limit(1)
+  ]);
+  const billet = ticketResult.documents?.[0];
+  if (!billet || !CalypsoTicketWorkflow.canSell(billet.statut)) {
+    throw new Error(`Le billet ${item.numero_billet} n’est plus disponible.`);
+  }
+  const prixActuel = CalypsoTicketWorkflow.getTicketPrice(billet, item.tarifChoisi);
+  if (prixActuel !== item.prix) {
+    throw new Error(`Le prix du billet ${item.numero_billet} a changé. Rechargez-le dans le panier.`);
+  }
+
+  if (item.mode === "ENTREE") {
+    await journaliserValidationEntree({
+      billet,
+      tarifChoisi: item.tarifChoisi,
+      numeroEtu: item.numeroEtu,
+      paiement,
+      numeroReservation: item.numeroReservation
+    });
+    const update = { statut: CalypsoConfig.ticketStatuses.vendu };
+    if (item.numeroReservation) update.reservation = item.numeroReservation;
+    await db.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_BILLETS_TABLE_ID, billet.$id, update);
+    if (item.numeroReservation) {
+      const reservation = await verifierReservationActive(item.numeroReservation);
+      if (reservation) {
+        await db.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_RESERVATION_COLLECTION_ID, reservation.$id, { actif: false });
+      }
+    }
+    return;
+  }
+
+  await db.createDocument(APPWRITE_DATABASE_ID, APPWRITE_VALIDATIONS_TABLE_ID, Appwrite.ID.unique(), {
+    numero_billet: billet.numero_billet,
+    billet_id: billet.$id,
+    date_validation: new Date().toISOString(),
+    type_acces: billet.type_billet || "Jeu interne",
+    type_billet: billet.type_billet || "Jeu interne",
+    code_offre: billet.code_offre || "JEU",
+    tarif_normal: item.prix,
+    tarif_etudiant: 0,
+    tarif_applique: "normal",
+    montant_paye: item.prix,
+    agent_id: currentAgent.$id || "",
+    poste_id: "INTERNE",
+    numero_etudiant: "",
+    moyen_paiement: "especes",
+    montant_recu: paiement.montantRecu,
+    monnaie_rendue: paiement.monnaieRendue,
+    session_caisse_id: currentCashSession.$id
+  });
+  await db.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_BILLETS_INTERNE_TABLE_ID, billet.$id, { statut: "Validé" });
+}
+
+async function validerPanierBillets() {
+  clearResult();
+  if (!currentAgent || !isGerantAgent() || !currentCashSession) {
+    showResult("Connectez-vous comme gérant et ouvrez votre caisse.", "error");
+    return;
+  }
+  if (!navigator.onLine) {
+    showResult("Connexion requise pour valider le panier.", "error");
+    return;
+  }
+  if (ticketPanier.length === 0) {
+    showResult("Ajoutez au moins un billet au panier.", "warn");
+    return;
+  }
+
+  const total = CalypsoTicketWorkflow.getCartTotal(ticketPanier);
+  let paiement;
+  try {
+    paiement = getCashDetails("ticketCashReceived", total);
+  } catch (error) {
+    showResult(error.message, "error");
+    return;
+  }
+
+  const button = $("btnValidateTicketCart");
+  setButtonLoading(button, "Encaissement…");
+  let completed = 0;
+  try {
+    for (const [index, item] of [...ticketPanier].entries()) {
+      await enregistrerBilletDuPanier(item, {
+        moyenPaiement: "especes",
+        montantRecu: index === 0 ? paiement.montantRecu : 0,
+        monnaieRendue: index === 0 ? paiement.monnaieRendue : 0
+      });
+      completed += 1;
+    }
+    ticketPanier = [];
+    $("ticketCashReceived").value = "";
+    renderTicketCart();
+    lastVerifiedEtudiant = null;
+    resetReservationForm();
+    chargerNombreBillets();
+    currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
+    renderCashRegister();
+    showResult(`${completed} billet${completed > 1 ? "s" : ""} vendu${completed > 1 ? "s" : ""} ✅ — monnaie : ${formatMontantGNF(paiement.monnaieRendue)}.`, "success");
+  } catch (error) {
+    ticketPanier = ticketPanier.slice(completed);
+    renderTicketCart();
+    console.error("[BILLETS] Panier partiellement enregistré :", error);
+    showResult(`${completed} billet(s) enregistré(s). ${error?.message || "La suite du panier a été arrêtée."}`, "error");
+  } finally {
+    resetButtonLoading(button);
+    if (button) button.textContent = "Valider le panier";
   }
 }
 
@@ -1040,7 +1282,7 @@ async function validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi) {
     : Number(billet.prix || 0);
   let paiement;
   try {
-    paiement = getCashDetails("ticketPayment", "ticketCashReceived", montantBillet);
+    paiement = getCashDetails("ticketCashReceived", montantBillet);
   } catch (error) {
     showResult(error.message, "error");
     return;
@@ -1341,7 +1583,7 @@ async function validerBilletJeuInterne(numeroBillet) {
   const nowIso = new Date().toISOString();
   let paiement;
   try {
-    paiement = getCashDetails("ticketPayment", "ticketCashReceived", montant);
+    paiement = getCashDetails("ticketCashReceived", montant);
   } catch (error) {
     showResult(error.message, "error");
     return;
@@ -1676,6 +1918,7 @@ function actualiserPanier() {
   if (cartCount) cartCount.textContent = `${totalArticles} article(s)`;
   if (cartTotal) cartTotal.textContent = formatMontantGNF(totalMontant);
   if (validerBtn) validerBtn.disabled = totalArticles === 0;
+  updateRestoChange();
 
   if (restoPanier.length === 0) {
     cartItems.innerHTML = '<div class="resto-cart-empty">Panier vide</div>';
@@ -1701,6 +1944,17 @@ function actualiserPanier() {
       `
     )
     .join("");
+}
+
+function updateRestoChange() {
+  const output = $("restoChange");
+  if (!output) return;
+  const total = restoPanier.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0);
+  const received = Number($("restoCashReceived")?.value || 0);
+  const change = CalypsoTicketWorkflow.getCashChange(total, received);
+  output.textContent = change == null
+    ? `Reste à recevoir : ${formatMontantGNF(Math.max(0, total - received))}`
+    : `Monnaie à rendre : ${formatMontantGNF(change)}`;
 }
 
 function modifierQuantitePanier(index, delta) {
@@ -1760,8 +2014,8 @@ async function enregistrerVenteResto() {
   }
 
 
-  if (!currentCashSession || currentCashSession.poste !== "RESTO") {
-    showTempMessage("❌ Ouvrez la caisse restauration avant la vente", "error");
+  if (!currentCashSession) {
+    showTempMessage("❌ Ouvrez votre caisse avant la vente", "error");
     return;
   }
 
@@ -1780,7 +2034,7 @@ async function enregistrerVenteResto() {
   );
   let paiement;
   try {
-    paiement = getCashDetails("restoPayment", "restoCashReceived", totalCommande);
+    paiement = getCashDetails("restoCashReceived", totalCommande);
   } catch (error) {
     showTempMessage(`❌ ${error.message}`, "error");
     return;
@@ -1908,9 +2162,10 @@ function nouvelleCommandeResto() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[AGENT] DOMContentLoaded - RESERVATION ENTREE UNIQUEMENT");
 
-  restaurerSessionAgent();
+  appliquerEtatConnexion(null);
   updateTarifEtudiantVisibility();
   updateReservationVisibility();
+  renderTicketCart();
 
   const btnLogin = $("btnLogin");
   const btnLogout = $("btnLogout");
@@ -1941,11 +2196,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnModeControle = $("btnModeControle");
   const btnModeResto = $("btnModeResto");
   const btnOpenCash = $("btnOpenCash");
-  const btnAddCashMovement = $("btnAddCashMovement");
   const btnCloseCash = $("btnCloseCash");
 
   if (btnOpenCash) btnOpenCash.addEventListener("click", ouvrirCaisse);
-  if (btnAddCashMovement) btnAddCashMovement.addEventListener("click", ajouterMouvementCaisse);
   if (btnCloseCash) btnCloseCash.addEventListener("click", cloturerCaisse);
 
   if (btnModeBillets) {
@@ -1988,14 +2241,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const btnCheckTicket = $("btnCheckTicket");
+  const btnLookupTicket = $("btnLookupTicket");
+  const btnAddTicket = $("btnAddTicket");
+  const btnValidateTicketCart = $("btnValidateTicketCart");
+  const btnClearTicketCart = $("btnClearTicketCart");
+  const ticketCartItems = $("ticketCartItems");
+  const ticketCashReceived = $("ticketCashReceived");
 
-  if (btnCheckTicket) {
-    btnCheckTicket.addEventListener("click", (e) => {
+  if (btnLookupTicket) {
+    btnLookupTicket.addEventListener("click", (e) => {
       e.preventDefault();
       verifierBillet();
     });
   }
+
+  if (btnAddTicket) btnAddTicket.addEventListener("click", ajouterBilletAuPanier);
+  if (btnValidateTicketCart) btnValidateTicketCart.addEventListener("click", validerPanierBillets);
+  if (btnClearTicketCart) {
+    btnClearTicketCart.addEventListener("click", () => {
+      ticketPanier = [];
+      ticketEnApercu = null;
+      renderTicketPreview();
+      renderTicketCart();
+      clearResult();
+    });
+  }
+  if (ticketCartItems) {
+    ticketCartItems.addEventListener("click", (event) => {
+      const remove = event.target.closest(".ticket-cart-remove");
+      if (!remove) return;
+      ticketPanier.splice(Number(remove.dataset.index), 1);
+      renderTicketCart();
+    });
+  }
+  if (ticketCashReceived) ticketCashReceived.addEventListener("input", updateTicketChange);
 
 
   const ticketNumberInput = $("ticketNumber");
@@ -2024,15 +2303,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-
-  document.querySelectorAll('input[name="ticketPayment"]').forEach((input) => {
-    input.addEventListener("change", () => updatePaymentZone("ticketPayment", "ticket-cash-zone"));
-  });
-  document.querySelectorAll('input[name="restoPayment"]').forEach((input) => {
-    input.addEventListener("change", () => updatePaymentZone("restoPayment", "resto-cash-zone"));
-  });
-  updatePaymentZone("ticketPayment", "ticket-cash-zone");
-  updatePaymentZone("restoPayment", "resto-cash-zone");
 
   const btnCheckStudent = $("btnCheckStudent");
 
@@ -2102,6 +2372,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnRestoVider = $("btnRestoVider");
   const btnRestoNouvelleCommande = $("btnRestoNouvelleCommande");
   const btnRestoImprimer = $("btnRestoImprimer");
+  const restoCashReceived = $("restoCashReceived");
+
+  if (restoCashReceived) restoCashReceived.addEventListener("input", updateRestoChange);
 
   if (btnRestoValider) {
     btnRestoValider.addEventListener("click", (e) => {

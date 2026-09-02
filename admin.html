@@ -473,6 +473,24 @@
           <button id="btnRefreshCashAdmin" type="button" class="btn-primary">Actualiser</button>
         </div>
 
+        <div class="admin-refund-panel">
+          <div>
+            <h3>Annuler ou rembourser une vente</h3>
+            <p class="status">Réservé à l’administrateur. La vente reste dans l’historique et la correction est journalisée.</p>
+          </div>
+          <div class="admin-refund-form">
+            <div class="form-row">
+              <label for="adminRefundReference">N° billet ou N° commande</label>
+              <input id="adminRefundReference" type="text" autocomplete="off" placeholder="Ex : 26-0001 ou V-..." />
+            </div>
+            <div class="form-row">
+              <label for="adminRefundReason">Motif obligatoire</label>
+              <input id="adminRefundReason" type="text" maxlength="400" placeholder="Expliquez la correction" />
+            </div>
+            <button id="btnAdminRefund" type="button" class="btn-danger">Annuler / rembourser</button>
+          </div>
+        </div>
+
         <h3>Dernières caisses</h3>
         <div class="table-wrapper">
           <table class="data-table">
@@ -578,16 +596,6 @@
               <h3>Espèces</h3>
               <p id="stat-payment-cash">0 GNF</p>
             </div>
-
-            <div class="stat-item">
-              <h3>Orange Money</h3>
-              <p id="stat-payment-orange">0 GNF</p>
-            </div>
-
-            <div class="stat-item">
-              <h3>MTN Money</h3>
-              <p id="stat-payment-mtn">0 GNF</p>
-            </div>
           </div>
 
           <h3 style="margin-top:2rem;">Détail par type d'accès</h3>
@@ -683,7 +691,7 @@
 <script src="js/auth-service.js?v=3"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=10"></script>
+<script src="js/admin-appwrite.js?v=11"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>
