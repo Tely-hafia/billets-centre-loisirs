@@ -32,3 +32,15 @@ test("le contrôleur confirme uniquement un billet vendu", () => {
   assert.match(workflow.getConfirmationRefusal("Non utilisé"), /non vendu/);
   assert.match(workflow.getConfirmationRefusal("Entrée confirmée"), /Double utilisation/);
 });
+
+test("calcule le prix Appwrite et le total du panier", () => {
+  const ticket = { prix: 40000, tarif_universite: 25000 };
+  assert.equal(workflow.getTicketPrice(ticket, "normal"), 40000);
+  assert.equal(workflow.getTicketPrice(ticket, "etudiant"), 25000);
+  assert.equal(workflow.getCartTotal([{ prix: 40000 }, { prix: 15000 }]), 55000);
+});
+
+test("calcule la monnaie uniquement si les espèces suffisent", () => {
+  assert.equal(workflow.getCashChange(55000, 60000), 5000);
+  assert.equal(workflow.getCashChange(55000, 50000), null);
+});

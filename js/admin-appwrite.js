@@ -59,6 +59,7 @@ function escapeHTML(value) {
 // =====================================
 
 let currentAdmin = null;
+let adminLoginRequestInProgress = false;
 let adminCurrentMode = "dashboard";
 let reservationHistoryPage = 0;
 const RESERVATIONS_PER_PAGE = 50;
@@ -391,8 +392,10 @@ function appliquerEtatConnexionAdmin(admin) {
 }
 
 async function adminLogin() {
+  if (adminLoginRequestInProgress) return;
   const email = $("adminEmail")?.value.trim();
-  const password = $("adminPassword")?.value.trim();
+  const password = $("adminPassword")?.value || "";
+  const button = $("btnAdminLogin");
 
   if (!email || !password) {
     showAdminLoginMessage("Veuillez saisir votre e-mail et votre mot de passe.", "error");
@@ -400,6 +403,11 @@ async function adminLogin() {
   }
 
   showAdminLoginMessage("Vérification en cours...", "info");
+  adminLoginRequestInProgress = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Connexion…";
+  }
 
   try {
     const agent = await CalypsoAuth.login(email, password, [
@@ -410,7 +418,19 @@ async function adminLogin() {
     appliquerEtatConnexionAdmin(agent);
   } catch (err) {
     console.error("[ADMIN] Erreur connexion admin :", err);
-    showAdminLoginMessage(err?.message || "Identifiants invalides.", "error");
+    const limited = err?.code === 429 || /rate limit/i.test(err?.message || "");
+    showAdminLoginMessage(
+      limited
+        ? "Trop de tentatives rapprochées. Attendez quelques minutes, puis cliquez une seule fois sur Se connecter."
+        : err?.message || "Identifiants invalides.",
+      "error"
+    );
+  } finally {
+    adminLoginRequestInProgress = false;
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Se connecter";
+    }
   }
 }
 
@@ -749,18 +769,51 @@ async function chargerControleCaisses() {
   movementsBody.innerHTML = '<tr><td colspan="7">Chargement…</td></tr>';
 
   try {
-    const [sessionsResult, movementsResult] = await Promise.all([
+    const [sessionsResult, movementsResult, validationsResult, restoResult] = await Promise.all([
       adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, [
         Appwrite.Query.orderDesc("$createdAt"),
         Appwrite.Query.limit(100)
-      ]),
+      ]).catch(() => ({ documents: [] })),
       adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID, [
         Appwrite.Query.orderDesc("$createdAt"),
         Appwrite.Query.limit(100)
-      ])
+      ]).catch(() => ({ documents: [] })),
+      adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VALIDATIONS_TABLE_ID, [
+        Appwrite.Query.orderDesc("$createdAt"),
+        Appwrite.Query.limit(5000)
+      ]).catch(() => ({ documents: [] })),
+      adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VENTES_RESTO_COLLECTION_ID, [
+        Appwrite.Query.orderDesc("$createdAt"),
+        Appwrite.Query.limit(5000)
+      ]).catch(() => ({ documents: [] }))
     ]);
 
-    const sessions = sessionsResult.documents || [];
+    const sessions = [...(sessionsResult.documents || [])];
+    const knownSessionIds = new Set(sessions.map((session) => session.$id));
+    const derived = new Map();
+    const addDerivedSale = (sale, amount, poste) => {
+      const sessionId = sale.session_caisse_id;
+      if (!sessionId || knownSessionIds.has(sessionId)) return;
+      if (!derived.has(sessionId)) {
+        derived.set(sessionId, {
+          $id: sessionId,
+          agent_id: sale.agent_id || "",
+          agent_nom: getAgentLabel(sale.agent_id),
+          poste,
+          statut: "OUVERTE",
+          ouverture: sale.date_validation || sale.date_vente || sale.$createdAt,
+          especes_attendues: 0,
+          derived: true
+        });
+      }
+      derived.get(sessionId).especes_attendues += Number(amount || 0);
+    };
+    (validationsResult.documents || [])
+      .filter((item) => ["VENTE_ENTREE", "INTERNE"].includes(item.poste_id))
+      .forEach((item) => addDerivedSale(item, item.montant_paye, "Billets"));
+    (restoResult.documents || []).forEach((item) => addDerivedSale(item, item.montant_total, "Restauration"));
+    sessions.push(...derived.values());
+
     sessionsBody.innerHTML = sessions.length ? sessions.map((session) => {
       const closed = session.statut === "CLOTUREE";
       const validated = Boolean(session.valide_admin_id);
@@ -769,10 +822,10 @@ async function chargerControleCaisses() {
         <td>${escapeHTML(session.agent_nom || getAgentLabel(session.agent_id))}</td>
         <td>${escapeHTML(session.poste || "-")}</td>
         <td>${formatDateFR(session.ouverture)}</td>
-        <td>${closed ? formatGNF(session.especes_attendues) : "En cours"}</td>
+        <td>${closed || session.derived ? formatGNF(session.especes_attendues) : "En cours"}</td>
         <td>${closed ? formatGNF(session.especes_declarees) : "-"}</td>
         <td><span class="${ecart === 0 ? "badge-success" : "badge-warning"}">${closed ? formatGNF(ecart) : "-"}</span></td>
-        <td>${validated ? "Validée admin" : closed ? "À valider" : "Ouverte"}</td>
+        <td>${validated ? "Validée admin" : closed ? "À valider" : session.derived ? "Ventes actives" : "Ouverte"}</td>
         <td>${closed && !validated ? `<button class="btn-secondary admin-validate-cash" data-id="${session.$id}">Valider</button>` : "-"}</td>
       </tr>`;
     }).join("") : '<tr><td colspan="8">Aucune caisse enregistrée.</td></tr>';
@@ -825,6 +878,84 @@ async function traiterActionCaisse(event) {
   } catch (error) {
     console.error("[ADMIN CAISSE] Action impossible :", error);
     showAdminCashMessage(error?.message || "Action impossible.", "error");
+  }
+}
+
+async function annulerOuRembourserVente() {
+  if (!currentAdmin) return;
+  const reference = $("adminRefundReference")?.value.trim() || "";
+  const reason = $("adminRefundReason")?.value.trim() || "";
+  const button = $("btnAdminRefund");
+
+  if (!reference || !reason) {
+    showAdminCashMessage("Le numéro de vente et le motif sont obligatoires.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Vérification…";
+  try {
+    const [ticketResult, restoResult] = await Promise.all([
+      adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VALIDATIONS_TABLE_ID, [
+        Appwrite.Query.equal("numero_billet", reference),
+        Appwrite.Query.limit(25)
+      ]),
+      adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_VENTES_RESTO_COLLECTION_ID, [
+        Appwrite.Query.equal("numero_vente", reference),
+        Appwrite.Query.limit(100)
+      ])
+    ]);
+
+    const ticketSale = (ticketResult.documents || []).find((item) =>
+      ["VENTE_ENTREE", "INTERNE"].includes(item.poste_id)
+    );
+    const restoLines = restoResult.documents || [];
+    const sale = ticketSale || restoLines[0];
+    if (!sale) throw new Error(`Aucune vente trouvée pour ${reference}.`);
+
+    const amount = ticketSale
+      ? Number(ticketSale.montant_paye || 0)
+      : restoLines.reduce((sum, item) => sum + Number(item.montant_total || 0), 0);
+    const sessionId = sale.session_caisse_id || "";
+    if (!sessionId) throw new Error("Cette ancienne vente n’est rattachée à aucune caisse.");
+
+    const marker = `[VENTE:${reference}]`;
+    const existing = await adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID, [
+      Appwrite.Query.equal("session_id", sessionId),
+      Appwrite.Query.limit(500)
+    ]);
+    if ((existing.documents || []).some((item) => String(item.motif || "").includes(marker))) {
+      throw new Error("Cette vente a déjà été annulée ou remboursée.");
+    }
+
+    if (!window.confirm(`Confirmer la correction de ${reference} pour ${formatGNF(amount)} ?`)) return;
+
+    await adminDB.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_MOUVEMENTS_CAISSE_TABLE_ID,
+      Appwrite.ID.unique(),
+      {
+        session_id: sessionId,
+        agent_id: sale.agent_id || "",
+        type: "REMBOURSEMENT",
+        montant: amount,
+        motif: `${marker} ${reason}`,
+        date_mouvement: new Date().toISOString(),
+        statut: "APPROUVE",
+        approbateur_id: currentAdmin.$id
+      }
+    );
+
+    $("adminRefundReference").value = "";
+    $("adminRefundReason").value = "";
+    showAdminCashMessage(`Correction enregistrée pour ${reference}. La vente originale est conservée.`, "success");
+    await chargerControleCaisses();
+  } catch (error) {
+    console.error("[ADMIN CAISSE] Correction impossible :", error);
+    showAdminCashMessage(error?.message || "Correction impossible.", "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Annuler / rembourser";
   }
 }
 
@@ -927,7 +1058,7 @@ async function chargerStatsBillets() {
 
     const parType = {};
 
-    const paiements = { especes: 0, orange_money: 0, mtn_money: 0 };
+    let paiementsEspeces = 0;
 
     ventes.forEach((d) => {
       const montant = parseInt(d.montant_paye || 0, 10) || 0;
@@ -941,8 +1072,7 @@ async function chargerStatsBillets() {
 
       parType[type].count += 1;
       parType[type].montant += montant;
-      const moyen = d.moyen_paiement || "especes";
-      if (Object.hasOwn(paiements, moyen)) paiements[moyen] += montant;
+      if (!d.moyen_paiement || d.moyen_paiement === "especes") paiementsEspeces += montant;
     });
 
     adminDashboardState.validationDocs = docs;
@@ -957,9 +1087,7 @@ async function chargerStatsBillets() {
     if ($("stat-revenue-total")) $("stat-revenue-total").textContent = formatGNF(recetteTotale);
     if ($("stat-revenue-normal")) $("stat-revenue-normal").textContent = formatGNF(recetteNormal);
     if ($("stat-revenue-etudiant")) $("stat-revenue-etudiant").textContent = formatGNF(recetteEtudiant);
-    if ($("stat-payment-cash")) $("stat-payment-cash").textContent = formatGNF(paiements.especes);
-    if ($("stat-payment-orange")) $("stat-payment-orange").textContent = formatGNF(paiements.orange_money);
-    if ($("stat-payment-mtn")) $("stat-payment-mtn").textContent = formatGNF(paiements.mtn_money);
+    if ($("stat-payment-cash")) $("stat-payment-cash").textContent = formatGNF(paiementsEspeces);
 
     const tbody = $("stats-type-body");
 
@@ -1486,9 +1614,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnReservationPrev = $("btnReservationPrev");
   const btnReservationNext = $("btnReservationNext");
   const btnRefreshCashAdmin = $("btnRefreshCashAdmin");
+  const btnAdminRefund = $("btnAdminRefund");
   const adminCashControl = $("admin-cash-control");
 
   btnRefreshCashAdmin?.addEventListener("click", chargerControleCaisses);
+  btnAdminRefund?.addEventListener("click", annulerOuRembourserVente);
   adminCashControl?.addEventListener("click", traiterActionCaisse);
 
   if (btnRefreshReservations) {
@@ -1556,5 +1686,5 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  restaurerSessionAdmin();
+  appliquerEtatConnexionAdmin(null);
 });

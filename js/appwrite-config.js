@@ -26,9 +26,7 @@
       resto: "resto"
     }),
     paymentMethods: Object.freeze({
-      especes: "especes",
-      orangeMoney: "orange_money",
-      mtnMoney: "mtn_money"
+      especes: "especes"
     }),
     ticketStatuses: Object.freeze({
       disponible: "Disponible",

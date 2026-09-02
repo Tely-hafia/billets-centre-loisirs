@@ -15,9 +15,10 @@ densité visuelle :
 
 | Rôle Appwrite | Interface agent |
 |---|---|
-| `billets` | contrôle des billets uniquement |
+| `gerant` ou `billets` | caisse billets d’entrée et jeux internes |
+| `controle` | confirmation des billets déjà vendus |
 | `resto` | caisse restauration uniquement |
-| `billets` + `resto` | sélecteur entre les deux postes |
+| plusieurs rôles | sélecteur entre les postes autorisés |
 | `admin` | accès au tableau de bord et, depuis le poste agent, aux deux métiers |
 
 Le masquage des écrans améliore l’ergonomie. La sécurité reste assurée par les rôles
@@ -45,6 +46,6 @@ Le tableau de bord réalise des contrôles de cohérence sur la période sélect
 - numéro de vente partagé entre plusieurs agents ou réutilisé longtemps après sa
   création.
 
-Ces résultats sont des **anomalies à vérifier**, jamais des accusations. La prochaine
-étape de sécurité consiste à déplacer les écritures métier dans des fonctions Appwrite,
-puis à ajouter rapprochement de caisse, modes de paiement et journal des corrections.
+Ces résultats sont des **anomalies à vérifier**, jamais des accusations. La caisse
+utilise uniquement les espèces. Toute annulation ou tout remboursement est réservé à
+l’administrateur, conserve la vente originale et ajoute une correction motivée au journal.

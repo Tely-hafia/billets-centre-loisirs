@@ -20,12 +20,24 @@ Les employés utilisent Appwrite Auth avec leur e-mail et leur mot de passe. Les
 autorisations sont portées par l’équipe Appwrite `calypco_staff` et ses rôles :
 
 - `admin` : administration et invitation du personnel ;
-- `billets` : billets, réservations et vérification des étudiants ;
+- `gerant` ou `billets` : caisse billets d’entrée et jeux internes ;
+- `controle` : confirmation des entrées déjà vendues ;
 - `resto` : menu et ventes restauration.
 
 Les mots de passe ne sont jamais stockés dans les tables métier. L’administrateur
 invite un employé par e-mail ; l’employé accepte l’invitation puis choisit lui-même
 son mot de passe.
+
+L’interface n’ouvre jamais automatiquement une session visible : même si le navigateur
+conserve les identifiants, l’utilisateur doit cliquer sur **Se connecter**.
+
+## Caisse
+
+Chaque agent encaisseur ouvre une caisse avant sa première vente. Les encaissements
+sont exclusivement en espèces. Pour les billets, le numéro charge automatiquement
+le type et le prix Appwrite, puis plusieurs billets peuvent être ajoutés au même
+panier avant le calcul de la monnaie. Les ventes ne sont jamais supprimées : seul
+l’administrateur peut journaliser une annulation ou un remboursement motivé.
 
 ## Développement
 

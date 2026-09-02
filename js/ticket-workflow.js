@@ -48,12 +48,33 @@
     return "";
   }
 
+  function getTicketPrice(ticket, tariff = "normal") {
+    if (!ticket) return 0;
+    const value = tariff === "etudiant" ? ticket.tarif_universite : ticket.prix;
+    const price = Number(value || 0);
+    return Number.isFinite(price) && price >= 0 ? price : 0;
+  }
+
+  function getCartTotal(items) {
+    return (items || []).reduce((total, item) => total + getTicketPrice(item), 0);
+  }
+
+  function getCashChange(total, received) {
+    const amountDue = Number(total || 0);
+    const amountReceived = Number(received);
+    if (!Number.isFinite(amountReceived) || amountReceived < amountDue) return null;
+    return amountReceived - amountDue;
+  }
+
   global.CalypsoTicketWorkflow = Object.freeze({
     states,
     normalizeStatus,
     canSell,
     canConfirm,
     getSaleRefusal,
-    getConfirmationRefusal
+    getConfirmationRefusal,
+    getTicketPrice,
+    getCartTotal,
+    getCashChange
   });
 })(typeof window !== "undefined" ? window : globalThis);
