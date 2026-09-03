@@ -39,6 +39,26 @@ test("l'administration sépare le jour, l'historique, les billets et l'équipe",
   assert.match(adminSource, /admin-delete-ticket/);
 });
 
+test("le tableau de bord admin reste synthétique", () => {
+  assert.doesNotMatch(adminHtml, /dashboard-welcome|Activité d’aujourd’hui/);
+  assert.doesNotMatch(adminHtml, /Caisses de la période|Mouvements à approuver|Journal des actions par agent/);
+  assert.match(adminHtml, /id="dashboardPeriod"/);
+  assert.match(adminHtml, /Journal quotidien des agents/);
+  assert.match(adminHtml, /Fonds de caisse/);
+  assert.match(adminHtml, /Recette billets internes/);
+  assert.match(adminHtml, /Alertes à vérifier/);
+  assert.match(adminSource, /cashSessionDocs/);
+  assert.match(adminSource, /buildAgentAlertCounts/);
+});
+
+test("les billets chargés se gèrent par jour ou semaine", () => {
+  assert.match(adminHtml, /id="ticketManagementPeriod"/);
+  assert.match(adminHtml, /value="day"/);
+  assert.match(adminHtml, /value="week"/);
+  assert.match(adminHtml, /id="btnDeleteDisplayedTickets"/);
+  assert.match(adminSource, /supprimerBilletsInutilisesAffiches/);
+});
+
 test("le poste billets affiche le prix Appwrite avant le panier", () => {
   assert.match(agentHtml, /id="ticketPreviewType"/);
   assert.match(agentHtml, /id="ticketPreviewPrice"/);

@@ -449,6 +449,16 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 
 #admin-zone-dashboard { gap: 1rem; }
 
+.dashboard-period-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .75rem;
+}
+
+.dashboard-period-toolbar label { font-weight: 850; color: var(--v2-ink); }
+.dashboard-period-toolbar select { min-width: 190px; }
+
 .dashboard-welcome::before { display: none; }
 .dashboard-welcome h2 { color: white; font-size: clamp(1.6rem, 3vw, 2.2rem); }
 .dashboard-welcome p { color: #c6d3e7; }
@@ -497,6 +507,9 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
   grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
   gap: 1rem;
 }
+
+.dashboard-grid-journal { grid-template-columns: 1fr; }
+.dashboard-grid-journal .data-table { min-width: 1080px; }
 
 .admin-alert-list { display: grid; gap: 0.7rem; }
 
@@ -697,6 +710,7 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 .admin-refund-panel { margin: 1rem 0 1.5rem; padding: 1rem; border: 1px solid #fecaca; border-radius: 16px; background: #fff7f7; }
 .admin-refund-panel h3 { margin: 0; }
 .admin-refund-form { display: grid; grid-template-columns: 1fr 2fr auto; gap: .75rem; align-items: end; margin-top: .75rem; }
+.ticket-management-actions { display: flex; justify-content: flex-end; margin: .85rem 0; }
 
 @media (max-width: 768px) {
   .payment-methods,
@@ -714,6 +728,9 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
   .ticket-preview,
   .ticket-cart-actions,
   .admin-refund-form { grid-template-columns: 1fr; }
+  .dashboard-period-toolbar { justify-content: stretch; align-items: stretch; flex-direction: column; }
+  .dashboard-period-toolbar select { width: 100%; }
+  .ticket-management-actions .btn-danger { width: 100%; }
   .contact-info-grid { grid-template-columns: 1fr; }
   .contact-job-card { grid-column: auto; }
   body.public-page .carousel-nav { width: 44px; height: 44px; }
