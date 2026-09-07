@@ -783,6 +783,144 @@ body.home-showcase-page .gallery-section {
   padding-top: 0;
 }
 
+.upcoming-events-section {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.35rem, 4vw, 2.5rem);
+  border: 1px solid var(--v2-line);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(41, 211, 194, 0.12), transparent 28rem),
+    #fff;
+  box-shadow: var(--v2-shadow);
+}
+
+.upcoming-events-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.upcoming-events-heading h2 {
+  margin: 0.35rem 0 0.45rem;
+  color: var(--v2-ink);
+  font-size: clamp(1.9rem, 4vw, 3.3rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.upcoming-events-heading p:last-child {
+  margin: 0;
+  color: var(--v2-muted);
+}
+
+.upcoming-events-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 999px;
+  color: var(--v2-brand-strong);
+  background: #e5f8f5;
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.upcoming-events-status > span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #19a67a;
+  box-shadow: 0 0 0 4px rgba(25, 166, 122, 0.13);
+}
+
+.upcoming-event-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 230px;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(1.25rem, 4vw, 2.25rem);
+  padding: clamp(1.3rem, 4vw, 2.35rem);
+  border-radius: 22px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 85% -10%, rgba(41, 211, 194, 0.3), transparent 32%),
+    radial-gradient(circle at 5% 120%, rgba(244, 122, 60, 0.26), transparent 36%),
+    linear-gradient(125deg, #0b1324, #11264a 62%, #075e66);
+}
+
+.upcoming-event-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 260px;
+  height: 260px;
+  right: -150px;
+  bottom: -175px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 50%;
+}
+
+.upcoming-event-visual {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(8px);
+}
+
+.upcoming-event-visual > span { font-size: 3rem; }
+.upcoming-event-visual small { color: #c9fbf4; font-weight: 850; }
+.upcoming-event-label { margin: 0 0 0.45rem; color: #67e8dc; font-size: 0.75rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+.upcoming-event-content h3 { margin: 0 0 0.65rem; color: #fff; font-size: clamp(1.35rem, 3vw, 2rem); }
+.upcoming-event-content > p:last-of-type { max-width: 620px; margin: 0; color: #ccdae9; line-height: 1.6; }
+
+.upcoming-event-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.upcoming-event-tags span {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  color: #eef8ff;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.upcoming-event-action {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 13px;
+  color: var(--v2-ink);
+  background: #fff;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 900;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.upcoming-event-action:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.18); }
+
 .home-gallery-heading h1 {
   margin-bottom: 0.55rem;
   color: var(--v2-ink);
@@ -879,6 +1017,10 @@ body.home-showcase-page .gallery-section {
     width: 100%;
   }
 
+  .upcoming-events-heading { align-items: flex-start; flex-direction: column; gap: 0.85rem; }
+  .upcoming-event-card { grid-template-columns: 96px minmax(0, 1fr); }
+  .upcoming-event-action { grid-column: 1 / -1; width: 100%; }
+
   .visit-highlights {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -900,6 +1042,12 @@ body.home-showcase-page .gallery-section {
   .visit-highlights {
     grid-template-columns: 1fr;
   }
+
+  .upcoming-events-section { padding: 1rem; border-radius: 22px; }
+  .upcoming-event-card { grid-template-columns: 1fr; padding: 1.2rem; }
+  .upcoming-event-visual { width: 82px; border-radius: 18px; }
+  .upcoming-event-visual > span { font-size: 2rem; }
+  .upcoming-event-visual small { font-size: 0.7rem; }
 }
 
 /* Page Infos & contact */
