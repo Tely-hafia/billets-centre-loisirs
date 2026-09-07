@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=14" />
+  <link rel="stylesheet" href="css/app-v2.css?v=15" />
 </head>
 
-<body class="public-page public-inner-page">
+<body class="public-page public-inner-page contact-page">
   <header class="site-header">
     <div class="header-inner">
       <a class="public-brand-link" href="index.html" aria-label="Accueil Calypço">
@@ -29,53 +29,89 @@
     </div>
   </header>
 
-  <main class="public-inner-main">
-    <section class="public-page-intro">
-      <p class="section-kicker">📍 Infos & contact</p>
-      <h1>Préparez votre visite</h1>
-      <p>Adresse, horaires, contact et candidature : toutes les informations utiles sont ici.</p>
+  <main class="public-inner-main contact-main">
+    <section class="contact-hero" aria-labelledby="contact-title">
+      <div class="contact-hero-copy">
+        <p class="contact-open-pill"><span aria-hidden="true"></span> Ouvert 7j/7 · 10h à 02h</p>
+        <p class="section-kicker">Infos & contact</p>
+        <h1 id="contact-title">Préparez votre visite</h1>
+        <p class="contact-hero-text">Adresse, horaires, contact et candidature : retrouvez toutes les informations utiles avant de venir profiter du Calypço.</p>
+        <div class="contact-hero-actions">
+          <a class="contact-action contact-action-primary" href="https://maps.google.com/?q=11.223501,-12.385032" target="_blank" rel="noopener">📍 Voir l’itinéraire</a>
+          <a class="contact-action contact-action-secondary" href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o" target="_blank" rel="noopener">💬 Nous écrire</a>
+        </div>
+      </div>
+      <div class="contact-hero-brand" aria-hidden="true">
+        <span class="contact-logo-halo"></span>
+        <img src="assets/icons/calypso.svg" alt="" width="180" height="180" />
+        <strong>Calypço</strong>
+        <small>Hafia · Labé</small>
+      </div>
     </section>
 
     <section class="visit-highlights" aria-label="Informations pratiques">
-      <article><strong>7j/7</strong><span>Jours d’ouverture</span></article>
-      <article><strong>10h – 02h</strong><span>Horaires</span></article>
-      <article><strong>Wi-Fi</strong><span>Disponible sur place</span></article>
-      <article><strong>🎉</strong><span>Groupes et événements</span></article>
+      <article><span class="visit-highlight-icon" aria-hidden="true">📅</span><div><strong>7j/7</strong><span>Jours d’ouverture</span></div></article>
+      <article><span class="visit-highlight-icon" aria-hidden="true">🕙</span><div><strong>10h – 02h</strong><span>Horaires</span></div></article>
+      <article><span class="visit-highlight-icon" aria-hidden="true">📶</span><div><strong>Wi-Fi</strong><span>Disponible sur place</span></div></article>
+      <article><span class="visit-highlight-icon" aria-hidden="true">🎉</span><div><strong>Groupes</strong><span>Événements bienvenus</span></div></article>
     </section>
+
+    <div class="contact-section-heading">
+      <p class="section-kicker">Restons en contact</p>
+      <h2>Comment pouvons-nous vous aider ?</h2>
+    </div>
 
     <section class="contact-info-grid" aria-label="Nous contacter">
       <article class="contact-info-card">
-        <span>📍</span>
-        <h2>Adresse</h2>
-        <p>Hafia Labé, proche université Hafia</p>
-        <a href="https://maps.google.com/?q=11.223501,-12.385032" target="_blank" rel="noopener">Ouvrir dans Google Maps</a>
+        <span class="contact-card-icon contact-card-icon-location" aria-hidden="true">📍</span>
+        <div class="contact-card-content">
+          <p class="contact-card-label">Nous rendre visite</p>
+          <h3>Adresse</h3>
+          <p>Hafia Labé, proche université Hafia</p>
+          <a href="https://maps.google.com/?q=11.223501,-12.385032" target="_blank" rel="noopener">Ouvrir dans Google Maps <span aria-hidden="true">→</span></a>
+        </div>
       </article>
 
       <article class="contact-info-card">
-        <span>📞</span>
-        <h2>Téléphone</h2>
-        <p>+224 00 00 00 00</p>
-        <a href="tel:+22400000000">Appeler le centre</a>
+        <span class="contact-card-icon contact-card-icon-phone" aria-hidden="true">📞</span>
+        <div class="contact-card-content">
+          <p class="contact-card-label">Nous appeler</p>
+          <h3>Téléphone</h3>
+          <p>+224 00 00 00 00</p>
+          <a href="tel:+22400000000">Appeler le centre <span aria-hidden="true">→</span></a>
+        </div>
       </article>
 
       <article class="contact-info-card">
-        <span>💬</span>
-        <h2>WhatsApp</h2>
-        <p>Questions, réservations de groupe et événements.</p>
-        <a href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o" target="_blank" rel="noopener">Écrire sur WhatsApp</a>
+        <span class="contact-card-icon contact-card-icon-whatsapp" aria-hidden="true">💬</span>
+        <div class="contact-card-content">
+          <p class="contact-card-label">Réponse rapide</p>
+          <h3>WhatsApp</h3>
+          <p>Questions, réservations de groupe et événements.</p>
+          <a href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o" target="_blank" rel="noopener">Écrire sur WhatsApp <span aria-hidden="true">→</span></a>
+        </div>
       </article>
 
       <article class="contact-info-card contact-job-card">
-        <span>🤝</span>
-        <h2>Postuler</h2>
-        <p>Vous souhaitez rejoindre l’équipe ? Présentez-vous et demandez comment transmettre votre CV.</p>
-        <a href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o%2C%20je%20souhaite%20postuler" target="_blank" rel="noopener">Postuler sur WhatsApp</a>
+        <span class="contact-card-icon contact-card-icon-job" aria-hidden="true">🤝</span>
+        <div class="contact-card-content">
+          <p class="contact-card-label">Rejoindre l’équipe</p>
+          <h3>Postuler au Calypço</h3>
+          <p>Vous souhaitez rejoindre l’équipe ? Présentez-vous et demandez comment transmettre votre CV.</p>
+          <a href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o%2C%20je%20souhaite%20postuler" target="_blank" rel="noopener">Postuler sur WhatsApp <span aria-hidden="true">→</span></a>
+        </div>
       </article>
     </section>
 
     <section class="map-section">
-      <h2>Nous trouver</h2>
-      <p>Hafia Labé, proche université Hafia</p>
+      <div class="map-section-heading">
+        <div>
+          <p class="section-kicker">Votre destination</p>
+          <h2>Nous trouver</h2>
+          <p>Hafia Labé, proche université Hafia</p>
+        </div>
+        <span class="map-location-badge">📍 Hafia · Labé</span>
+      </div>
       <div class="map-frame">
         <iframe
           src="https://www.openstreetmap.org/export/embed.html?bbox=-12.387032,11.222501,-12.383032,11.224501&amp;layer=mapnik&amp;marker=11.223501,-12.385032"
@@ -88,9 +124,9 @@
       </div>
 
       <div class="gps-buttons">
-        <a href="https://maps.google.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-google" target="_blank" rel="noopener">🗺️ Google Maps</a>
-        <a href="https://waze.com/ul?ll=11.223501,-12.385032&amp;navigate=yes" class="gps-btn gps-btn-waze" target="_blank" rel="noopener">🚗 Waze</a>
-        <a href="https://maps.apple.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-apple" target="_blank" rel="noopener">🍎 Apple Plans</a>
+        <a href="https://maps.google.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-google" target="_blank" rel="noopener"><span>🗺️</span> Google Maps</a>
+        <a href="https://waze.com/ul?ll=11.223501,-12.385032&amp;navigate=yes" class="gps-btn gps-btn-waze" target="_blank" rel="noopener"><span>🚗</span> Waze</a>
+        <a href="https://maps.apple.com/?q=11.223501,-12.385032" class="gps-btn gps-btn-apple" target="_blank" rel="noopener"><span>🍎</span> Apple Plans</a>
       </div>
     </section>
   </main>
