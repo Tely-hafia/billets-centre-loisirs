@@ -27,6 +27,7 @@ test("la carte étudiant inclut photo, rentrée, QR et impression", () => {
 
 test("le tarif étudiant exige une carte renouvelée pour la rentrée", () => {
   assert.match(agent, /isStudentCardCurrent/);
+  assert.match(agent, /hasOwnProperty\.call\(student, "annee_scolaire"\)/);
   assert.match(agent, /annee_scolaire === getCurrentStudentSchoolYear/);
   assert.match(migration, /photo_data/);
   assert.match(migration, /fulltext/);

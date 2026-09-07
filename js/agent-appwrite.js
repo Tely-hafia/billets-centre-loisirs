@@ -1399,7 +1399,11 @@ function getCurrentStudentSchoolYear(date = new Date()) {
 }
 
 function isStudentCardCurrent(student) {
-  return Boolean(student?.actif && student?.annee_scolaire === getCurrentStudentSchoolYear());
+  if (!student?.actif) return false;
+  // Compatibilité temporaire : tant que la colonne n'existe pas encore dans
+  // Appwrite, les anciennes cartes actives continuent de fonctionner.
+  if (!Object.prototype.hasOwnProperty.call(student, "annee_scolaire")) return true;
+  return student.annee_scolaire === getCurrentStudentSchoolYear();
 }
 
 async function verifierTarifEtudiantAvantValidation(numeroEtu) {
