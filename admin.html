@@ -210,13 +210,8 @@
           <div><h3>Rechercher un étudiant</h3><p class="status">Aucune grande liste n’est chargée. Recherchez par numéro, nom ou date de naissance.</p></div>
         </div>
         <div class="student-search-bar">
-          <select id="studentSearchMode" aria-label="Type de recherche">
-            <option value="numero">Numéro étudiant</option>
-            <option value="nom">Nom</option>
-            <option value="naissance">Date de naissance</option>
-          </select>
-          <input id="studentSearchText" type="search" autocomplete="off" placeholder="Ex : UNIV-HA-1234" />
-          <input id="studentSearchDate" type="date" hidden />
+          <div class="form-row"><label for="studentSearchText">Numéro étudiant ou nom</label><input id="studentSearchText" type="search" autocomplete="off" placeholder="Ex : UNIV-HA-1234 ou Baldé" /></div>
+          <div class="form-row"><label for="studentSearchDate">Date de naissance</label><input id="studentSearchDate" type="date" /></div>
           <button id="btnSearchStudents" type="button" class="btn-secondary">Rechercher</button>
         </div>
         <div id="studentSearchResults" hidden>
@@ -642,7 +637,7 @@
 <script src="js/vendor/qrcode.js?v=1"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=16"></script>
+<script src="js/admin-appwrite.js?v=17"></script>
 <script src="js/pwa.js?v=1"></script>
 
 <script src="js/whatsapp-access.js?v=1"></script>

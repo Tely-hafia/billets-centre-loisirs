@@ -1654,19 +1654,52 @@ async function creerEtudiantDepuisAdmin() {
   try {
     const data = readStudentForm();
     if (studentAdminState.editingId) {
-      const updated = await adminDB.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, studentAdminState.editingId, data);
+      let updated;
+      try {
+        updated = await adminDB.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, studentAdminState.editingId, data);
+      } catch (error) {
+        if (!studentSchemaError(error)) throw error;
+        updated = await adminDB.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, studentAdminState.editingId, {
+          nom: data.nom,
+          prenom: data.prenom,
+          universite: data.universite,
+          "e-mail": data["e-mail"],
+          telephone: data.telephone,
+          actif: data.actif
+        });
+        updated = { ...updated, date_naissance: data.date_naissance, annee_scolaire: data.annee_scolaire, photo_data: data.photo_data };
+      }
       studentAdminState.results.set(updated.$id, updated);
       showAdminEtuMessage(`Carte ${updated.numero_etudiant} mise à jour.`, "success");
       renderStudentSearchResults();
       showStudentCard(updated);
     } else {
       const numero = genererNumeroEtudiant(data.universite);
-      const created = await adminDB.createDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, Appwrite.ID.unique(), {
-        numero_etudiant: numero,
-        ...data,
-        date_creation: new Date().toISOString()
-      });
-      showAdminEtuMessage(`Étudiant enregistré. Carte générée : ${numero}`, "success");
+      const documentId = Appwrite.ID.unique();
+      let created;
+      try {
+        created = await adminDB.createDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, documentId, {
+          numero_etudiant: numero,
+          ...data,
+          date_creation: new Date().toISOString()
+        });
+        showAdminEtuMessage(`Étudiant enregistré. Carte générée : ${numero}`, "success");
+      } catch (error) {
+        if (!studentSchemaError(error)) throw error;
+        const legacyData = {
+          numero_etudiant: numero,
+          nom: data.nom,
+          prenom: data.prenom,
+          universite: data.universite,
+          "e-mail": data["e-mail"],
+          telephone: data.telephone,
+          actif: data.actif,
+          date_creation: new Date().toISOString()
+        };
+        created = await adminDB.createDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, documentId, legacyData);
+        created = { ...created, date_naissance: data.date_naissance, annee_scolaire: data.annee_scolaire, photo_data: data.photo_data };
+        showAdminEtuMessage(`Étudiant enregistré avec la table actuelle. Enregistrez ou imprimez maintenant la carte ${numero} ; la photo, la naissance et la rentrée seront persistantes après la mise à niveau Appwrite.`, "success");
+      }
       showStudentCard(created);
     }
     resetStudentForm();
@@ -1700,16 +1733,21 @@ function renderStudentSearchResults() {
 }
 
 async function searchStudents() {
-  const mode = $("studentSearchMode")?.value || "numero";
-  const value = mode === "naissance" ? $("studentSearchDate")?.value : $("studentSearchText")?.value.trim();
-  if (!value) {
-    showAdminEtuMessage("Saisissez une valeur de recherche.", "error");
+  const identity = $("studentSearchText")?.value.trim() || "";
+  const birthDate = $("studentSearchDate")?.value || "";
+  if (!identity && !birthDate) {
+    showAdminEtuMessage("Saisissez un numéro ou un nom, ou choisissez une date de naissance.", "error");
     return;
   }
-  const field = mode === "numero" ? "numero_etudiant" : mode === "nom" ? "nom" : "date_naissance";
-  const query = mode === "nom" ? Appwrite.Query.search(field, value) : Appwrite.Query.equal(field, value);
+  const queries = [];
+  if (identity) {
+    queries.push(/^UNIV-/i.test(identity)
+      ? Appwrite.Query.equal("numero_etudiant", identity.toUpperCase())
+      : Appwrite.Query.search("nom", identity));
+  }
+  if (birthDate) queries.push(Appwrite.Query.equal("date_naissance", birthDate));
   try {
-    const result = await adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, [query, Appwrite.Query.limit(10)]);
+    const result = await adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, [...queries, Appwrite.Query.limit(10)]);
     studentAdminState.results = new Map((result.documents || []).map((doc) => [doc.$id, doc]));
     renderStudentSearchResults();
     showAdminEtuMessage(`${result.documents?.length || 0} résultat(s).`, "info");
@@ -1828,7 +1866,7 @@ function shareAgentAccess() {
   showAdminAgentMessage("Message préparé dans WhatsApp. Vérifiez le numéro avant l’envoi.", "success");
 }
 
-function renderStaffList(memberships) {
+function renderStaffList(memberships, knownNames = {}) {
   const target = $("staffManagementList");
   if (!target) return;
   const members = memberships || [];
@@ -1839,8 +1877,10 @@ function renderStaffList(memberships) {
   target.innerHTML = members.map((member) => {
     const isSelf = member.userId === currentAdmin?.$id || member.$id === currentAdmin?.membership?.$id;
     const roles = CalypsoAuth.normalizeRoles(member.roles);
+    const name = member.userName || member.name || knownNames[member.userId] || (isSelf ? currentAdmin?.nom : "") || member.userEmail || member.email || `Agent …${String(member.userId || member.$id).slice(-6)}`;
+    const contact = member.userEmail || member.email || member.userPhone || member.phone || (isSelf ? currentAdmin?.login : "Identité à compléter par l’agent");
     return `<article class="staff-member-card" data-membership-id="${escapeHTML(member.$id)}">
-      <div><strong>${escapeHTML(member.userName || member.userEmail || member.userPhone || "Agent sans nom")}</strong><p>${escapeHTML(member.userPhone || member.userEmail || "Compte en attente")}</p><small>${member.confirm ? "Compte actif" : "Invitation en attente"}${isSelf ? " · Votre compte" : ""}</small></div>
+      <div><strong>${escapeHTML(name)}</strong><p>${escapeHTML(contact)}</p><small>${member.confirm ? "Compte actif" : "Invitation en attente"}${isSelf ? " · Votre compte" : ""}</small></div>
       <div class="staff-role-editor">${["gerant", "controle", "resto", "admin"].map((role) => `<label><input class="staff-role-checkbox" type="checkbox" value="${role}" ${roles.includes(role) ? "checked" : ""} ${isSelf ? "disabled" : ""}/><span>${escapeHTML(staffRoleLabels[role])}</span></label>`).join("")}</div>
       <div class="compact-actions"><button type="button" class="btn-secondary staff-save-roles" ${isSelf ? "disabled" : ""}>Enregistrer les rôles</button><button type="button" class="btn-danger staff-delete" ${isSelf ? "disabled" : ""}>Retirer l’accès</button></div>
     </article>`;
@@ -1851,8 +1891,19 @@ async function loadStaffManagement() {
   const target = $("staffManagementList");
   if (target) target.innerHTML = '<p class="empty-state">Chargement…</p>';
   try {
-    const result = await CalypsoAuth.listStaff();
-    renderStaffList(result.memberships || []);
+    const [staffResult, cashResult] = await Promise.allSettled([
+      CalypsoAuth.listStaff(),
+      adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, [Appwrite.Query.orderDesc("$createdAt"), Appwrite.Query.limit(100)])
+    ]);
+    if (staffResult.status !== "fulfilled") throw staffResult.reason;
+    const knownNames = { ...adminDashboardState.agentNames };
+    if (currentAdmin?.$id && currentAdmin?.nom) knownNames[currentAdmin.$id] = currentAdmin.nom;
+    if (cashResult.status === "fulfilled") {
+      (cashResult.value.documents || []).forEach((session) => {
+        if (session.agent_id && session.agent_nom && !knownNames[session.agent_id]) knownNames[session.agent_id] = session.agent_nom;
+      });
+    }
+    renderStaffList(staffResult.value.memberships || [], knownNames);
   } catch (error) {
     if (target) target.innerHTML = `<p class="message message-error">${escapeHTML(error?.message || "Liste indisponible.")}</p>`;
   }
@@ -2113,12 +2164,6 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnSearchStudents")?.addEventListener("click", searchStudents);
   $("studentSearchText")?.addEventListener("keydown", (event) => {
     if (event.key === "Enter") { event.preventDefault(); searchStudents(); }
-  });
-  $("studentSearchMode")?.addEventListener("change", () => {
-    const dateMode = $("studentSearchMode").value === "naissance";
-    $("studentSearchText").hidden = dateMode;
-    $("studentSearchDate").hidden = !dateMode;
-    $("studentSearchText").placeholder = $("studentSearchMode").value === "nom" ? "Ex : Baldé" : "Ex : UNIV-HA-1234";
   });
   $("studentSearchBody")?.addEventListener("click", async (event) => {
     const row = event.target.closest("tr[data-student-id]");
