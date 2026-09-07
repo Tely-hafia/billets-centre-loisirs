@@ -138,6 +138,37 @@
     );
   }
 
+  async function listStaff() {
+    await getStaffContext([config.staffRoles.admin]);
+    return teams.listMemberships(
+      config.staffTeamId,
+      [global.Appwrite.Query.limit(100)]
+    );
+  }
+
+  async function updateStaffRoles({ membershipId, roles }) {
+    const context = await getStaffContext([config.staffRoles.admin]);
+    const normalizedRoles = normalizeRoles(roles);
+
+    if (!membershipId || normalizedRoles.length === 0) {
+      throw new Error("Un membre et au moins un rôle sont requis.");
+    }
+    if (context.membership?.$id === membershipId) {
+      throw new Error("Vous ne pouvez pas modifier votre propre accès depuis cette page.");
+    }
+
+    return teams.updateMembership(config.staffTeamId, membershipId, normalizedRoles);
+  }
+
+  async function deleteStaff({ membershipId }) {
+    const context = await getStaffContext([config.staffRoles.admin]);
+    if (!membershipId) throw new Error("Membre introuvable.");
+    if (context.membership?.$id === membershipId) {
+      throw new Error("Vous ne pouvez pas supprimer votre propre accès.");
+    }
+    await teams.deleteMembership(config.staffTeamId, membershipId);
+  }
+
   async function updateStaffName({ prenom, nom }) {
     await getStaffContext();
     const name = buildStaffName(prenom, nom);
@@ -149,10 +180,13 @@
     getStaffContext,
     hasAnyRole,
     inviteStaff,
+    listStaff,
     login,
     logout,
     normalizeRoles,
     restore,
+    deleteStaff,
+    updateStaffRoles,
     updateStaffName
   });
 })(window);

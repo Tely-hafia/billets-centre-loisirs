@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=14" />
+  <link rel="stylesheet" href="css/app-v2.css?v=17" />
 </head>
 
 <body class="admin-page">
@@ -162,128 +162,88 @@
       </section>
     </div>
 
-    <!-- === MODE 1 : Saisie / Enregistrement === -->
+    <!-- === MODE 1 : Équipe et étudiants === -->
     <div id="admin-zone-team" class="mode-content" style="display:none;">
-
-      <!-- ENREGISTRER UN ÉTUDIANT -->
-      <section class="card" id="admin-etudiants">
-        <h2>Enregistrer un étudiant</h2>
-
-        <p class="status">
-          Ajoute un étudiant dans la collection <strong>etudiants</strong>
-          pour le tarif étudiant.<br>
-          Le numéro étudiant est <strong>généré automatiquement</strong> au format :
-          <code>UNIV-XX-1234</code>.
-        </p>
-
-        <div class="form-row">
-          <label for="admin-etu-universite">Université / École *</label>
-          <input
-            type="text"
-            id="admin-etu-universite"
-            placeholder="Ex : HAFIA, USTG, Kofi Annan..."
-            required
-          />
+      <section class="card team-management-card" id="admin-etudiants">
+        <div class="section-heading-row">
+          <div>
+            <p class="eyebrow">Tarif étudiant</p>
+            <h2 id="student-form-title">Créer une carte étudiant</h2>
+            <p class="status">La carte doit être renouvelée à chaque rentrée pour conserver le tarif étudiant.</p>
+          </div>
+          <span class="role-badge">Numéro automatique</span>
         </div>
 
-        <div class="form-row">
-          <label for="admin-etu-nom">Nom *</label>
-          <input
-            type="text"
-            id="admin-etu-nom"
-            placeholder="Ex : BAH"
-            required
-          />
+        <div class="student-form-grid">
+          <div class="student-photo-field">
+            <div id="studentPhotoPreview" class="student-photo-preview" aria-label="Aperçu de la photo"><span>Photo</span></div>
+            <label class="btn-secondary student-photo-button" for="admin-etu-photo">📷 Prendre ou choisir une photo</label>
+            <input id="admin-etu-photo" type="file" accept="image/*" capture="user" hidden />
+            <small>La photo est réduite avant l’enregistrement pour économiser les données.</small>
+          </div>
+
+          <div class="student-fields">
+            <div class="identity-fields">
+              <div class="form-row"><label for="admin-etu-nom">Nom *</label><input id="admin-etu-nom" type="text" autocomplete="family-name" required /></div>
+              <div class="form-row"><label for="admin-etu-prenom">Prénom *</label><input id="admin-etu-prenom" type="text" autocomplete="given-name" required /></div>
+            </div>
+            <div class="identity-fields">
+              <div class="form-row"><label for="admin-etu-naissance">Date de naissance *</label><input id="admin-etu-naissance" type="date" required /></div>
+              <div class="form-row"><label for="admin-etu-annee">Année scolaire *</label><input id="admin-etu-annee" type="text" inputmode="numeric" placeholder="2026-2027" pattern="\d{4}-\d{4}" required /></div>
+            </div>
+            <div class="form-row"><label for="admin-etu-universite">Université / École *</label><input id="admin-etu-universite" type="text" placeholder="Ex : Université Hafia" required /></div>
+            <div class="identity-fields">
+              <div class="form-row"><label for="admin-etu-telephone">Téléphone</label><input id="admin-etu-telephone" type="tel" autocomplete="tel" /></div>
+              <div class="form-row"><label for="admin-etu-email">E-mail</label><input id="admin-etu-email" type="email" autocomplete="email" /></div>
+            </div>
+            <label class="radio-inline"><input type="checkbox" id="admin-etu-actif" checked /><span>Carte active</span></label>
+            <div class="actions-row">
+              <button id="btnCreateEtudiant" type="button" class="btn-primary">Créer la carte</button>
+              <button id="btnCancelStudentEdit" type="button" class="btn-secondary" hidden>Annuler la modification</button>
+            </div>
+          </div>
+        </div>
+        <p id="admin-etu-message" class="message" style="display:none;" aria-live="polite"></p>
+
+        <hr class="section-divider" />
+        <div class="section-heading-row">
+          <div><h3>Rechercher un étudiant</h3><p class="status">Aucune grande liste n’est chargée. Recherchez par numéro, nom ou date de naissance.</p></div>
+        </div>
+        <div class="student-search-bar">
+          <select id="studentSearchMode" aria-label="Type de recherche">
+            <option value="numero">Numéro étudiant</option>
+            <option value="nom">Nom</option>
+            <option value="naissance">Date de naissance</option>
+          </select>
+          <input id="studentSearchText" type="search" autocomplete="off" placeholder="Ex : UNIV-HA-1234" />
+          <input id="studentSearchDate" type="date" hidden />
+          <button id="btnSearchStudents" type="button" class="btn-secondary">Rechercher</button>
+        </div>
+        <div id="studentSearchResults" hidden>
+          <div class="table-wrapper"><table class="data-table"><thead><tr><th>Étudiant</th><th>Numéro</th><th>Rentrée</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="studentSearchBody"></tbody></table></div>
         </div>
 
-        <div class="form-row">
-          <label for="admin-etu-prenom">Prénom *</label>
-          <input
-            type="text"
-            id="admin-etu-prenom"
-            placeholder="Ex : LAMA"
-            required
-          />
-        </div>
-
-        <div class="form-row">
-          <label for="admin-etu-email">E-mail</label>
-          <input
-            type="email"
-            id="admin-etu-email"
-            placeholder="exemple@domaine.com"
-          />
-        </div>
-
-        <div class="form-row">
-          <label for="admin-etu-telephone">Téléphone</label>
-          <input
-            type="text"
-            id="admin-etu-telephone"
-            placeholder="Numéro de téléphone"
-          />
-        </div>
-
-        <div class="form-row" style="flex-direction:row; align-items:center; gap:0.5rem;">
-          <input type="checkbox" id="admin-etu-actif" checked />
-          <label for="admin-etu-actif" style="margin:0;">Étudiant actif</label>
-        </div>
-
-        <button id="btnCreateEtudiant" type="button" class="btn-primary">
-          Enregistrer l’étudiant
-        </button>
-
-        <p id="admin-etu-message" class="message" style="display:none;"></p>
+        <section id="studentCardPanel" class="student-card-panel" hidden aria-label="Carte étudiant">
+          <div id="studentCard" class="student-card">
+            <div class="student-card-brand"><img src="assets/icons/calypso-officiel.png" alt="" /><div><strong>CALYPÇO</strong><small>CARTE ÉTUDIANT</small></div></div>
+            <img id="studentCardPhoto" class="student-card-photo" alt="Photo de l’étudiant" />
+            <div class="student-card-details"><h3 id="studentCardName"></h3><p id="studentCardBirth"></p><p id="studentCardSchool"></p><strong id="studentCardNumber"></strong><small id="studentCardYear"></small></div>
+            <div id="studentCardQR" class="student-card-qr" aria-label="QR code de la carte"></div>
+          </div>
+          <div class="actions-row"><button id="btnPrintStudentCard" type="button" class="btn-primary">Imprimer la carte</button><button id="btnCloseStudentCard" type="button" class="btn-secondary">Fermer</button></div>
+        </section>
       </section>
 
-      <!-- INVITATION D'UN AGENT -->
-      <section class="card">
-        <h2>Inviter un agent</h2>
+      <section class="card team-management-card" id="admin-agents">
+        <p class="eyebrow">Équipe</p>
+        <h2>Donner l’accès à un agent</h2>
+        <p class="status">Préparez le lien de connexion et envoyez-le vous-même sur WhatsApp. Le mot de passe n’apparaît jamais dans le message.</p>
 
-        <p class="status">
-          L’agent recevra une invitation par e-mail. Il définira lui-même son
-          mot de passe : aucun mot de passe n’est conservé dans la base métier.
-        </p>
-
-        <div class="form-row">
-          <label for="admin-agent-email">
-            E-mail de l’agent <span style="color:#ef4444;">*</span>
-          </label>
-          <input
-            type="email"
-            id="admin-agent-email"
-            placeholder="agent@exemple.com"
-          />
-        </div>
+        <div class="form-row"><label for="admin-agent-phone">Numéro WhatsApp *</label><input type="tel" id="admin-agent-phone" placeholder="+224…" autocomplete="tel" /></div>
 
         <div class="identity-fields">
-          <div class="form-row">
-            <label for="admin-agent-prenom">
-              Prénom <span style="color:#ef4444;">*</span>
-            </label>
-            <input
-              type="text"
-              id="admin-agent-prenom"
-              placeholder="Prénom de l’agent"
-              autocomplete="given-name"
-              maxlength="64"
-              required
-            />
-          </div>
-
-          <div class="form-row">
-            <label for="admin-agent-nom">
-              Nom <span style="color:#ef4444;">*</span>
-            </label>
-            <input
-              type="text"
-              id="admin-agent-nom"
-              placeholder="Nom de l’agent"
-              autocomplete="family-name"
-              maxlength="64"
-              required
-            />
-          </div>
+          <div class="form-row"><label for="admin-agent-prenom">Prénom *</label><input type="text" id="admin-agent-prenom" autocomplete="given-name" maxlength="64" /></div>
+          <div class="form-row"><label for="admin-agent-nom">Nom *</label><input type="text" id="admin-agent-nom" autocomplete="family-name" maxlength="64" /></div>
         </div>
 
         <div class="form-row">
@@ -308,19 +268,19 @@
           </div>
         </div>
 
-        <button id="btnCreateAgent" type="button" class="btn-secondary">
-          Envoyer l’invitation
-        </button>
-
+        <button id="btnShareAgentAccess" type="button" class="btn-primary">💬 Préparer le message WhatsApp</button>
         <p id="admin-agent-message" class="status"></p>
-        <details>
-          <summary>Partager le lien de connexion par WhatsApp</summary>
-          <p class="status">Pour un compte déjà activé uniquement. Ce lien ne crée pas de compte et ne remplace pas l’invitation par e-mail.</p>
-          <label for="shareAgentPhone">Numéro WhatsApp de l’agent (avec indicatif)</label>
-          <input id="shareAgentPhone" type="tel" autocomplete="off" placeholder="+224…" />
-          <button id="shareAgentAccess" type="button" class="btn-secondary">Préparer le message WhatsApp</button>
-          <p id="shareAgentStatus" class="status" aria-live="polite"></p>
+
+        <details class="technical-access-panel">
+          <summary>Créer le compte sécurisé d’un nouvel agent</summary>
+          <p class="status">Appwrite demande encore une adresse e-mail pour créer le compte et définir son mot de passe. Après activation, les connexions suivantes passent par le lien WhatsApp.</p>
+          <div class="form-row"><label for="admin-agent-email">E-mail technique de connexion</label><input type="email" id="admin-agent-email" placeholder="agent@exemple.com" autocomplete="email" /></div>
+          <button id="btnCreateAgent" type="button" class="btn-secondary">Créer l’accès sécurisé</button>
         </details>
+
+        <hr class="section-divider" />
+        <div class="section-heading-row"><div><h3>Agents autorisés</h3><p class="status">Chargez la liste uniquement lorsque vous devez modifier un rôle ou retirer un accès.</p></div><button id="btnLoadStaff" type="button" class="btn-secondary">Charger l’équipe</button></div>
+        <div id="staffManagementList" class="staff-management-list"><p class="empty-state">La liste n’est pas chargée.</p></div>
       </section>
 
     </div>
@@ -677,11 +637,12 @@
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
 <script src="js/data-access.js?v=1"></script>
-  <script src="js/auth-service.js?v=5"></script>
+  <script src="js/auth-service.js?v=6"></script>
 <script src="js/ticket-workflow.js?v=2"></script>
+<script src="js/vendor/qrcode.js?v=1"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=15"></script>
+<script src="js/admin-appwrite.js?v=16"></script>
 <script src="js/pwa.js?v=1"></script>
 
 <script src="js/whatsapp-access.js?v=1"></script>
