@@ -5,7 +5,7 @@
 
   function destinationFor(context) {
     const roles = context?.roles || [];
-    if (roles.includes(CalypsoConfig.staffRoles.admin)) return "admin.html";
+    if (roles.includes(CalypsoConfig.staffRoles.admin)) return "postes.html";
     if (roles.includes(CalypsoConfig.staffRoles.gerant) || roles.includes(CalypsoConfig.staffRoles.billets)) {
       return "agent.html?poste=billets";
     }
@@ -26,8 +26,10 @@
     const button = document.getElementById("btnStaffLogin");
     sessionStorage.removeItem(ACCESS_KEY);
 
+    let inProgress = false;
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (inProgress) return;
       const email = document.getElementById("staffEmail")?.value.trim() || "";
       const password = document.getElementById("staffPassword")?.value || "";
       if (!email || !password) {
@@ -35,6 +37,7 @@
         return;
       }
 
+      inProgress = true;
       button.disabled = true;
       button.textContent = "Connexion…";
       showMessage("Vérification du compte…");
@@ -54,6 +57,7 @@
           "error"
         );
       } finally {
+        inProgress = false;
         button.disabled = false;
         button.textContent = "Se connecter";
       }

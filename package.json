@@ -2,7 +2,7 @@
   "name": "billets-centre-loisirs",
   "private": true,
   "scripts": {
-    "check": "for file in js/*.js; do node --check \"$file\"; done",
+    "check": "for file in js/*.js js/vendor/*.js service-worker.js; do node --check \"$file\"; done",
     "test": "node --test"
   }
 }

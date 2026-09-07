@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_VERSION = "calypso-equipe-v11";
+const CACHE_VERSION = "calypso-equipe-v12";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const APP_SHELL = [
@@ -18,6 +18,14 @@ const APP_SHELL = [
   "./js/auth-service.js",
   "./js/connexion.js",
   "./js/ticket-workflow.js",
+  "./postes.html",
+  "./js/postes.js",
+  "./js/data-access.js",
+  "./js/receipts.js",
+  "./js/access-control.js",
+  "./js/whatsapp-access.js",
+  "./js/gallery.js",
+  "./js/gallery-images.js",
   "./js/agent-appwrite.js",
   "./js/admin-appwrite.js",
   "./manifest.webmanifest",
@@ -71,7 +79,10 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    fetch(request)
+    caches.open(STATIC_CACHE).then(async (cache) => {
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      return fetch(request)
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
@@ -79,6 +90,7 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request, { ignoreSearch: true }))
+      .catch(() => cache.match(request, { ignoreSearch: true }));
+    })
   );
 });

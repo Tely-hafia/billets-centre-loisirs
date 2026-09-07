@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css" />
+  <link rel="stylesheet" href="css/app-v2.css?v=14" />
 </head>
 
 <body class="staff-page">
@@ -70,6 +70,7 @@
           </button>
         </div>
 
+        <a id="agentAdminPostLink" href="postes.html" class="btn-secondary btn-link" hidden>Changer de poste</a>
         <button id="btnLogout" type="button" class="btn-danger">
           Se déconnecter
         </button>
@@ -139,6 +140,14 @@
           <article><span>Espèces attendues</span><strong id="cashExpected">0 GNF</strong></article>
           <article><span>Opérations</span><strong id="cashOperations">0</strong></article>
         </div>
+        <details class="cash-close-panel">
+          <summary>Clôturer ma caisse</summary>
+          <div class="form-row"><label for="cashActual">Espèces réellement remises</label>
+            <input id="cashActual" type="number" min="0" step="1" inputmode="numeric" /></div>
+          <div class="form-row"><label for="cashCloseComment">Commentaire (obligatoire en cas d’écart)</label>
+            <textarea id="cashCloseComment" maxlength="500"></textarea></div>
+          <button id="btnCloseCash" type="button" class="btn-danger">Clôturer la caisse</button>
+        </details>
 
       </div>
 
@@ -289,6 +298,14 @@
       </div>
 
       <div id="result-message" class="result" style="display:none;"></div>
+      <section id="ticketReceipt" class="ticket-receipt" hidden aria-label="Reçu de vente">
+        <h3>Calypço — Reçu billets</h3><p id="ticketReceiptDate"></p>
+        <ul id="ticketReceiptLines"></ul>
+        <strong id="ticketReceiptTotal"></strong><p id="ticketReceiptPayment"></p>
+        <div id="ticketReceiptQR" class="receipt-qr"></div>
+        <p>Présentez ce QR au contrôle. Un billet de jeu ne donne pas droit à une entrée.</p>
+        <button id="btnPrintTicketReceipt" type="button" class="btn-secondary">Imprimer / enregistrer en PDF</button>
+      </section>
 
       <p class="operation-security-note">
         <span aria-hidden="true">🔒</span>
@@ -315,8 +332,15 @@
           autocomplete="off"
           placeholder="Numéro du billet"
         />
-        <button id="btnConfirmEntry" type="button" class="btn-primary">Confirmer l’entrée</button>
+        <button id="btnConfirmEntry" type="button" class="btn-secondary">Vérifier le numéro</button>
       </div>
+      <button id="btnScanReceipt" type="button" class="btn-primary">Scanner le reçu QR</button>
+      <div id="qrCamera" hidden>
+        <video id="qrVideo" autoplay muted playsinline aria-label="Caméra de lecture QR"></video>
+        <button id="btnStopScanner" type="button" class="btn-secondary">Arrêter la caméra</button>
+      </div>
+      <ul id="controlChecks" aria-live="polite"></ul>
+      <button id="btnConfirmChecked" type="button" class="btn-primary" hidden>Confirmer les entrées</button>
       <div id="control-result" class="result" style="display:none;" aria-live="assertive"></div>
       <p class="operation-security-note">
         <span aria-hidden="true">🔒</span>
@@ -456,11 +480,14 @@
 <!-- Configuration et authentification partagées -->
 <script src="js/appwrite-config.js?v=1"></script>
 <script src="js/appwrite-client.js?v=1"></script>
-<script src="js/auth-service.js?v=4"></script>
+<script src="js/data-access.js?v=1"></script>
+  <script src="js/auth-service.js?v=5"></script>
 <script src="js/ticket-workflow.js?v=2"></script>
 
 <!-- Script agent -->
-<script src="js/agent-appwrite.js?v=15"></script>
+<script src="js/receipts.js?v=1"></script>
+<script src="js/access-control.js?v=1"></script>
+<script src="js/agent-appwrite.js?v=16"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>
