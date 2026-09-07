@@ -29,6 +29,16 @@ test("la caisse journalise ouverture et clôture explicites", () => {
   assert.match(agentHtml, /cashActual/);
   assert.match(agentHtml, /cashCloseComment/);
   assert.match(agentSource, /fermeture: new Date\(\)\.toISOString\(\)/);
+  assert.match(agentHtml, /id="cashOpeningRecorded"/);
+  assert.match(agentHtml, /id="cashSalesRecorded"/);
+  assert.match(agentSource, /isPreviousCashSession/);
+  assert.match(agentSource, /Fermez la caisse précédente avant de rechercher/);
+});
+
+test("le reçu billets peut être fermé et disparaît après impression", () => {
+  assert.match(agentHtml, /id="btnCloseTicketReceipt"/);
+  assert.match(agentSource, /window\.addEventListener\("afterprint", fermerRecuBillets\)/);
+  assert.match(agentSource, /receipt\.hidden = true/);
 });
 
 test("l'administration sépare le jour, l'historique, les billets et l'équipe", () => {
