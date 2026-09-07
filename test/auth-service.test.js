@@ -112,15 +112,15 @@ test("une connexion non autorisée est immédiatement révoquée", async () => {
   );
 });
 
-test("réutilise une session valide sans recréer une connexion", async () => {
+test("une connexion explicite vérifie les identifiants même avec une session existante", async () => {
   const { auth, calls } = createAuthFixture({ membershipRoles: ["billets"] });
 
   const context = await auth.login("agent@example.com", "secret", ["billets"]);
 
   assert.equal(context.$id, "user-1");
-  assert.equal(calls.filter(([name]) => name === "account.get").length, 1);
-  assert.equal(calls.filter(([name]) => name === "createEmailSession").length, 0);
-  assert.equal(calls.filter(([name]) => name === "deleteSession").length, 0);
+  assert.equal(calls.filter(([name]) => name === "account.get").length, 2);
+  assert.equal(calls.filter(([name]) => name === "createEmailSession").length, 1);
+  assert.equal(calls.filter(([name]) => name === "deleteSession").length, 1);
 });
 
 test("seul un administrateur peut envoyer une invitation", async () => {

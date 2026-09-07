@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calypço — Choisir mon poste</title>
+  <meta name="theme-color" content="#0b1324">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/calypso-192.png">
+  <link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/app-v2.css?v=14">
+</head>
+<body class="staff-page auth-page">
+<main class="auth-main"><section class="card auth-card">
+  <p class="eyebrow">Administration</p><h1>Choisir mon poste</h1>
+  <p id="postStatus" class="status" aria-live="polite">Vérification de votre accès…</p>
+  <nav id="postLinks" class="post-chooser" hidden aria-label="Postes disponibles">
+    <a class="btn-primary btn-link" href="admin.html">Administration</a>
+    <a class="btn-secondary btn-link" href="agent.html?poste=billets">Caisse billets et jeux</a>
+    <a class="btn-secondary btn-link" href="agent.html?poste=controle">Contrôle d’accès</a>
+    <a class="btn-secondary btn-link" href="agent.html?poste=resto">Restauration</a>
+  </nav>
+  <a class="btn-link" href="index.html">Accueil</a>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+<script src="js/appwrite-config.js?v=1"></script><script src="js/appwrite-client.js?v=1"></script>
+<script src="js/auth-service.js?v=5"></script><script src="js/postes.js?v=1"></script>
+<script src="js/pwa.js?v=1"></script>
+</body></html>

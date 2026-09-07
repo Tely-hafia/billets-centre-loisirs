@@ -956,3 +956,26 @@ body.home-showcase-page .gallery-section {
     width: 100%;
   }
 }
+
+/* Caisse compacte, reçus mobiles et sélection explicite du poste. */
+.post-chooser { display: grid; gap: 12px; margin: 20px 0; }
+[hidden] { display: none !important; }
+.ticket-receipt { margin-top: 20px; padding: 20px; border: 1px solid #d8e3eb; border-radius: 16px; background: white; }
+.receipt-qr { width: min(100%, 320px); margin: 16px auto; }
+.receipt-qr svg { display: block; width: 100%; height: auto; }
+#qrVideo { width: 100%; max-width: 560px; margin: 12px 0; border-radius: 12px; }
+.cash-close-panel { margin-top: 12px; }
+.cash-close-panel summary { cursor: pointer; padding: 12px 0; }
+.photo-slide { padding: 0 !important; overflow: hidden; }
+.photo-slide img { display: block; width: 100%; height: 100%; object-fit: contain; background: #0b1324; }
+#carouselTrack, .gallery-carousel { min-width: 0; max-width: 100%; }
+.carousel-slide { flex: 0 0 100%; min-width: 0; box-sizing: border-box; }
+@media print {
+  body[data-print-receipt="tickets"] * { visibility: hidden; }
+  body[data-print-receipt="tickets"] #mode-billets { display: block !important; }
+  body[data-print-receipt="tickets"] #mode-resto { display: none !important; }
+  body[data-print-receipt="tickets"] #ticketReceipt,
+  body[data-print-receipt="tickets"] #ticketReceipt * { visibility: visible; }
+  body[data-print-receipt="tickets"] #ticketReceipt { position: absolute; left: 0; top: 0; width: 100%; border: 0; }
+  body[data-print-receipt="tickets"] #btnPrintTicketReceipt { display: none; }
+}

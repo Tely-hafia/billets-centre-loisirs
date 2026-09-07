@@ -10,6 +10,7 @@ test("le tableau de bord admin est synthétique", () => {
   assert.doesNotMatch(html, /dashboard-welcome|Activité d’aujourd’hui/);
   assert.doesNotMatch(html, /Caisses de la période|Mouvements à approuver|Journal des actions par agent/);
   assert.match(html, /id="dashboardPeriod"/);
+  assert.match(html, /Choisir une période/);
   assert.match(html, /value="today"/);
   assert.match(html, /value="week"/);
   assert.match(html, /value="month"/);
@@ -29,13 +30,14 @@ test("le journal affiche une ligne synthétique par agent et par jour", () => {
   assert.match(html, /<th>Anomalies<\/th>/);
   assert.match(source, /buildAgentAlertCounts/);
   assert.match(source, /cashSessionDocs/);
+  assert.match(source, /Choisissez une période pour afficher le journal/);
 });
 
 test("les billets inutilisés chargés restent modifiables et supprimables", () => {
-  assert.match(html, /id="ticketManagementPeriod"/);
-  assert.match(html, /value="day"/);
-  assert.match(html, /value="week"/);
+  assert.doesNotMatch(html, /id="ticketManagementPeriod"/);
+  assert.match(html, /id="ticketManagementType"/);
   assert.match(html, /id="btnDeleteDisplayedTickets"/);
   assert.match(source, /supprimerBilletsInutilisesAffiches/);
   assert.match(source, /CalypsoTicketWorkflow\.canSell/);
+  assert.match(source, /verifierAucuneCaisseOuverte/);
 });

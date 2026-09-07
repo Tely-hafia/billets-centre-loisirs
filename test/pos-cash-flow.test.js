@@ -24,10 +24,11 @@ test("la connexion attend explicitement le clic de l'utilisateur", () => {
   assert.match(adminSource, /sessionStorage\.getItem\("calypso_access_granted"\)/);
 });
 
-test("la caisse est journalière et sa clôture n'est pas imposée à l'agent", () => {
+test("la caisse journalise ouverture et clôture explicites", () => {
   assert.match(agentHtml, /Espèces reçues pour démarrer/);
-  assert.doesNotMatch(agentHtml, /Clôturer mon service|cashActual|cashCloseComment/);
-  assert.match(agentSource, /getDayKey\(session\.ouverture \|\| session\.\$createdAt\) === getDayKey\(\)/);
+  assert.match(agentHtml, /cashActual/);
+  assert.match(agentHtml, /cashCloseComment/);
+  assert.match(agentSource, /fermeture: new Date\(\)\.toISOString\(\)/);
 });
 
 test("l'administration sépare le jour, l'historique, les billets et l'équipe", () => {
@@ -35,7 +36,8 @@ test("l'administration sépare le jour, l'historique, les billets et l'équipe",
   assert.match(adminHtml, /Historique & comptabilité/);
   assert.match(adminHtml, /Gestion des billets/);
   assert.match(adminHtml, /Équipe & accès/);
-  assert.match(adminSource, /getAdminHistoryRange/);
+  assert.match(adminHtml, /id="reservationStartDate"/);
+  assert.doesNotMatch(adminHtml, /id="admin-history-filter"/);
   assert.match(adminSource, /admin-delete-ticket/);
 });
 
@@ -51,10 +53,9 @@ test("le tableau de bord admin reste synthétique", () => {
   assert.match(adminSource, /buildAgentAlertCounts/);
 });
 
-test("les billets chargés se gèrent par jour ou semaine", () => {
-  assert.match(adminHtml, /id="ticketManagementPeriod"/);
-  assert.match(adminHtml, /value="day"/);
-  assert.match(adminHtml, /value="week"/);
+test("les stocks entrée et interne se gèrent sans filtre quotidien", () => {
+  assert.doesNotMatch(adminHtml, /id="ticketManagementPeriod"/);
+  assert.match(adminHtml, /id="ticketManagementType"/);
   assert.match(adminHtml, /id="btnDeleteDisplayedTickets"/);
   assert.match(adminSource, /supprimerBilletsInutilisesAffiches/);
 });
@@ -67,10 +68,9 @@ test("le poste billets affiche le prix Appwrite avant le panier", () => {
   assert.match(agentSource, /CalypsoTicketWorkflow\.getTicketPrice\(billet, tarifChoisi\)/);
 });
 
-test("une permission de session refusée ne bloque plus l'ouverture", () => {
-  assert.match(agentSource, /permissionDenied/);
-  assert.match(agentSource, /createLocalCashSession\(fonds\)/);
-  assert.match(agentSource, /saveLocalCashSession\(currentCashSession\)/);
+test("une permission refusée ne crée jamais une fausse caisse locale", () => {
+  assert.doesNotMatch(agentSource, /createLocalCashSession|localFallback|saveLocalCashSession/);
+  assert.match(agentSource, /CalypsoData\.errorMessage\(error, "Ouverture de caisse"\)/);
 });
 
 test("l'annulation et le remboursement restent réservés à l'administration", () => {

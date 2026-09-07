@@ -23,7 +23,7 @@ test("le manifeste PWA contient les informations d'installation", () => {
 });
 
 test("les pages professionnelles chargent le manifeste et le gestionnaire PWA", () => {
-  for (const page of ["connexion.html", "agent.html", "admin.html", "accept-invite.html", "reset-password.html"]) {
+  for (const page of ["connexion.html", "postes.html", "agent.html", "admin.html", "accept-invite.html", "reset-password.html"]) {
     const html = read(page);
     assert.match(html, /rel="manifest" href="manifest\.webmanifest"/);
     assert.match(html, /src="js\/pwa\.js\?v=1"/);

@@ -6,7 +6,9 @@ la restauration et l’administration du centre Calypço.
 ## Architecture
 
 - `index.html` : accueil et réservations publiques.
-- `agent.html` : espace billets et restauration.
+- `connexion.html` : point de connexion unique de toute l'équipe.
+- `postes.html` : choix du poste pour un administrateur.
+- `agent.html` : caisse billets, contrôle d'accès et restauration selon le rôle.
 - `admin.html` : administration, statistiques et invitations du personnel.
 - `accept-invite.html` : acceptation d’une invitation Appwrite Team.
 - `reset-password.html` : définition sécurisée du mot de passe.
@@ -71,8 +73,14 @@ en ligne afin d’éviter les doublons et les écritures non contrôlées.
 Pour tester l’installation, servir le projet par HTTPS ou sur `localhost`, puis
 utiliser l’audit PWA du navigateur.
 
+Le reçu billets peut regrouper jusqu’à 30 billets dans un QR. Les bibliothèques de
+génération et de lecture sont servies localement et chargées uniquement lorsque la
+fonction est utilisée afin d’économiser les données mobiles.
+
 ## Mise en production
 
 Suivre intégralement [la procédure de migration Appwrite](docs/APPWRITE_MIGRATION.md).
 Les permissions de production ne doivent être modifiées qu’au moment du basculement,
 après création et test du premier administrateur.
+
+Voir aussi [les fonctionnalités livrées et les limites de production](docs/RELEASE_CAISSE_QR.md).

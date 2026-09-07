@@ -89,18 +89,7 @@
     }
 
     if (authenticatedUser) {
-      const requestedEmail = String(email || "").trim().toLowerCase();
-      const sessionEmail = String(authenticatedUser.email || "").trim().toLowerCase();
-
-      if (requestedEmail === sessionEmail) {
-        try {
-          return await getStaffContext(requiredRoles, authenticatedUser);
-        } catch (error) {
-          await logout();
-          throw error;
-        }
-      }
-
+      // Une connexion explicite vérifie toujours le mot de passe saisi.
       await account.deleteSession("current");
     }
 

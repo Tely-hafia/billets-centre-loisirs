@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css" />
+  <link rel="stylesheet" href="css/app-v2.css?v=14" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
@@ -112,11 +112,12 @@
           <div class="carousel-slide slide-piscine"><span>🏊 Piscine & Toboggan Aquatique</span></div>
         </div>
 
-        <button class="carousel-nav carousel-prev" type="button" onclick="prevSlide()" aria-label="Image précédente">❮</button>
-        <button class="carousel-nav carousel-next" type="button" onclick="nextSlide()" aria-label="Image suivante">❯</button>
+        <button class="carousel-nav carousel-prev" type="button" id="galleryPrev" aria-label="Image précédente">❮</button>
+        <button class="carousel-nav carousel-next" type="button" id="galleryNext" aria-label="Image suivante">❯</button>
       </div>
 
       <div class="carousel-dots" id="carouselDots" aria-label="Choisir une image"></div>
+      <button id="galleryPause" type="button" class="btn-secondary">Mettre en pause</button>
     </section>
   </main>
 
@@ -130,47 +131,9 @@
   <script src="js/index.js?v=11"></script>
   <script src="js/pwa.js?v=1"></script>
 
+  <script src="js/gallery-images.js?v=1"></script>
+  <script src="js/gallery.js?v=1"></script>
   <script>
-    let currentSlide = 0;
-    const slides = document.querySelectorAll('.carousel-slide');
-    const track = document.getElementById('carouselTrack');
-    const dotsContainer = document.getElementById('carouselDots');
-
-    slides.forEach((_, index) => {
-      const dot = document.createElement('button');
-      dot.type = 'button';
-      dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
-      dot.setAttribute('aria-label', `Afficher l’image ${index + 1}`);
-      dot.addEventListener('click', () => goToSlide(index));
-      dotsContainer.appendChild(dot);
-    });
-
-    function updateCarousel() {
-      track.style.transform = `translateX(-${currentSlide * 100}%)`;
-      document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
-        dot.classList.toggle('active', index === currentSlide);
-      });
-    }
-
-    function nextSlide() {
-      currentSlide = (currentSlide + 1) % slides.length;
-      updateCarousel();
-    }
-
-    function prevSlide() {
-      currentSlide = (currentSlide - 1 + slides.length) % slides.length;
-      updateCarousel();
-    }
-
-    function goToSlide(index) {
-      currentSlide = index;
-      updateCarousel();
-    }
-
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setInterval(nextSlide, 5000);
-    }
-
     document.getElementById('navReservation')?.addEventListener('click', (event) => {
       event.preventDefault();
       openReservationPopup();
