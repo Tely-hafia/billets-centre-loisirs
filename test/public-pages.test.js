@@ -19,8 +19,8 @@ test("l'accueil se concentre sur la galerie Calypço", () => {
   assert.doesNotMatch(html, /Nos Expériences Uniques/);
   assert.doesNotMatch(html, /Informations Pratiques/);
   assert.doesNotMatch(html, /Accès Professionnel/);
-  assert.match(html, />Espace équipe<\/a>/);
-  assert.doesNotMatch(html.match(/<nav class="public-nav"[\s\S]*?<\/nav>/)?.[0] || "", />Administration<\/a>/);
+  assert.match(html, /class="footer-team-access"[^>]*>Espace équipe<\/a>/);
+  assert.doesNotMatch(html.match(/<nav class="public-nav"[\s\S]*?<\/nav>/)?.[0] || "", /connexion\.html|Administration|Espace équipe/);
 });
 
 test("les pages publiques proposent les accès importants en haut", () => {
@@ -31,7 +31,8 @@ test("les pages publiques proposent les accès importants en haut", () => {
     assert.match(nav, /experiences\.html/);
     assert.match(nav, /contact\.html/);
     assert.match(nav, /Réserver/);
-    assert.match(nav, /connexion\.html/);
+    assert.doesNotMatch(nav, /connexion\.html/);
+    assert.match(html, /class="footer-team-access"[^>]*href="connexion\.html"/);
   }
 });
 
