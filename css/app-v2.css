@@ -1412,6 +1412,22 @@ body.home-showcase-page .gallery-section {
   body[data-print-receipt="tickets"] #btnPrintTicketReceipt { display: none; }
 }
 
+.footer-team-access {
+  display: inline-block;
+  margin-top: 0.45rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 650;
+  text-decoration: none;
+  opacity: 0.62;
+}
+
+.footer-team-access:hover,
+.footer-team-access:focus-visible {
+  text-decoration: underline;
+  opacity: 1;
+}
+
 @media (max-width: 900px) {
   .cash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
