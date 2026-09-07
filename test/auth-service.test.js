@@ -58,6 +58,13 @@ function createAuthFixture({
           }
         ]
       };
+    },
+    async updateMembership(...args) {
+      calls.push(["updateMembership", ...args]);
+      return { $id: args[1], roles: args[2] };
+    },
+    async deleteMembership(...args) {
+      calls.push(["deleteMembership", ...args]);
     }
   };
   const window = {
@@ -161,4 +168,25 @@ test("refuse une invitation sans prénom et nom", async () => {
     () => auth.inviteStaff({ email: "nouveau@example.com", roles: ["billets"] }),
     /prénom et le nom/
   );
+});
+
+test("un administrateur peut modifier les rôles d’un autre agent", async () => {
+  const { auth, calls } = createAuthFixture({ membershipRoles: ["admin"] });
+  await auth.updateStaffRoles({ membershipId: "membership-2", roles: ["gerant", "resto", "inconnu"] });
+  const update = calls.find(([name]) => name === "updateMembership");
+  assert.equal(update[1], "calypco_staff");
+  assert.equal(update[2], "membership-2");
+  assert.deepEqual([...update[3]], ["gerant", "resto"]);
+});
+
+test("un administrateur ne peut pas retirer son propre accès", async () => {
+  const { auth, calls } = createAuthFixture({ membershipRoles: ["admin"] });
+  await assert.rejects(() => auth.deleteStaff({ membershipId: "membership-1" }), /propre accès/);
+  assert.equal(calls.some(([name]) => name === "deleteMembership"), false);
+});
+
+test("un administrateur peut retirer l’accès d’un autre agent", async () => {
+  const { auth, calls } = createAuthFixture({ membershipRoles: ["admin"] });
+  await auth.deleteStaff({ membershipId: "membership-2" });
+  assert.ok(calls.some((call) => call.join("|") === "deleteMembership|calypco_staff|membership-2"));
 });

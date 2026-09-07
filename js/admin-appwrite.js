@@ -1552,65 +1552,221 @@ function genererNumeroEtudiant(universite) {
   return `UNIV-${codeEcole}-${randomDigits}`;
 }
 
+const studentAdminState = {
+  editingId: null,
+  photoData: "",
+  results: new Map()
+};
+
+const staffRoleLabels = Object.freeze({
+  admin: "Administration",
+  gerant: "Gérant – caisse billets et jeux",
+  controle: "Contrôle des entrées",
+  resto: "Restauration",
+  billets: "Billets (ancien rôle)"
+});
+
+function getCurrentSchoolYear(date = new Date()) {
+  const start = date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1;
+  return `${start}-${start + 1}`;
+}
+
+function studentSchemaError(error) {
+  const message = String(error?.message || "");
+  return Number(error?.code) === 400 && /attribute|document structure|unknown/i.test(message);
+}
+
+function resetStudentForm() {
+  studentAdminState.editingId = null;
+  studentAdminState.photoData = "";
+  ["admin-etu-universite", "admin-etu-nom", "admin-etu-prenom", "admin-etu-email", "admin-etu-telephone", "admin-etu-naissance"].forEach((id) => {
+    if ($(id)) $(id).value = "";
+  });
+  if ($("admin-etu-annee")) $("admin-etu-annee").value = getCurrentSchoolYear();
+  if ($("admin-etu-actif")) $("admin-etu-actif").checked = true;
+  if ($("admin-etu-photo")) $("admin-etu-photo").value = "";
+  if ($("studentPhotoPreview")) $("studentPhotoPreview").innerHTML = "<span>Photo</span>";
+  if ($("student-form-title")) $("student-form-title").textContent = "Créer une carte étudiant";
+  if ($("btnCreateEtudiant")) $("btnCreateEtudiant").textContent = "Créer la carte";
+  if ($("btnCancelStudentEdit")) $("btnCancelStudentEdit").hidden = true;
+}
+
+function readStudentForm() {
+  const data = {
+    universite: $("admin-etu-universite")?.value.trim() || "",
+    nom: $("admin-etu-nom")?.value.trim() || "",
+    prenom: $("admin-etu-prenom")?.value.trim() || "",
+    date_naissance: $("admin-etu-naissance")?.value || "",
+    annee_scolaire: $("admin-etu-annee")?.value.trim() || "",
+    "e-mail": $("admin-etu-email")?.value.trim() || null,
+    telephone: $("admin-etu-telephone")?.value.trim() || null,
+    actif: !!$("admin-etu-actif")?.checked,
+    photo_data: studentAdminState.photoData || null
+  };
+  if (!data.universite || !data.nom || !data.prenom || !data.date_naissance || !/^\d{4}-\d{4}$/.test(data.annee_scolaire)) {
+    throw new Error("Nom, prénom, date de naissance, école et année scolaire au format 2026-2027 sont obligatoires.");
+  }
+  return data;
+}
+
+function compressStudentPhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith("image/")) {
+      reject(new Error("Choisissez une photo au format image."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("La photo n’a pas pu être lue."));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("La photo est illisible."));
+      image.onload = () => {
+        const size = 420;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d");
+        const crop = Math.min(image.naturalWidth, image.naturalHeight);
+        const sx = (image.naturalWidth - crop) / 2;
+        const sy = (image.naturalHeight - crop) / 2;
+        context.drawImage(image, sx, sy, crop, crop, 0, 0, size, size);
+        let result = canvas.toDataURL("image/jpeg", 0.68);
+        if (result.length > 190000) result = canvas.toDataURL("image/jpeg", 0.45);
+        if (result.length > 200000) {
+          reject(new Error("La photo reste trop lourde. Choisissez une image plus simple."));
+          return;
+        }
+        resolve(result);
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function safeStudentPhoto(value) {
+  return /^data:image\/jpeg;base64,[a-zA-Z0-9+/=]+$/.test(String(value || ""))
+    ? value
+    : "assets/icons/calypso-officiel.png";
+}
+
 async function creerEtudiantDepuisAdmin() {
-  const univEl = $("admin-etu-universite");
-  const nomEl = $("admin-etu-nom");
-  const preEl = $("admin-etu-prenom");
-  const mailEl = $("admin-etu-email");
-  const telEl = $("admin-etu-telephone");
-  const actEl = $("admin-etu-actif");
-
-  if (!univEl || !nomEl || !preEl) {
-    alert("Problème de configuration du formulaire étudiant.");
-    return;
-  }
-
-  const universite = univEl.value.trim();
-  const nom = nomEl.value.trim();
-  const prenom = preEl.value.trim();
-  const email = (mailEl?.value || "").trim();
-  const telephone = (telEl?.value || "").trim();
-  const actif = !!(actEl && actEl.checked);
-
-  if (!universite || !nom || !prenom) {
-    showAdminEtuMessage("Veuillez remplir au minimum université, nom et prénom.", "error");
-    return;
-  }
-
-  const numero = genererNumeroEtudiant(universite);
-
   try {
-    await adminDB.createDocument(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_ETUDIANTS_TABLE_ID,
-      Appwrite.ID.unique(),
-      {
+    const data = readStudentForm();
+    if (studentAdminState.editingId) {
+      const updated = await adminDB.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, studentAdminState.editingId, data);
+      studentAdminState.results.set(updated.$id, updated);
+      showAdminEtuMessage(`Carte ${updated.numero_etudiant} mise à jour.`, "success");
+      renderStudentSearchResults();
+      showStudentCard(updated);
+    } else {
+      const numero = genererNumeroEtudiant(data.universite);
+      const created = await adminDB.createDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, Appwrite.ID.unique(), {
         numero_etudiant: numero,
-        nom,
-        prenom,
-        universite,
-        "e-mail": email || null,
-        telephone: telephone || null,
-        actif,
+        ...data,
         date_creation: new Date().toISOString()
-      }
-    );
-
-    showAdminEtuMessage(
-      `Étudiant enregistré avec succès. Numéro généré : ${numero}`,
-      "success"
-    );
-
-    univEl.value = "";
-    nomEl.value = "";
-    preEl.value = "";
-    if (mailEl) mailEl.value = "";
-    if (telEl) telEl.value = "";
-    if (actEl) actEl.checked = true;
+      });
+      showAdminEtuMessage(`Étudiant enregistré. Carte générée : ${numero}`, "success");
+      showStudentCard(created);
+    }
+    resetStudentForm();
   } catch (err) {
     console.error("[ADMIN] Erreur création étudiant :", err);
-    showAdminEtuMessage("Erreur lors de l'enregistrement de l'étudiant.", "error");
+    showAdminEtuMessage(
+      studentSchemaError(err)
+        ? "Configuration Appwrite incomplète : ajoutez à etudiants les colonnes date_naissance, annee_scolaire et photo_data décrites dans la documentation du dépôt."
+        : CalypsoData.errorMessage(err, "Enregistrement de l’étudiant"),
+      "error"
+    );
   }
+}
+
+function renderStudentSearchResults() {
+  const wrapper = $("studentSearchResults");
+  const body = $("studentSearchBody");
+  if (!wrapper || !body) return;
+  const docs = [...studentAdminState.results.values()];
+  wrapper.hidden = false;
+  body.innerHTML = docs.length ? docs.map((doc) => {
+    const current = doc.actif && doc.annee_scolaire === getCurrentSchoolYear();
+    return `<tr data-student-id="${escapeHTML(doc.$id)}">
+      <td><strong>${escapeHTML(`${doc.prenom || ""} ${doc.nom || ""}`.trim())}</strong><br><small>${escapeHTML(doc.date_naissance || "Date non renseignée")}</small></td>
+      <td>${escapeHTML(doc.numero_etudiant || "-")}</td>
+      <td>${escapeHTML(doc.annee_scolaire || "À renouveler")}</td>
+      <td><span class="${current ? "badge-success" : "badge-warning"}">${current ? "Valide" : doc.actif ? "À renouveler" : "Désactivée"}</span></td>
+      <td><div class="compact-actions"><button class="btn-secondary student-card-action" type="button">Carte</button><button class="btn-secondary student-edit-action" type="button">Modifier</button><button class="btn-secondary student-toggle-action" type="button">${doc.actif ? "Désactiver" : "Activer"}</button><button class="btn-danger student-delete-action" type="button">Supprimer</button></div></td>
+    </tr>`;
+  }).join("") : '<tr><td colspan="5">Aucun étudiant trouvé.</td></tr>';
+}
+
+async function searchStudents() {
+  const mode = $("studentSearchMode")?.value || "numero";
+  const value = mode === "naissance" ? $("studentSearchDate")?.value : $("studentSearchText")?.value.trim();
+  if (!value) {
+    showAdminEtuMessage("Saisissez une valeur de recherche.", "error");
+    return;
+  }
+  const field = mode === "numero" ? "numero_etudiant" : mode === "nom" ? "nom" : "date_naissance";
+  const query = mode === "nom" ? Appwrite.Query.search(field, value) : Appwrite.Query.equal(field, value);
+  try {
+    const result = await adminDB.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, [query, Appwrite.Query.limit(10)]);
+    studentAdminState.results = new Map((result.documents || []).map((doc) => [doc.$id, doc]));
+    renderStudentSearchResults();
+    showAdminEtuMessage(`${result.documents?.length || 0} résultat(s).`, "info");
+  } catch (error) {
+    showAdminEtuMessage(
+      studentSchemaError(error) ? "La recherche nécessite les colonnes et index Appwrite indiqués dans docs/APPWRITE_MIGRATION.md." : CalypsoData.errorMessage(error, "Recherche étudiant"),
+      "error"
+    );
+  }
+}
+
+function editStudent(doc) {
+  studentAdminState.editingId = doc.$id;
+  studentAdminState.photoData = doc.photo_data || "";
+  const values = { "admin-etu-universite": doc.universite, "admin-etu-nom": doc.nom, "admin-etu-prenom": doc.prenom, "admin-etu-email": doc["e-mail"], "admin-etu-telephone": doc.telephone, "admin-etu-naissance": doc.date_naissance, "admin-etu-annee": doc.annee_scolaire || getCurrentSchoolYear() };
+  Object.entries(values).forEach(([id, value]) => { if ($(id)) $(id).value = value || ""; });
+  if ($("admin-etu-actif")) $("admin-etu-actif").checked = !!doc.actif;
+  $("studentPhotoPreview").innerHTML = doc.photo_data ? `<img src="${safeStudentPhoto(doc.photo_data)}" alt="Photo actuelle" />` : "<span>Photo</span>";
+  $("student-form-title").textContent = `Modifier ${doc.numero_etudiant}`;
+  $("btnCreateEtudiant").textContent = "Enregistrer les modifications";
+  $("btnCancelStudentEdit").hidden = false;
+  $("admin-etudiants").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function updateStudentStatus(doc) {
+  const updated = await adminDB.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, doc.$id, { actif: !doc.actif });
+  studentAdminState.results.set(updated.$id, updated);
+  renderStudentSearchResults();
+  showAdminEtuMessage(`Carte ${updated.actif ? "activée" : "désactivée"}.`, "success");
+}
+
+async function deleteStudent(doc) {
+  if (!window.confirm(`Supprimer la carte ${doc.numero_etudiant} de ${doc.prenom} ${doc.nom} ? Les anciennes ventes restent conservées.`)) return;
+  await adminDB.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_ETUDIANTS_TABLE_ID, doc.$id);
+  studentAdminState.results.delete(doc.$id);
+  renderStudentSearchResults();
+  showAdminEtuMessage("Étudiant supprimé. Les historiques de vente n’ont pas été effacés.", "success");
+}
+
+function showStudentCard(doc) {
+  if (!doc) return;
+  $("studentCardPhoto").src = safeStudentPhoto(doc.photo_data);
+  $("studentCardName").textContent = `${doc.prenom || ""} ${doc.nom || ""}`.trim();
+  $("studentCardBirth").textContent = `Né(e) le ${formatDateFR(doc.date_naissance)}`;
+  $("studentCardSchool").textContent = doc.universite || "Établissement non renseigné";
+  $("studentCardNumber").textContent = doc.numero_etudiant || "";
+  $("studentCardYear").textContent = `Valable pour la rentrée ${doc.annee_scolaire || "à renouveler"}`;
+  const qrTarget = $("studentCardQR");
+  qrTarget.textContent = "QR indisponible";
+  if (typeof window.qrcode === "function") {
+    const qr = window.qrcode(0, "M");
+    qr.addData(`CALYETU1:${JSON.stringify({ numero: doc.numero_etudiant, nom: doc.nom, prenom: doc.prenom, annee: doc.annee_scolaire })}`);
+    qr.make();
+    qrTarget.innerHTML = qr.createSvgTag({ cellSize: 3, margin: 8, scalable: true });
+  }
+  $("studentCardPanel").hidden = false;
+  $("studentCardPanel").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function creerAgentDepuisAdmin() {
@@ -1649,6 +1805,78 @@ async function creerAgentDepuisAdmin() {
   } catch (err) {
     console.error("[ADMIN] Erreur invitation agent :", err);
     showAdminAgentMessage(err?.message || "Erreur lors de l'invitation.", "error");
+  }
+}
+
+function selectedAgentRoles(container = document) {
+  return [...container.querySelectorAll(".admin-agent-role:checked")].map((element) => element.value);
+}
+
+function shareAgentAccess() {
+  const phone = ($("admin-agent-phone")?.value || "").replace(/[\s().-]/g, "").replace(/^\+/, "").replace(/^00/, "");
+  const prenom = $("admin-agent-prenom")?.value.trim() || "";
+  const nom = $("admin-agent-nom")?.value.trim() || "";
+  const roles = selectedAgentRoles();
+  if (!/^[1-9]\d{7,14}$/.test(phone) || !prenom || !nom || roles.length === 0) {
+    showAdminAgentMessage("Saisissez le numéro international, le prénom, le nom et au moins un rôle.", "error");
+    return;
+  }
+  const url = new URL("connexion.html", window.location.href).href;
+  const labels = roles.map((role) => staffRoleLabels[role] || role).join(", ");
+  const text = `Bonjour ${prenom}, voici votre lien de connexion Calypço : ${url}\nPoste(s) autorisé(s) : ${labels}.\nUtilisez vos identifiants personnels et ne partagez jamais votre mot de passe.`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  showAdminAgentMessage("Message préparé dans WhatsApp. Vérifiez le numéro avant l’envoi.", "success");
+}
+
+function renderStaffList(memberships) {
+  const target = $("staffManagementList");
+  if (!target) return;
+  const members = memberships || [];
+  if (!members.length) {
+    target.innerHTML = '<p class="empty-state">Aucun agent trouvé.</p>';
+    return;
+  }
+  target.innerHTML = members.map((member) => {
+    const isSelf = member.userId === currentAdmin?.$id || member.$id === currentAdmin?.membership?.$id;
+    const roles = CalypsoAuth.normalizeRoles(member.roles);
+    return `<article class="staff-member-card" data-membership-id="${escapeHTML(member.$id)}">
+      <div><strong>${escapeHTML(member.userName || member.userEmail || member.userPhone || "Agent sans nom")}</strong><p>${escapeHTML(member.userPhone || member.userEmail || "Compte en attente")}</p><small>${member.confirm ? "Compte actif" : "Invitation en attente"}${isSelf ? " · Votre compte" : ""}</small></div>
+      <div class="staff-role-editor">${["gerant", "controle", "resto", "admin"].map((role) => `<label><input class="staff-role-checkbox" type="checkbox" value="${role}" ${roles.includes(role) ? "checked" : ""} ${isSelf ? "disabled" : ""}/><span>${escapeHTML(staffRoleLabels[role])}</span></label>`).join("")}</div>
+      <div class="compact-actions"><button type="button" class="btn-secondary staff-save-roles" ${isSelf ? "disabled" : ""}>Enregistrer les rôles</button><button type="button" class="btn-danger staff-delete" ${isSelf ? "disabled" : ""}>Retirer l’accès</button></div>
+    </article>`;
+  }).join("");
+}
+
+async function loadStaffManagement() {
+  const target = $("staffManagementList");
+  if (target) target.innerHTML = '<p class="empty-state">Chargement…</p>';
+  try {
+    const result = await CalypsoAuth.listStaff();
+    renderStaffList(result.memberships || []);
+  } catch (error) {
+    if (target) target.innerHTML = `<p class="message message-error">${escapeHTML(error?.message || "Liste indisponible.")}</p>`;
+  }
+}
+
+async function handleStaffAction(event) {
+  const card = event.target.closest(".staff-member-card");
+  if (!card) return;
+  const membershipId = card.dataset.membershipId;
+  try {
+    if (event.target.closest(".staff-save-roles")) {
+      const roles = [...card.querySelectorAll(".staff-role-checkbox:checked")].map((input) => input.value);
+      await CalypsoAuth.updateStaffRoles({ membershipId, roles });
+      showAdminAgentMessage("Rôles de l’agent mis à jour.", "success");
+      await loadStaffManagement();
+    }
+    if (event.target.closest(".staff-delete")) {
+      if (!window.confirm("Retirer immédiatement l’accès de cet agent ?")) return;
+      await CalypsoAuth.deleteStaff({ membershipId });
+      showAdminAgentMessage("Accès de l’agent retiré.", "success");
+      await loadStaffManagement();
+    }
+  } catch (error) {
+    showAdminAgentMessage(error?.message || "Modification refusée par Appwrite.", "error");
   }
 }
 
@@ -1865,6 +2093,56 @@ document.addEventListener("DOMContentLoaded", () => {
       creerAgentDepuisAdmin();
     });
   }
+
+  if ($("admin-etu-annee") && !$("admin-etu-annee").value) {
+    $("admin-etu-annee").value = getCurrentSchoolYear();
+  }
+
+  $("admin-etu-photo")?.addEventListener("change", async (event) => {
+    try {
+      studentAdminState.photoData = await compressStudentPhoto(event.target.files?.[0]);
+      $("studentPhotoPreview").innerHTML = `<img src="${studentAdminState.photoData}" alt="Aperçu de la photo" />`;
+      showAdminEtuMessage("Photo prête à être enregistrée.", "success");
+    } catch (error) {
+      studentAdminState.photoData = "";
+      showAdminEtuMessage(error.message, "error");
+    }
+  });
+
+  $("btnCancelStudentEdit")?.addEventListener("click", resetStudentForm);
+  $("btnSearchStudents")?.addEventListener("click", searchStudents);
+  $("studentSearchText")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); searchStudents(); }
+  });
+  $("studentSearchMode")?.addEventListener("change", () => {
+    const dateMode = $("studentSearchMode").value === "naissance";
+    $("studentSearchText").hidden = dateMode;
+    $("studentSearchDate").hidden = !dateMode;
+    $("studentSearchText").placeholder = $("studentSearchMode").value === "nom" ? "Ex : Baldé" : "Ex : UNIV-HA-1234";
+  });
+  $("studentSearchBody")?.addEventListener("click", async (event) => {
+    const row = event.target.closest("tr[data-student-id]");
+    const doc = row ? studentAdminState.results.get(row.dataset.studentId) : null;
+    if (!doc) return;
+    try {
+      if (event.target.closest(".student-card-action")) showStudentCard(doc);
+      else if (event.target.closest(".student-edit-action")) editStudent(doc);
+      else if (event.target.closest(".student-toggle-action")) await updateStudentStatus(doc);
+      else if (event.target.closest(".student-delete-action")) await deleteStudent(doc);
+    } catch (error) {
+      showAdminEtuMessage(CalypsoData.errorMessage(error, "Modification étudiant"), "error");
+    }
+  });
+  $("btnPrintStudentCard")?.addEventListener("click", () => {
+    document.body.dataset.printStudentCard = "true";
+    window.print();
+    setTimeout(() => { delete document.body.dataset.printStudentCard; }, 500);
+  });
+  $("btnCloseStudentCard")?.addEventListener("click", () => { $("studentCardPanel").hidden = true; });
+
+  $("btnShareAgentAccess")?.addEventListener("click", shareAgentAccess);
+  $("btnLoadStaff")?.addEventListener("click", loadStaffManagement);
+  $("staffManagementList")?.addEventListener("click", handleStaffAction);
 
   restaurerSessionAdmin();
 });

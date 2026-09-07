@@ -1415,3 +1415,59 @@ body.home-showcase-page .gallery-section {
 @media (max-width: 900px) {
   .cash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Équipe, étudiants et carte étudiant */
+.team-management-card { margin-bottom: 1.25rem; }
+.section-heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.section-heading-row h2, .section-heading-row h3 { margin-top: 0; }
+.student-form-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.student-photo-field { display: grid; gap: 0.75rem; text-align: center; }
+.student-photo-preview { width: 180px; aspect-ratio: 1; margin: 0 auto; display: grid; place-items: center; overflow: hidden; border: 2px dashed #b8c9d9; border-radius: 24px; color: var(--v2-muted); background: linear-gradient(145deg, #f4fafb, #eef2f7); font-weight: 850; }
+.student-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.student-photo-button { display: block; cursor: pointer; }
+.student-fields { min-width: 0; }
+.student-search-bar { display: grid; grid-template-columns: minmax(170px, .65fr) minmax(220px, 1.35fr) auto; gap: .75rem; align-items: end; }
+#studentSearchResults { margin-top: 1rem; }
+.compact-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.compact-actions button { padding: .55rem .7rem; font-size: .82rem; }
+.student-card-panel { margin-top: 1.4rem; padding: 1.25rem; border-radius: 22px; background: #edf4f8; }
+.student-card { position: relative; width: min(100%, 760px); min-height: 420px; margin: 0 auto 1rem; overflow: hidden; display: grid; grid-template-columns: 180px 1fr 135px; grid-template-rows: auto 1fr; gap: 1.2rem; padding: 1.65rem; border-radius: 28px; color: #fff; background: radial-gradient(circle at 100% 0, rgba(27, 198, 184, .55), transparent 35%), linear-gradient(135deg, #0b1324 0%, #123755 72%, #0d7780 100%); box-shadow: 0 24px 55px rgba(15, 31, 55, .22); }
+.student-card::after { content: ""; position: absolute; right: -60px; bottom: -120px; width: 310px; height: 310px; border: 28px solid rgba(244, 122, 60, .35); border-radius: 50%; }
+.student-card-brand { grid-column: 1 / -1; display: flex; align-items: center; gap: .8rem; z-index: 1; }
+.student-card-brand img { width: 54px; height: 54px; object-fit: contain; border-radius: 14px; }
+.student-card-brand strong, .student-card-brand small { display: block; }
+.student-card-brand strong { font-size: 1.4rem; letter-spacing: .08em; }
+.student-card-brand small { color: #9aede6; font-weight: 850; letter-spacing: .18em; }
+.student-card-photo { width: 180px; height: 220px; object-fit: cover; border: 4px solid rgba(255,255,255,.82); border-radius: 22px; z-index: 1; }
+.student-card-details { align-self: center; z-index: 1; }
+.student-card-details h3 { margin: 0 0 .7rem; color: #fff; font-size: clamp(1.45rem, 3vw, 2.25rem); }
+.student-card-details p { margin: .35rem 0; color: #d8e8ef; }
+.student-card-details strong, .student-card-details small { display: block; margin-top: 1rem; }
+.student-card-details strong { color: #ffb06c; font-size: 1.2rem; letter-spacing: .08em; }
+.student-card-qr { align-self: end; padding: .55rem; border-radius: 14px; color: #111; background: #fff; z-index: 1; }
+.student-card-qr svg { display: block; width: 100%; height: auto; }
+.technical-access-panel { margin-top: 1rem; padding: 1rem; border: 1px solid var(--v2-line); border-radius: 16px; background: #f8fafc; }
+.technical-access-panel summary { cursor: pointer; color: var(--v2-ink); font-weight: 850; }
+.staff-management-list { display: grid; gap: .8rem; margin-top: 1rem; }
+.staff-member-card { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(280px, 1.4fr) auto; gap: 1rem; align-items: center; padding: 1rem; border: 1px solid var(--v2-line); border-radius: 16px; background: #f8fafc; }
+.staff-member-card p, .staff-member-card small { margin: .25rem 0 0; color: var(--v2-muted); }
+.staff-role-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem .8rem; }
+.staff-role-editor label { display: flex; gap: .45rem; align-items: flex-start; font-size: .88rem; }
+
+@media (max-width: 800px) {
+  .student-form-grid, .staff-member-card { grid-template-columns: 1fr; }
+  .student-photo-field { max-width: 300px; margin: 0 auto; }
+  .student-search-bar { grid-template-columns: 1fr; }
+  .student-card { grid-template-columns: 115px 1fr; min-height: 0; padding: 1rem; gap: .85rem; border-radius: 20px; }
+  .student-card-photo { width: 115px; height: 150px; }
+  .student-card-details h3 { font-size: 1.25rem; }
+  .student-card-qr { grid-column: 1 / -1; width: 125px; justify-self: end; }
+  .section-heading-row { flex-direction: column; }
+}
+
+@media print {
+  body[data-print-student-card="true"] * { visibility: hidden; }
+  body[data-print-student-card="true"] #studentCard,
+  body[data-print-student-card="true"] #studentCard * { visibility: visible; }
+  body[data-print-student-card="true"] #studentCard { position: absolute; left: 0; top: 0; width: 100%; max-width: none; box-shadow: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

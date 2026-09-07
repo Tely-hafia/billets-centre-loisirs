@@ -1393,6 +1393,15 @@ async function validerBilletEntree(numeroBillet, numeroEtu, tarifChoisi) {
   ticketInput?.focus();
 }
 
+function getCurrentStudentSchoolYear(date = new Date()) {
+  const start = date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1;
+  return `${start}-${start + 1}`;
+}
+
+function isStudentCardCurrent(student) {
+  return Boolean(student?.actif && student?.annee_scolaire === getCurrentStudentSchoolYear());
+}
+
 async function verifierTarifEtudiantAvantValidation(numeroEtu) {
   if (!numeroEtu) {
     showResult(
@@ -1416,14 +1425,13 @@ async function verifierTarifEtudiantAvantValidation(numeroEtu) {
       APPWRITE_ETUDIANTS_TABLE_ID,
       [
         Appwrite.Query.equal("numero_etudiant", numeroEtu),
-        Appwrite.Query.equal("actif", true),
         Appwrite.Query.limit(1)
       ]
     );
 
-    if (!etuRes.documents || etuRes.documents.length === 0) {
+    if (!etuRes.documents || etuRes.documents.length === 0 || !isStudentCardCurrent(etuRes.documents[0])) {
       showResult(
-        "Numéro étudiant introuvable ou inactif. L'étudiant doit être enregistré par l'administrateur.",
+        `Carte étudiante introuvable, désactivée ou non renouvelée pour ${getCurrentStudentSchoolYear()}.`,
         "error"
       );
       return false;
@@ -1615,7 +1623,6 @@ async function verifierEtudiant() {
       APPWRITE_ETUDIANTS_TABLE_ID,
       [
         Appwrite.Query.equal("numero_etudiant", numeroEtu),
-        Appwrite.Query.equal("actif", true),
         Appwrite.Query.limit(1)
       ]
     );
@@ -1628,6 +1635,12 @@ async function verifierEtudiant() {
     }
 
     const etu = res.documents[0];
+
+    if (!isStudentCardCurrent(etu)) {
+      zoneInfo.classList.add("error");
+      zoneInfo.textContent = `Carte désactivée ou non renouvelée pour la rentrée ${getCurrentStudentSchoolYear()}.`;
+      return;
+    }
 
     lastVerifiedEtudiant = numeroEtu;
 

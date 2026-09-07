@@ -66,3 +66,38 @@ permissions par table.
 En cas d’échec avant la suppression de l’ancienne table, rétablir temporairement la
 version Git précédente et les permissions sauvegardées. Ne jamais maintenir les
 permissions publiques plus longtemps que nécessaire.
+
+## 6. Carte étudiant et recherche (obligatoire)
+
+Dans la table `etudiants`, conserver les colonnes existantes et ajouter :
+
+| Colonne | Type Appwrite | Taille | Obligatoire | Valeur par défaut |
+|---|---|---:|---|---|
+| `date_naissance` | String | 10 | oui | aucune |
+| `annee_scolaire` | String | 9 | oui | aucune |
+| `photo_data` | String | 200000 | non | null |
+
+Formats attendus : `date_naissance` en `AAAA-MM-JJ` et `annee_scolaire` en
+`2026-2027`. La photo est réduite dans le navigateur avant enregistrement.
+
+Créer également ces index :
+
+1. index **unique** sur `numero_etudiant` ;
+2. index **fulltext** sur `nom` pour la recherche ;
+3. index **key** sur `date_naissance` ;
+4. index **key** sur `annee_scolaire` et `actif` si Appwrite accepte cet index
+   composé dans le projet.
+
+Une ancienne carte sans `annee_scolaire` n’ouvre plus droit au tarif étudiant :
+l’administrateur doit la renouveler pour la rentrée courante.
+
+## 7. Gestion des membres de l’équipe
+
+L’administrateur qui gère les agents doit être membre confirmé de
+`calypco_staff` avec les rôles Appwrite `owner` et `admin`. Le rôle métier
+`admin` seul permet d’ouvrir l’écran, mais Appwrite exige `owner` pour modifier
+ou supprimer les adhésions de l’équipe.
+
+Le bouton WhatsApp prépare seulement le message et le lien vers
+`connexion.html`. Pour un nouvel agent, créer d’abord l’accès sécurisé avec son
+adresse e-mail technique ; l’application ne conserve jamais le mot de passe.
