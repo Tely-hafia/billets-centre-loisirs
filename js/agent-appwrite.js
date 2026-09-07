@@ -156,6 +156,13 @@ function getDayKey(value = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function isPreviousCashSession(session = currentCashSession) {
+  return Boolean(
+    session &&
+    getDayKey(session.ouverture || session.$createdAt) !== getDayKey()
+  );
+}
+
 function showCashMessage(text, type = "info") {
   const element = $("cash-register-message");
   if (!element) return;
@@ -205,6 +212,10 @@ async function calculerSyntheseCaisse(session) {
 
   return {
     especes: Number(session.fonds_depart || 0) + especesVentes + ajouts - sorties,
+    fonds: Number(session.fonds_depart || 0),
+    ventes: especesVentes,
+    ajouts,
+    sorties,
     operations: new Set(ventes.map((sale) => sale.id)).size,
     mouvementsEnAttente: (movementsResult.documents || []).filter((item) => item.statut === "EN_ATTENTE").length
   };
@@ -216,6 +227,8 @@ function renderCashRegister() {
   const activeZone = $("cash-active-zone");
   const status = $("cash-register-status");
   const badge = $("cash-session-badge");
+  const closePanel = document.querySelector(".cash-close-panel");
+  const closeSummary = $("cashCloseSummary");
   const canCash = currentAgent?.profileComplete && (isGerantAgent() || isRestoAgent()) && currentMode !== "controle";
 
   if (!card) return;
@@ -234,8 +247,17 @@ function renderCashRegister() {
     return;
   }
 
-  status.textContent = `Ouverte le ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} — fonds : ${formatMontantGNF(currentCashSession.fonds_depart)}.`;
+  const previous = isPreviousCashSession();
+  status.textContent = previous
+    ? `Caisse du ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} encore ouverte. Saisissez les espèces réellement remises, puis clôturez-la avant toute nouvelle vente.`
+    : `Ouverte le ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} — fonds saisi : ${formatMontantGNF(currentCashSession.fonds_depart)}.`;
+  if (closePanel && previous) closePanel.open = true;
+  if (closeSummary) {
+    closeSummary.textContent = previous ? "Fermer la caisse précédente" : "Clôturer ma caisse";
+  }
   if (currentCashSummary) {
+    $("cashOpeningRecorded").textContent = formatMontantGNF(currentCashSummary.fonds);
+    $("cashSalesRecorded").textContent = formatMontantGNF(currentCashSummary.ventes);
     $("cashExpected").textContent = formatMontantGNF(currentCashSummary.especes);
     $("cashOperations").textContent = String(currentCashSummary.operations);
   }
@@ -263,6 +285,12 @@ async function chargerSessionCaisse() {
     if (request !== cashRequest) return;
     currentCashSession = session;
     currentCashSummary = summary;
+    if (isPreviousCashSession(session)) {
+      ticketPanier = [];
+      ticketEnApercu = null;
+      renderTicketPreview();
+      renderTicketCart();
+    }
     renderCashRegister();
     if ($("btnOpenCash")) $("btnOpenCash").disabled = false;
     showCashMessage(session && getDayKey(session.ouverture) !== getDayKey()
@@ -290,7 +318,15 @@ async function ouvrirCaisse() {
       agent_id: currentAgent.$id, agent_nom: currentAgent.nom, poste: getCashPoste(),
       statut: "OUVERTE", ouverture: new Date().toISOString(), fonds_depart: fonds
     });
-    currentCashSummary = { especes: fonds, operations: 0, mouvementsEnAttente: 0 };
+    currentCashSummary = {
+      especes: fonds,
+      fonds,
+      ventes: 0,
+      ajouts: 0,
+      sorties: 0,
+      operations: 0,
+      mouvementsEnAttente: 0
+    };
     renderCashRegister();
     showCashMessage("Caisse enregistrée dans Appwrite. Vous pouvez commencer.", "success");
   } catch (error) {
@@ -313,6 +349,7 @@ async function verifierCaisseAvantVente() {
 function ajouterRecetteCaisse(montant, operations = 1) {
   if (!currentCashSummary) return;
   currentCashSummary.especes += Number(montant);
+  currentCashSummary.ventes += Number(montant);
   currentCashSummary.operations += operations;
   renderCashRegister();
 }
@@ -878,7 +915,9 @@ function renderTicketCart() {
     $("ticketCartCount").textContent = `${ticketPanier.length} billet${ticketPanier.length > 1 ? "s" : ""}`;
   }
   if ($("ticketCartTotal")) $("ticketCartTotal").textContent = formatMontantGNF(total);
-  if ($("btnValidateTicketCart")) $("btnValidateTicketCart").disabled = ticketPanier.length === 0;
+  if ($("btnValidateTicketCart")) {
+    $("btnValidateTicketCart").disabled = ticketPanier.length === 0 || isPreviousCashSession();
+  }
 
   if (container) {
     container.replaceChildren();
@@ -942,6 +981,13 @@ async function verifierBillet() {
 
   if (!currentCashSession) {
     showResult("Ouvrez votre caisse avant d’ajouter un billet.", "error");
+    return;
+  }
+
+  if (isPreviousCashSession()) {
+    const closePanel = document.querySelector(".cash-close-panel");
+    if (closePanel) closePanel.open = true;
+    showResult("Fermez la caisse précédente avant de rechercher un nouveau billet.", "error");
     return;
   }
 
@@ -1173,7 +1219,8 @@ async function validerPanierBillets() {
     }
     renderTicketCart();
     console.error("[BILLETS] Panier partiellement enregistré :", error);
-    showResult(`${completed} billet(s) enregistré(s). ${error?.message || "La suite du panier a été arrêtée."}`, "error");
+    const detail = error?.message || "La suite du panier a été arrêtée.";
+    showResult(completed ? `${completed} billet(s) enregistré(s). ${detail}` : detail, "error");
   } finally {
     ticketSaleBusy = false;
     resetButtonLoading(button);
@@ -2093,7 +2140,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnOpenCash) btnOpenCash.addEventListener("click", ouvrirCaisse);
   $("btnCloseCash")?.addEventListener("click", cloturerCaisse);
-  $("btnPrintTicketReceipt")?.addEventListener("click", () => { document.body.dataset.printReceipt = "tickets"; window.print(); delete document.body.dataset.printReceipt; });
+  const fermerRecuBillets = () => {
+    const receipt = $("ticketReceipt");
+    if (receipt) receipt.hidden = true;
+    delete document.body.dataset.printReceipt;
+  };
+  $("btnCloseTicketReceipt")?.addEventListener("click", fermerRecuBillets);
+  $("btnPrintTicketReceipt")?.addEventListener("click", () => {
+    document.body.dataset.printReceipt = "tickets";
+    window.print();
+  });
+  window.addEventListener("afterprint", fermerRecuBillets);
   CalypsoAccess.init({ allowed: () => Boolean(currentAgent && isControleAgent()), agent: () => currentAgent });
 
   if (btnModeBillets) {

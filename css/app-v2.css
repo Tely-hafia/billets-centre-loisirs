@@ -676,9 +676,10 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 .cash-register-card { border-top: 4px solid #0f9f9a; }
 .cash-register-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
 .cash-open-form { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 1rem; align-items: end; }
-.cash-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0; }
+.cash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0; }
 .cash-kpis article { padding: .9rem; border: 1px solid #dce5ee; border-radius: 14px; background: #f8fafc; }
 .cash-kpis span { display: block; margin-bottom: .25rem; color: #64748b; font-size: .82rem; }
+.cash-kpis span small { display: block; font-size: .72rem; font-weight: 400; }
 .cash-kpis strong { color: #0b1324; font-size: 1.05rem; }
 .cash-details { margin-top: .8rem; padding: .9rem; border: 1px solid #dce5ee; border-radius: 14px; }
 .cash-details summary { cursor: pointer; font-weight: 800; color: #0f314d; }
@@ -966,6 +967,10 @@ body.home-showcase-page .gallery-section {
 #qrVideo { width: 100%; max-width: 560px; margin: 12px 0; border-radius: 12px; }
 .cash-close-panel { margin-top: 12px; }
 .cash-close-panel summary { cursor: pointer; padding: 12px 0; }
+.ticket-receipt-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.ticket-receipt-header h3 { margin: 0; }
+.receipt-close { width: 42px; height: 42px; border: 0; border-radius: 50%; background: #eef2f7; color: #9f1239; font-size: 1.7rem; line-height: 1; cursor: pointer; }
+.receipt-close:hover, .receipt-close:focus-visible { background: #ffe4e6; outline: 3px solid rgba(15, 159, 168, .22); }
 .photo-slide { padding: 0 !important; overflow: hidden; }
 .photo-slide img { display: block; width: 100%; height: 100%; object-fit: contain; background: #0b1324; }
 #carouselTrack, .gallery-carousel { min-width: 0; max-width: 100%; }
@@ -977,5 +982,10 @@ body.home-showcase-page .gallery-section {
   body[data-print-receipt="tickets"] #ticketReceipt,
   body[data-print-receipt="tickets"] #ticketReceipt * { visibility: visible; }
   body[data-print-receipt="tickets"] #ticketReceipt { position: absolute; left: 0; top: 0; width: 100%; border: 0; }
+  body[data-print-receipt="tickets"] .receipt-close,
   body[data-print-receipt="tickets"] #btnPrintTicketReceipt { display: none; }
+}
+
+@media (max-width: 900px) {
+  .cash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

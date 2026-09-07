@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=14" />
+  <link rel="stylesheet" href="css/app-v2.css?v=15" />
 </head>
 
 <body class="staff-page">
@@ -137,11 +137,13 @@
 
       <div id="cash-active-zone" style="display:none;">
         <div class="cash-kpis">
-          <article><span>Espèces attendues</span><strong id="cashExpected">0 GNF</strong></article>
+          <article><span>Fonds saisi à l’ouverture</span><strong id="cashOpeningRecorded">0 GNF</strong></article>
+          <article><span>Ventes enregistrées</span><strong id="cashSalesRecorded">0 GNF</strong></article>
+          <article><span>Espèces attendues <small>(fonds + ventes ± mouvements)</small></span><strong id="cashExpected">0 GNF</strong></article>
           <article><span>Opérations</span><strong id="cashOperations">0</strong></article>
         </div>
         <details class="cash-close-panel">
-          <summary>Clôturer ma caisse</summary>
+          <summary id="cashCloseSummary">Clôturer ma caisse</summary>
           <div class="form-row"><label for="cashActual">Espèces réellement remises</label>
             <input id="cashActual" type="number" min="0" step="1" inputmode="numeric" /></div>
           <div class="form-row"><label for="cashCloseComment">Commentaire (obligatoire en cas d’écart)</label>
@@ -299,7 +301,11 @@
 
       <div id="result-message" class="result" style="display:none;"></div>
       <section id="ticketReceipt" class="ticket-receipt" hidden aria-label="Reçu de vente">
-        <h3>Calypço — Reçu billets</h3><p id="ticketReceiptDate"></p>
+        <div class="ticket-receipt-header">
+          <h3>Calypço — Reçu billets</h3>
+          <button id="btnCloseTicketReceipt" type="button" class="receipt-close" aria-label="Fermer le reçu" title="Fermer">×</button>
+        </div>
+        <p id="ticketReceiptDate"></p>
         <ul id="ticketReceiptLines"></ul>
         <strong id="ticketReceiptTotal"></strong><p id="ticketReceiptPayment"></p>
         <div id="ticketReceiptQR" class="receipt-qr"></div>
@@ -487,7 +493,7 @@
 <!-- Script agent -->
 <script src="js/receipts.js?v=1"></script>
 <script src="js/access-control.js?v=1"></script>
-<script src="js/agent-appwrite.js?v=16"></script>
+  <script src="js/agent-appwrite.js?v=17"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>
