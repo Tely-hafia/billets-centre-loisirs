@@ -14,6 +14,8 @@ test("l'accueil se concentre sur la galerie Calypço", () => {
 
   assert.match(html, /Découvrez le Calypço/);
   assert.match(html, /id="carouselTrack"/);
+  assert.match(html, /Événements à venir/);
+  assert.match(html, /upcoming-event-card/);
   assert.doesNotMatch(html, /Nos Expériences Uniques/);
   assert.doesNotMatch(html, /Informations Pratiques/);
   assert.doesNotMatch(html, /Accès Professionnel/);

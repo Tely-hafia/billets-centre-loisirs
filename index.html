@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=14" />
+  <link rel="stylesheet" href="css/app-v2.css?v=16" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
@@ -118,6 +118,35 @@
 
       <div class="carousel-dots" id="carouselDots" aria-label="Choisir une image"></div>
       <button id="galleryPause" type="button" class="btn-secondary">Mettre en pause</button>
+    </section>
+
+    <section class="upcoming-events-section" aria-labelledby="upcomingEventsTitle">
+      <div class="upcoming-events-heading">
+        <div>
+          <p class="section-kicker">🎉 Agenda</p>
+          <h2 id="upcomingEventsTitle">Événements à venir</h2>
+          <p>Les prochains rendez-vous du Calypço seront annoncés ici.</p>
+        </div>
+        <span class="upcoming-events-status"><span aria-hidden="true"></span> Programmation à venir</span>
+      </div>
+
+      <article class="upcoming-event-card">
+        <div class="upcoming-event-visual" aria-hidden="true">
+          <span>📅</span>
+          <small>Prochainement</small>
+        </div>
+        <div class="upcoming-event-content">
+          <p class="upcoming-event-label">Restez connectés</p>
+          <h3>De nouveaux événements se préparent</h3>
+          <p>Tournois gaming, journées piscine, défis et soirées spéciales : les dates confirmées apparaîtront dans cet espace.</p>
+          <div class="upcoming-event-tags" aria-label="Types d’événements">
+            <span>🎮 Gaming</span>
+            <span>🏊 Piscine</span>
+            <span>🎯 Défis</span>
+          </div>
+        </div>
+        <a class="upcoming-event-action" href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o%2C%20je%20souhaite%20conna%C3%AEtre%20les%20prochains%20%C3%A9v%C3%A9nements" target="_blank" rel="noopener">Être informé sur WhatsApp <span aria-hidden="true">→</span></a>
+      </article>
     </section>
   </main>
 
