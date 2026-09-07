@@ -138,6 +138,12 @@ function buildAgentAlertCounts() {
       add(doc, "date_vente");
     }
   });
+  adminDashboardState.cashSessionDocs.forEach((session) => {
+    const sessionDay = getDocumentDay(session.ouverture || session.$createdAt);
+    if (session.statut === "OUVERTE" && sessionDay !== getDocumentDay(new Date())) {
+      add(session, "ouverture");
+    }
+  });
   return counts;
 }
 
@@ -364,6 +370,18 @@ function detectDashboardAlerts() {
       level: "high",
       title: `${missingSaleAgents} ligne(s) de vente sans agent identifié`,
       detail: "La vente doit être rattachée à une session authentifiée."
+    });
+  }
+
+  const previousOpenSessions = adminDashboardState.cashSessionDocs.filter((session) =>
+    session.statut === "OUVERTE" &&
+    getDocumentDay(session.ouverture || session.$createdAt) !== getDocumentDay(new Date())
+  );
+  if (previousOpenSessions.length > 0) {
+    alerts.push({
+      level: "high",
+      title: `${previousOpenSessions.length} ancienne(s) caisse(s) non clôturée(s)`,
+      detail: `Elles ne bloquent plus la caisse du jour, mais doivent être régularisées dans l’historique.${agentList(previousOpenSessions.map((session) => session.agent_id))}`
     });
   }
 

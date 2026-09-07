@@ -31,6 +31,7 @@ test("le journal affiche une ligne synthétique par agent et par jour", () => {
   assert.match(source, /buildAgentAlertCounts/);
   assert.match(source, /cashSessionDocs/);
   assert.match(source, /Choisissez une période pour afficher le journal/);
+  assert.match(source, /ancienne\(s\) caisse\(s\) non clôturée\(s\)/);
 });
 
 test("les billets inutilisés chargés restent modifiables et supprimables", () => {

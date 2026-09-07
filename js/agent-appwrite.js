@@ -147,22 +147,6 @@ function getCashPoste() {
   return currentMode === "resto" ? "RESTO" : "GERANT";
 }
 
-function getDayKey(value = new Date()) {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function isPreviousCashSession(session = currentCashSession) {
-  return Boolean(
-    session &&
-    getDayKey(session.ouverture || session.$createdAt) !== getDayKey()
-  );
-}
-
 function showCashMessage(text, type = "info") {
   const element = $("cash-register-message");
   if (!element) return;
@@ -227,7 +211,6 @@ function renderCashRegister() {
   const activeZone = $("cash-active-zone");
   const status = $("cash-register-status");
   const badge = $("cash-session-badge");
-  const closePanel = document.querySelector(".cash-close-panel");
   const closeSummary = $("cashCloseSummary");
   const canCash = currentAgent?.profileComplete && (isGerantAgent() || isRestoAgent()) && currentMode !== "controle";
 
@@ -247,14 +230,8 @@ function renderCashRegister() {
     return;
   }
 
-  const previous = isPreviousCashSession();
-  status.textContent = previous
-    ? `Caisse du ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} encore ouverte. Saisissez les espèces réellement remises, puis clôturez-la avant toute nouvelle vente.`
-    : `Ouverte le ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} — fonds saisi : ${formatMontantGNF(currentCashSession.fonds_depart)}.`;
-  if (closePanel && previous) closePanel.open = true;
-  if (closeSummary) {
-    closeSummary.textContent = previous ? "Fermer la caisse précédente" : "Clôturer ma caisse";
-  }
+  status.textContent = `Ouverte le ${new Date(currentCashSession.ouverture).toLocaleString("fr-FR")} — fonds saisi : ${formatMontantGNF(currentCashSession.fonds_depart)}.`;
+  if (closeSummary) closeSummary.textContent = "Clôturer ma caisse";
   if (currentCashSummary) {
     $("cashOpeningRecorded").textContent = formatMontantGNF(currentCashSummary.fonds);
     $("cashSalesRecorded").textContent = formatMontantGNF(currentCashSummary.ventes);
@@ -278,23 +255,17 @@ async function chargerSessionCaisse() {
       Appwrite.Query.equal("agent_id", currentAgent.$id),
       Appwrite.Query.equal("poste", poste),
       Appwrite.Query.equal("statut", "OUVERTE"),
-      Appwrite.Query.orderDesc("$createdAt"), Appwrite.Query.limit(1)
+      Appwrite.Query.orderDesc("$createdAt"), Appwrite.Query.limit(100)
     ]);
-    const session = result.documents?.[0] || null;
+    const openSessions = result.documents || [];
+    const session = openSessions[0] || null;
     const summary = session ? await calculerSyntheseCaisse(session) : null;
     if (request !== cashRequest) return;
     currentCashSession = session;
     currentCashSummary = summary;
-    if (isPreviousCashSession(session)) {
-      ticketPanier = [];
-      ticketEnApercu = null;
-      renderTicketPreview();
-      renderTicketCart();
-    }
     renderCashRegister();
     if ($("btnOpenCash")) $("btnOpenCash").disabled = false;
-    showCashMessage(session && getDayKey(session.ouverture) !== getDayKey()
-      ? "Une caisse précédente est encore ouverte. Clôturez-la avant de commencer la journée." : "");
+    showCashMessage("");
   } catch (error) {
     if (request !== cashRequest) return;
     showCashMessage(CalypsoData.errorMessage(error, "Lecture de la caisse") + " Rechargez la page après correction.", "error");
@@ -313,8 +284,7 @@ async function ouvrirCaisse() {
   const button = $("btnOpenCash");
   setButtonLoading(button, "Ouverture…");
   try {
-    const id = await CalypsoData.eventId("cash", currentAgent.$id + ":" + getCashPoste() + ":" + getDayKey());
-    currentCashSession = await db.createDocument(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, id, {
+    currentCashSession = await db.createDocument(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, Appwrite.ID.unique(), {
       agent_id: currentAgent.$id, agent_nom: currentAgent.nom, poste: getCashPoste(),
       statut: "OUVERTE", ouverture: new Date().toISOString(), fonds_depart: fonds
     });
@@ -327,12 +297,13 @@ async function ouvrirCaisse() {
       operations: 0,
       mouvementsEnAttente: 0
     };
+    $("cashOpeningFloat").value = "";
     renderCashRegister();
     showCashMessage("Caisse enregistrée dans Appwrite. Vous pouvez commencer.", "success");
   } catch (error) {
     if (Number(error?.code) === 409) {
       await chargerSessionCaisse();
-      showCashMessage("Une caisse existe déjà pour ce poste aujourd’hui. Si elle est clôturée, contactez l’administrateur.", "error");
+      showCashMessage("Une caisse est déjà ouverte pour ce poste.", "error");
     } else showCashMessage(CalypsoData.errorMessage(error, "Ouverture de caisse"), "error");
   } finally {
     cashBusy = false;
@@ -344,7 +315,6 @@ async function verifierCaisseAvantVente() {
   if (!currentCashSession) throw new Error("Ouvrez votre caisse.");
   const session = await db.getDocument(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, currentCashSession.$id);
   if (session.agent_id !== currentAgent.$id || session.poste !== getCashPoste() || session.statut !== "OUVERTE") throw new Error("Cette caisse n’est plus ouverte pour votre poste.");
-  if (getDayKey(session.ouverture) !== getDayKey()) throw new Error("Clôturez la caisse précédente avant de vendre.");
 }
 function ajouterRecetteCaisse(montant, operations = 1) {
   if (!currentCashSummary) return;
@@ -356,10 +326,19 @@ function ajouterRecetteCaisse(montant, operations = 1) {
 
 async function cloturerCaisse() {
   if (cashBusy || ticketSaleBusy || restoSaleBusy || !currentCashSession) return;
+  let openSessions = [];
   cashBusy = true;
   try {
-    const session = await db.getDocument(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, currentCashSession.$id);
-    if (session.statut !== "OUVERTE" || session.agent_id !== currentAgent.$id) throw new Error("Cette caisse n’est plus ouverte pour votre compte.");
+    const result = await db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_SESSIONS_CAISSE_TABLE_ID, [
+      Appwrite.Query.equal("agent_id", currentAgent.$id),
+      Appwrite.Query.equal("poste", getCashPoste()),
+      Appwrite.Query.equal("statut", "OUVERTE"),
+      Appwrite.Query.orderDesc("$createdAt"),
+      Appwrite.Query.limit(100)
+    ]);
+    openSessions = result.documents || [];
+    const session = openSessions.find((candidate) => candidate.$id === currentCashSession.$id);
+    if (!session) throw new Error("Cette caisse n’est plus ouverte pour votre compte.");
     currentCashSummary = await calculerSyntheseCaisse(currentCashSession);
   } catch (error) {
     showCashMessage(CalypsoData.errorMessage(error, "Vérification avant clôture"), "error");
@@ -391,14 +370,28 @@ async function cloturerCaisse() {
   cashBusy = true;
   setButtonLoading(button, "Clôture…");
   try {
+    const closingTime = new Date().toISOString();
     const closingData = {
       statut: "CLOTUREE",
-      fermeture: new Date().toISOString(),
+      fermeture: closingTime,
       especes_attendues: currentCashSummary.especes,
       especes_declarees: especesDeclarees,
       ecart,
       commentaire
     };
+    const legacySessions = openSessions.filter((session) => session.$id !== currentCashSession.$id);
+    for (const session of legacySessions) {
+      await db.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+        session.$id,
+        {
+          statut: "CLOTUREE",
+          fermeture: closingTime,
+          commentaire: "Régularisation automatique d’une ancienne session restée ouverte."
+        }
+      );
+    }
     await db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_SESSIONS_CAISSE_TABLE_ID,
@@ -407,10 +400,12 @@ async function cloturerCaisse() {
       );
     currentCashSession = null;
     currentCashSummary = null;
+    $("cashOpeningFloat").value = "";
     $("cashActual").value = "";
     $("cashCloseComment").value = "";
     renderCashRegister();
-    showCashMessage(`Caisse clôturée. Écart : ${formatMontantGNF(ecart)}.`, ecart === 0 ? "success" : "error");
+    const cleanup = legacySessions.length ? ` ${legacySessions.length} ancienne(s) session(s) ouverte(s) ont aussi été clôturées et conservées dans l’historique.` : "";
+    showCashMessage(`Caisse clôturée. Écart : ${formatMontantGNF(ecart)}.${cleanup}`, ecart === 0 ? "success" : "error");
   } catch (error) {
     console.error("[CAISSE] Clôture impossible :", error);
     showCashMessage(CalypsoData.errorMessage(error, "Clôture de caisse"), "error");
@@ -915,9 +910,7 @@ function renderTicketCart() {
     $("ticketCartCount").textContent = `${ticketPanier.length} billet${ticketPanier.length > 1 ? "s" : ""}`;
   }
   if ($("ticketCartTotal")) $("ticketCartTotal").textContent = formatMontantGNF(total);
-  if ($("btnValidateTicketCart")) {
-    $("btnValidateTicketCart").disabled = ticketPanier.length === 0 || isPreviousCashSession();
-  }
+  if ($("btnValidateTicketCart")) $("btnValidateTicketCart").disabled = ticketPanier.length === 0;
 
   if (container) {
     container.replaceChildren();
@@ -981,13 +974,6 @@ async function verifierBillet() {
 
   if (!currentCashSession) {
     showResult("Ouvrez votre caisse avant d’ajouter un billet.", "error");
-    return;
-  }
-
-  if (isPreviousCashSession()) {
-    const closePanel = document.querySelector(".cash-close-panel");
-    if (closePanel) closePanel.open = true;
-    showResult("Fermez la caisse précédente avant de rechercher un nouveau billet.", "error");
     return;
   }
 
