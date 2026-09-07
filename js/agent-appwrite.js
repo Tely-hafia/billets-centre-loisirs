@@ -147,6 +147,33 @@ function getCashPoste() {
   return currentMode === "resto" ? "RESTO" : "GERANT";
 }
 
+const CASH_CLOSED_CUTOFF_PREFIX = "calypso_cash_closed_through";
+
+function getCashCutoffKey(poste = getCashPoste()) {
+  return `${CASH_CLOSED_CUTOFF_PREFIX}:${currentAgent?.$id || "anonymous"}:${poste}`;
+}
+
+function getCashClosedThrough(poste = getCashPoste()) {
+  try {
+    return Number(localStorage.getItem(getCashCutoffKey(poste)) || 0);
+  } catch (_) {
+    return 0;
+  }
+}
+
+function markCashClosedThrough(closingTime, poste = getCashPoste()) {
+  try {
+    localStorage.setItem(getCashCutoffKey(poste), String(new Date(closingTime).getTime()));
+  } catch (_) {
+    // La clôture Appwrite reste la source de vérité si le stockage local est indisponible.
+  }
+}
+
+function getCashSessionTimestamp(session) {
+  const timestamp = new Date(session?.$createdAt || session?.ouverture || 0).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
 function showCashMessage(text, type = "info") {
   const element = $("cash-register-message");
   if (!element) return;
@@ -255,10 +282,11 @@ async function chargerSessionCaisse() {
       Appwrite.Query.equal("agent_id", currentAgent.$id),
       Appwrite.Query.equal("poste", poste),
       Appwrite.Query.equal("statut", "OUVERTE"),
-      Appwrite.Query.orderDesc("$createdAt"), Appwrite.Query.limit(100)
+      Appwrite.Query.orderDesc("$createdAt"), Appwrite.Query.limit(25)
     ]);
     const openSessions = result.documents || [];
-    const session = openSessions[0] || null;
+    const closedThrough = getCashClosedThrough(poste);
+    const session = openSessions.find((candidate) => getCashSessionTimestamp(candidate) > closedThrough) || null;
     const summary = session ? await calculerSyntheseCaisse(session) : null;
     if (request !== cashRequest) return;
     currentCashSession = session;
@@ -334,7 +362,7 @@ async function cloturerCaisse() {
       Appwrite.Query.equal("poste", getCashPoste()),
       Appwrite.Query.equal("statut", "OUVERTE"),
       Appwrite.Query.orderDesc("$createdAt"),
-      Appwrite.Query.limit(100)
+      Appwrite.Query.limit(25)
     ]);
     openSessions = result.documents || [];
     const session = openSessions.find((candidate) => candidate.$id === currentCashSession.$id);
@@ -379,9 +407,26 @@ async function cloturerCaisse() {
       ecart,
       commentaire
     };
-    const legacySessions = openSessions.filter((session) => session.$id !== currentCashSession.$id);
-    for (const session of legacySessions) {
-      await db.updateDocument(
+    const closedSessionId = currentCashSession.$id;
+    const cashPoste = getCashPoste();
+    const legacySessions = openSessions.filter((session) => session.$id !== closedSessionId);
+    await db.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_SESSIONS_CAISSE_TABLE_ID,
+        closedSessionId,
+        closingData
+      );
+    markCashClosedThrough(closingTime, cashPoste);
+    currentCashSession = null;
+    currentCashSummary = null;
+    $("cashOpeningFloat").value = "";
+    $("cashActual").value = "";
+    $("cashCloseComment").value = "";
+    renderCashRegister();
+    showCashMessage(`Caisse clôturée. Écart : ${formatMontantGNF(ecart)}. Vous pouvez ouvrir une nouvelle caisse.`, ecart === 0 ? "success" : "error");
+
+    if (legacySessions.length) {
+      void Promise.allSettled(legacySessions.map((session) => db.updateDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_SESSIONS_CAISSE_TABLE_ID,
         session.$id,
@@ -390,22 +435,11 @@ async function cloturerCaisse() {
           fermeture: closingTime,
           commentaire: "Régularisation automatique d’une ancienne session restée ouverte."
         }
-      );
+      ))).then((results) => {
+        const failures = results.filter((result) => result.status === "rejected").length;
+        if (failures) console.warn(`[CAISSE] ${failures} ancienne(s) session(s) restent à régulariser côté administration.`);
+      });
     }
-    await db.updateDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_SESSIONS_CAISSE_TABLE_ID,
-        currentCashSession.$id,
-        closingData
-      );
-    currentCashSession = null;
-    currentCashSummary = null;
-    $("cashOpeningFloat").value = "";
-    $("cashActual").value = "";
-    $("cashCloseComment").value = "";
-    renderCashRegister();
-    const cleanup = legacySessions.length ? ` ${legacySessions.length} ancienne(s) session(s) ouverte(s) ont aussi été clôturées et conservées dans l’historique.` : "";
-    showCashMessage(`Caisse clôturée. Écart : ${formatMontantGNF(ecart)}.${cleanup}`, ecart === 0 ? "success" : "error");
   } catch (error) {
     console.error("[CAISSE] Clôture impossible :", error);
     showCashMessage(CalypsoData.errorMessage(error, "Clôture de caisse"), "error");

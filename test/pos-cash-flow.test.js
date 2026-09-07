@@ -37,6 +37,9 @@ test("la caisse journalise ouverture et clôture explicites", () => {
   assert.match(agentSource, /Appwrite\.ID\.unique\(\)/);
   assert.doesNotMatch(agentSource, /getDayKey|isPreviousCashSession/);
   assert.match(agentSource, /Régularisation automatique d’une ancienne session restée ouverte/);
+  assert.match(agentSource, /markCashClosedThrough\(closingTime, cashPoste\)/);
+  assert.match(agentSource, /Promise\.allSettled\(legacySessions\.map/);
+  assert.match(agentSource, /Vous pouvez ouvrir une nouvelle caisse/);
 });
 
 test("le reçu billets peut être fermé et disparaît après impression", () => {
