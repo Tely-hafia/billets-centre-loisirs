@@ -41,4 +41,7 @@ test("les contenus détaillés sont rangés dans les pages dédiées", () => {
   assert.match(contact, /10h – 02h/);
   assert.match(contact, /Postuler/);
   assert.match(contact, /Nous trouver/);
+  assert.match(contact, /contact-hero/);
+  assert.match(contact, /assets\/icons\/calypso\.svg/);
+  assert.match(contact, /Voir l’itinéraire/);
 });
