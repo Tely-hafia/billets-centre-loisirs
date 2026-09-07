@@ -28,11 +28,15 @@ test("la caisse journalise ouverture et clôture explicites", () => {
   assert.match(agentHtml, /Espèces reçues pour démarrer/);
   assert.match(agentHtml, /cashActual/);
   assert.match(agentHtml, /cashCloseComment/);
-  assert.match(agentSource, /fermeture: new Date\(\)\.toISOString\(\)/);
+  assert.match(agentSource, /fermeture: closingTime/);
   assert.match(agentHtml, /id="cashOpeningRecorded"/);
   assert.match(agentHtml, /id="cashSalesRecorded"/);
-  assert.match(agentSource, /isPreviousCashSession/);
-  assert.match(agentSource, /Fermez la caisse précédente avant de rechercher/);
+  assert.match(agentHtml, /Caisse par service/);
+  assert.match(agentHtml, /id="cashOpeningFloat"[^>]+placeholder="Saisir le fonds reçu"/);
+  assert.doesNotMatch(agentHtml, /id="cashOpeningFloat"[^>]+value=/);
+  assert.match(agentSource, /Appwrite\.ID\.unique\(\)/);
+  assert.doesNotMatch(agentSource, /getDayKey|isPreviousCashSession/);
+  assert.match(agentSource, /Régularisation automatique d’une ancienne session restée ouverte/);
 });
 
 test("le reçu billets peut être fermé et disparaît après impression", () => {

@@ -118,7 +118,7 @@
     <section id="cash-register-card" class="card cash-register-card" style="display:none;">
       <div class="cash-register-header">
         <div>
-          <p class="eyebrow">Caisse du jour</p>
+          <p class="eyebrow">Caisse par service</p>
           <h2 id="cash-register-title">Ma caisse</h2>
           <p id="cash-register-status" class="status">Aucune caisse ouverte.</p>
         </div>
@@ -129,9 +129,9 @@
         <div class="cash-open-form">
           <div class="form-row">
             <label for="cashOpeningFloat">Espèces reçues pour démarrer</label>
-            <input id="cashOpeningFloat" type="number" min="0" step="500" inputmode="numeric" value="0" />
+            <input id="cashOpeningFloat" type="number" min="0" step="500" inputmode="numeric" placeholder="Saisir le fonds reçu" />
           </div>
-          <button id="btnOpenCash" type="button" class="btn-primary">Commencer la journée</button>
+          <button id="btnOpenCash" type="button" class="btn-primary">Ouvrir ma caisse</button>
         </div>
       </div>
 
@@ -493,7 +493,7 @@
 <!-- Script agent -->
 <script src="js/receipts.js?v=1"></script>
 <script src="js/access-control.js?v=1"></script>
-  <script src="js/agent-appwrite.js?v=17"></script>
+  <script src="js/agent-appwrite.js?v=18"></script>
 <script src="js/pwa.js?v=1"></script>
 
 </body>
