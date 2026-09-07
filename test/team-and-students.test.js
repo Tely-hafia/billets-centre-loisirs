@@ -10,11 +10,19 @@ const agent = fs.readFileSync(path.join(root, "js/agent-appwrite.js"), "utf8");
 const migration = fs.readFileSync(path.join(root, "docs/APPWRITE_MIGRATION.md"), "utf8");
 
 test("la gestion étudiant charge uniquement une recherche ciblée", () => {
-  assert.match(html, /id="studentSearchMode"/);
+  assert.doesNotMatch(html, /id="studentSearchMode"/);
+  assert.match(html, /Numéro étudiant ou nom/);
+  assert.match(html, /id="studentSearchDate"/);
   assert.match(html, /id="studentSearchResults" hidden/);
   assert.match(html, /Date de naissance/);
-  assert.match(admin, /Query\.search\(field, value\)/);
+  assert.match(admin, /Query\.search\("nom", identity\)/);
   assert.match(admin, /Query\.limit\(10\)/);
+});
+
+test("la création étudiant reste compatible avec la table Appwrite actuelle", () => {
+  assert.match(admin, /if \(!studentSchemaError\(error\)\) throw error/);
+  assert.match(admin, /const legacyData/);
+  assert.match(admin, /Étudiant enregistré avec la table actuelle/);
 });
 
 test("la carte étudiant inclut photo, rentrée, QR et impression", () => {
@@ -38,4 +46,6 @@ test("les agents peuvent être partagés par WhatsApp et administrés", () => {
   assert.match(html, /id="btnLoadStaff"/);
   assert.match(admin, /CalypsoAuth\.updateStaffRoles/);
   assert.match(admin, /CalypsoAuth\.deleteStaff/);
+  assert.match(admin, /session\.agent_nom/);
+  assert.doesNotMatch(admin, /Agent sans nom/);
 });
