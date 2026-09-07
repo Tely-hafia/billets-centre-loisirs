@@ -42,6 +42,12 @@ test("les contenus détaillés sont rangés dans les pages dédiées", () => {
   assert.match(contact, /Postuler/);
   assert.match(contact, /Nous trouver/);
   assert.match(contact, /contact-hero/);
-  assert.match(contact, /CALYPO%20Logo%20-%20Original%20with%20Transparent%20Background%20-%205000x5000%20\(1\)\.png/);
+  assert.match(contact, /assets\/icons\/calypso-officiel\.png/);
   assert.match(contact, /Voir l’itinéraire/);
+});
+
+test("le logo officiel est utilisé dans les en-têtes", () => {
+  for (const page of ["index.html", "experiences.html", "contact.html", "connexion.html", "admin.html", "agent.html"]) {
+    assert.match(read(page), /class="brand-logo" src="assets\/icons\/calypso-officiel\.png"/);
+  }
 });
