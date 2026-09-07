@@ -19,6 +19,8 @@ test("l'accueil se concentre sur la galerie Calypço", () => {
   assert.doesNotMatch(html, /Nos Expériences Uniques/);
   assert.doesNotMatch(html, /Informations Pratiques/);
   assert.doesNotMatch(html, /Accès Professionnel/);
+  assert.match(html, />Espace équipe<\/a>/);
+  assert.doesNotMatch(html.match(/<nav class="public-nav"[\s\S]*?<\/nav>/)?.[0] || "", />Administration<\/a>/);
 });
 
 test("les pages publiques proposent les accès importants en haut", () => {
