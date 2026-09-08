@@ -101,3 +101,41 @@ ou supprimer les adhésions de l’équipe.
 Le bouton WhatsApp prépare seulement le message et le lien vers
 `connexion.html`. Pour un nouvel agent, créer d’abord l’accès sécurisé avec son
 adresse e-mail technique ; l’application ne conserve jamais le mot de passe.
+
+## 8. Contenu public administrable
+
+Ne créez pas une deuxième base de données. Dans la base existante, créez une
+table avec l’ID exact `contenu_site` et les colonnes suivantes :
+
+| Colonne | Type Appwrite | Taille | Obligatoire | Valeur par défaut |
+|---|---|---:|---|---|
+| `type_contenu` | String | 20 | oui | aucune |
+| `titre` | String | 160 | non | chaîne vide |
+| `description` | String | 1200 | non | chaîne vide |
+| `categorie` | String | 40 | non | chaîne vide |
+| `date_evenement` | Datetime | non applicable | non | null |
+| `image_file_id` | String | 64 | non | chaîne vide |
+| `actif` | Boolean | non applicable | oui | true |
+| `ordre` | Integer | non applicable | oui | 0 |
+
+Permissions de la table :
+
+- lecture pour `Any`, afin que les événements et la galerie s’affichent sans
+  connexion ;
+- création, lecture, modification et suppression pour
+  `Role.team("calypco_staff", "admin")` ;
+- sécurité par ligne désactivée.
+
+Créez ensuite l’unique bucket de fichiers avec l’ID exact `contenu_media` :
+
+- lecture pour `Any` ;
+- création, modification et suppression pour l’équipe `calypco_staff`, rôle
+  `admin` ;
+- types autorisés : `image/webp`, `image/jpeg`, `image/png` ;
+- taille maximale recommandée : 2 Mo ;
+- sécurité par fichier désactivée.
+
+Les photos sont redimensionnées à 1 600 px maximum et converties en WebP avant
+l’envoi. Le site public effectue une seule lecture pour la galerie, les
+événements et le réglage d’ordre, puis conserve le résultat dix minutes dans le
+cache du téléphone. Il ne fait ni interrogation répétée ni écoute en temps réel.

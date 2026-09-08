@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=18" />
+  <link rel="stylesheet" href="css/app-v2.css?v=19" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
@@ -126,9 +126,10 @@
           <h2 id="upcomingEventsTitle">Événements à venir</h2>
           <p>Les prochains rendez-vous du Calypço seront annoncés ici.</p>
         </div>
-        <span class="upcoming-events-status"><span aria-hidden="true"></span> Programmation à venir</span>
+        <span class="upcoming-events-status" id="upcomingEventsStatus"><span aria-hidden="true"></span> Programmation à venir</span>
       </div>
 
+      <div id="upcomingEventsList" class="upcoming-events-list">
       <article class="upcoming-event-card">
         <div class="upcoming-event-visual" aria-hidden="true">
           <span>📅</span>
@@ -146,6 +147,7 @@
         </div>
         <a class="upcoming-event-action" href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o%2C%20je%20souhaite%20conna%C3%AEtre%20les%20prochains%20%C3%A9v%C3%A9nements" target="_blank" rel="noopener">Être informé sur WhatsApp <span aria-hidden="true">→</span></a>
       </article>
+      </div>
     </section>
   </main>
 
@@ -158,10 +160,11 @@
   <script src="js/appwrite-config.js?v=1"></script>
   <script src="js/appwrite-client.js?v=1"></script>
   <script src="js/index.js?v=11"></script>
-  <script src="js/pwa.js?v=1"></script>
+  <script src="js/pwa.js?v=2"></script>
 
   <script src="js/gallery-images.js?v=1"></script>
-  <script src="js/gallery.js?v=1"></script>
+  <script src="js/public-content.js?v=1"></script>
+  <script src="js/gallery.js?v=2"></script>
   <script>
     document.getElementById('navReservation')?.addEventListener('click', (event) => {
       event.preventDefault();

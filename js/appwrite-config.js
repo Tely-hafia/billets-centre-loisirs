@@ -16,7 +16,11 @@
       ventesResto: "ventes_resto",
       reservations: "reservation",
       sessionsCaisse: "sessions_caisse",
-      mouvementsCaisse: "mouvements_caisse"
+      mouvementsCaisse: "mouvements_caisse",
+      contenuSite: "contenu_site"
+    }),
+    buckets: Object.freeze({
+      contenuMedia: "contenu_media"
     }),
     staffRoles: Object.freeze({
       admin: "admin",

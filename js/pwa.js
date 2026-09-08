@@ -57,14 +57,19 @@
     );
   }
 
+  function isStandalone() {
+    return window.matchMedia("(display-mode: standalone)").matches || Boolean(navigator.standalone);
+  }
+
   function showInstallAction() {
-    if (!installPrompt || document.getElementById("btn-install-pwa")) return;
+    if (!installPrompt || isStandalone() || document.getElementById("btn-install-pwa")) return;
 
     const host = getInstallHost();
     if (!host) return;
 
     const panel = document.createElement("div");
     panel.className = "pwa-install-panel";
+    panel.id = "pwa-install-action";
 
     const text = document.createElement("p");
     text.textContent = "Installez Calypço Équipe sur ce téléphone pour un accès rapide.";
@@ -88,7 +93,7 @@
 
   function showIOSInstallHint() {
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    const standalone = isStandalone();
     const host = getInstallHost();
 
     if (!isIOS || standalone || !host || document.getElementById("ios-install-hint")) return;
@@ -98,6 +103,23 @@
     hint.className = "pwa-ios-hint";
     hint.textContent = "Sur iPhone : ouvrez Partager puis « Sur l’écran d’accueil » pour installer l’application.";
     host.appendChild(hint);
+  }
+
+  function showManualInstallHint() {
+    const isMobile = /android|mobile/i.test(navigator.userAgent);
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const host = getInstallHost();
+    if (!isMobile || isIOS || isStandalone() || installPrompt || !host || document.getElementById("manual-install-hint")) return;
+
+    const details = document.createElement("details");
+    details.id = "manual-install-hint";
+    details.className = "pwa-manual-hint";
+    const summary = document.createElement("summary");
+    summary.textContent = "Installer Calypço Équipe";
+    const text = document.createElement("p");
+    text.textContent = "Ouvrez le menu du navigateur, puis choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».";
+    details.append(summary, text);
+    host.appendChild(details);
   }
 
   async function registerServiceWorker() {
@@ -132,7 +154,15 @@
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     installPrompt = event;
+    document.getElementById("manual-install-hint")?.remove();
     showInstallAction();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    installPrompt = null;
+    document.getElementById("pwa-install-action")?.remove();
+    document.getElementById("manual-install-hint")?.remove();
+    document.getElementById("ios-install-hint")?.remove();
   });
 
   window.addEventListener("online", updateNetworkStatus);
@@ -142,9 +172,11 @@
     createStatusBanner();
     updateNetworkStatus();
     showIOSInstallHint();
+    showInstallAction();
+    window.setTimeout(showManualInstallHint, 1500);
     registerServiceWorker();
 
-    if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) {
+    if (isStandalone()) {
       document.documentElement.classList.add("is-standalone");
     }
   });

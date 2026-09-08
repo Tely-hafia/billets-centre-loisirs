@@ -417,7 +417,7 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 .admin-primary-nav {
   margin-top: 1rem;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -449,7 +449,8 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 
 #admin-zone-dashboard { gap: 1rem; }
 #admin-zone-team,
-#admin-zone-gestion { gap: 1rem; }
+#admin-zone-gestion,
+#admin-zone-content { gap: 1rem; }
 
 .dashboard-period-toolbar {
   display: flex;
@@ -509,6 +510,61 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
+
+.admin-shortcut-wide { grid-column: 1 / -1; }
+
+.content-editor-form,
+.gallery-display-setting {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--v2-line);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.content-active-choice { align-self: end; min-height: 48px; }
+.content-image-help { margin: .35rem 0 .8rem; color: var(--v2-muted); font-size: .82rem; }
+.gallery-display-setting { display: flex; align-items: end; gap: .75rem; }
+.gallery-display-setting .form-row { flex: 1; }
+.content-admin-list { display: grid; gap: .75rem; margin-top: 1rem; }
+.content-admin-item {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: .85rem;
+  border: 1px solid var(--v2-line);
+  border-radius: 16px;
+  background: #fff;
+}
+.content-admin-thumb { width: 112px; height: 76px; object-fit: cover; border-radius: 12px; background: #e8eef6; }
+.content-admin-thumb-empty { display: grid; place-items: center; font-size: 1.8rem; }
+.content-admin-item-title { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; }
+.content-admin-item-body small { color: var(--v2-muted); }
+.content-admin-item-body p { margin: .4rem 0 0; color: var(--v2-muted); }
+.content-admin-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
+.badge-muted { padding: .25rem .55rem; border-radius: 999px; background: #e7edf4; color: #52647a; font-size: .75rem; font-weight: 850; }
+
+.upcoming-events-list { display: grid; gap: 1rem; }
+.dynamic-event-card .upcoming-event-visual { overflow: hidden; }
+.dynamic-event-card .upcoming-event-visual img { width: 100%; height: 100%; object-fit: cover; }
+
+.pwa-install-host .pwa-install-panel,
+.pwa-install-host .pwa-manual-hint,
+.pwa-install-host .pwa-ios-hint {
+  margin-top: .9rem;
+  padding: .75rem .9rem;
+  border: 1px solid var(--v2-line);
+  border-radius: 12px;
+  background: #f6fafc;
+  color: var(--v2-muted);
+  font-size: .82rem;
+}
+.pwa-install-host .pwa-install-panel { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.pwa-install-host .pwa-install-panel p { margin: 0; }
+.pwa-install-host .pwa-install-panel button { width: auto; white-space: nowrap; }
+.pwa-manual-hint summary { cursor: pointer; color: var(--v2-teal); font-weight: 850; }
+.pwa-manual-hint p { margin: .55rem 0 0; }
 
 .admin-shortcut {
   width: 100%;
@@ -652,6 +708,14 @@ body.admin-page main { width: min(1380px, calc(100% - 3rem)); }
 }
 
 @media (max-width: 768px) {
+  .content-admin-item { grid-template-columns: 78px minmax(0, 1fr); }
+  .content-admin-thumb { width: 78px; height: 66px; }
+  .content-admin-actions { grid-column: 1 / -1; justify-content: stretch; }
+  .content-admin-actions button { flex: 1; }
+  .gallery-display-setting,
+  .pwa-install-host .pwa-install-panel { align-items: stretch; flex-direction: column; }
+  .pwa-install-host .pwa-install-panel button { width: 100%; }
+
   body.staff-page main,
   body.admin-page main { width: 100%; padding: 0 0.85rem; }
 

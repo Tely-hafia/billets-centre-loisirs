@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=18" />
+  <link rel="stylesheet" href="css/app-v2.css?v=19" />
 </head>
 
 <body class="admin-page">
@@ -67,6 +67,10 @@
 
         <button id="btnAdminModeTickets" type="button" class="mode-btn">
           Billets
+        </button>
+
+        <button id="btnAdminModeContent" type="button" class="mode-btn">
+          Contenu
         </button>
 
         <button id="btnAdminModeTeam" type="button" class="mode-btn">
@@ -133,6 +137,11 @@
         <button type="button" class="admin-shortcut" data-admin-mode="team" data-admin-panel="admin-etudiants">
           <span class="admin-shortcut-icon" aria-hidden="true">🎓</span>
           <span><strong>Étudiants</strong><small>Créer ou rechercher une carte</small></span>
+          <span class="admin-shortcut-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="admin-shortcut admin-shortcut-wide" data-admin-mode="content" data-admin-panel="admin-content-events">
+          <span class="admin-shortcut-icon" aria-hidden="true">🖼️</span>
+          <span><strong>Contenu du site</strong><small>Événements et galerie « Découvrez Calypço »</small></span>
           <span class="admin-shortcut-arrow" aria-hidden="true">›</span>
         </button>
       </section>
@@ -256,6 +265,64 @@
         <div id="staffManagementList" class="staff-management-list"><p class="empty-state">La liste n’est pas chargée.</p></div>
       </details>
 
+    </div>
+
+    <!-- === CONTENU DU SITE === -->
+    <div id="admin-zone-content" class="mode-content" style="display:none;">
+      <section class="card content-manager-intro">
+        <div class="section-heading-row">
+          <div>
+            <p class="eyebrow">Site public</p>
+            <h2>Contenu du site</h2>
+            <p class="status">Les listes restent vides jusqu’à votre demande afin d’économiser le forfait Appwrite.</p>
+          </div>
+          <button id="btnLoadSiteContent" type="button" class="btn-primary">Charger le contenu</button>
+        </div>
+        <p id="siteContentMessage" class="status" aria-live="polite">Aucune requête effectuée.</p>
+      </section>
+
+      <details class="card admin-module" id="admin-content-events">
+        <summary class="admin-module-summary"><span><strong>Événements</strong><small>Créer, modifier, publier ou masquer un événement</small></span></summary>
+        <form id="eventContentForm" class="content-editor-form">
+          <input id="eventContentId" type="hidden" />
+          <div class="identity-fields">
+            <div class="form-row"><label for="eventContentTitle">Titre *</label><input id="eventContentTitle" maxlength="160" required /></div>
+            <div class="form-row"><label for="eventContentDate">Date et heure *</label><input id="eventContentDate" type="datetime-local" required /></div>
+          </div>
+          <div class="form-row"><label for="eventContentDescription">Description *</label><textarea id="eventContentDescription" maxlength="1200" required></textarea></div>
+          <div class="identity-fields">
+            <div class="form-row"><label for="eventContentImage">Photo</label><input id="eventContentImage" type="file" accept="image/*" /></div>
+            <label class="radio-inline content-active-choice"><input id="eventContentActive" type="checkbox" checked /><span>Publié sur le site</span></label>
+          </div>
+          <p class="content-image-help">La photo est convertie en WebP et réduite avant l’envoi.</p>
+          <div class="actions-row"><button type="submit" class="btn-primary">Enregistrer l’événement</button><button id="btnCancelEventEdit" type="button" class="btn-secondary" hidden>Annuler la modification</button></div>
+        </form>
+        <div id="eventContentList" class="content-admin-list"><p class="empty-state">Cliquez sur « Charger le contenu ».</p></div>
+      </details>
+
+      <details class="card admin-module" id="admin-content-gallery">
+        <summary class="admin-module-summary"><span><strong>Galerie Découvrez Calypço</strong><small>Ajouter, classer, ordonner ou masquer les photos</small></span></summary>
+        <form id="galleryContentForm" class="content-editor-form">
+          <input id="galleryContentId" type="hidden" />
+          <div class="identity-fields">
+            <div class="form-row"><label for="galleryContentTitle">Légende *</label><input id="galleryContentTitle" maxlength="160" required placeholder="Ex : Piscine et toboggan" /></div>
+            <div class="form-row"><label for="galleryContentCategory">Catégorie *</label><select id="galleryContentCategory" required><option value="Piscine">Piscine</option><option value="Tir">Tir</option><option value="Jeux">Jeux</option><option value="Général">Général</option></select></div>
+          </div>
+          <div class="identity-fields">
+            <div class="form-row"><label for="galleryContentOrder">Position</label><input id="galleryContentOrder" type="number" min="0" max="9999" value="0" /></div>
+            <div class="form-row"><label for="galleryContentImage">Photo *</label><input id="galleryContentImage" type="file" accept="image/*" /></div>
+          </div>
+          <label class="radio-inline content-active-choice"><input id="galleryContentActive" type="checkbox" checked /><span>Visible sur le site</span></label>
+          <p class="content-image-help">Maximum conseillé : 24 photos actives. Elles sont chargées seulement lorsqu’elles deviennent visibles.</p>
+          <div class="actions-row"><button type="submit" class="btn-primary">Enregistrer la photo</button><button id="btnCancelGalleryEdit" type="button" class="btn-secondary" hidden>Annuler la modification</button></div>
+        </form>
+
+        <div class="gallery-display-setting">
+          <div class="form-row"><label for="galleryDisplayMode">Ordre de défilement</label><select id="galleryDisplayMode"><option value="random">Aléatoire</option><option value="manual">Ordre manuel</option></select></div>
+          <button id="btnSaveGalleryMode" type="button" class="btn-secondary">Enregistrer le mode</button>
+        </div>
+        <div id="galleryContentList" class="content-admin-list"><p class="empty-state">Cliquez sur « Charger le contenu ».</p></div>
+      </details>
     </div>
 
     <!-- === MODE 2 : Gestion & statistiques === -->
@@ -644,8 +711,9 @@
 <script src="js/vendor/qrcode.js?v=1"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=18"></script>
-<script src="js/pwa.js?v=1"></script>
+<script src="js/admin-appwrite.js?v=19"></script>
+<script src="js/content-admin.js?v=1"></script>
+<script src="js/pwa.js?v=2"></script>
 
 <script src="js/whatsapp-access.js?v=1"></script>
 </body>
