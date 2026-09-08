@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_VERSION = "calypso-equipe-v25";
+const CACHE_VERSION = "calypso-equipe-v26";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const APP_SHELL = [
@@ -26,8 +26,10 @@ const APP_SHELL = [
   "./js/whatsapp-access.js",
   "./js/gallery.js",
   "./js/gallery-images.js",
+  "./js/public-content.js",
   "./js/agent-appwrite.js",
   "./js/admin-appwrite.js",
+  "./js/content-admin.js",
   "./manifest.webmanifest",
   "./assets/icons/calypso-192.png",
   "./assets/icons/calypso-512.png",

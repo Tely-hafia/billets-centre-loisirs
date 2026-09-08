@@ -18,6 +18,7 @@
     client,
     account: new global.Appwrite.Account(client),
     teams: new global.Appwrite.Teams(client),
-    databases: new global.Appwrite.Databases(client)
+    databases: new global.Appwrite.Databases(client),
+    storage: new global.Appwrite.Storage(client)
   });
 })(window);

@@ -625,9 +625,11 @@ function switchAdminMode(mode) {
   const btnTeam = $("btnAdminModeTeam");
   const btnHistory = $("btnAdminModeHistory");
   const btnTickets = $("btnAdminModeTickets");
+  const btnContent = $("btnAdminModeContent");
   const zoneDashboard = $("admin-zone-dashboard");
   const zoneTeam = $("admin-zone-team");
   const zoneGestion = $("admin-zone-gestion");
+  const zoneContent = $("admin-zone-content");
   const historySections = ["admin-daily-control", "admin-statistics", "admin-reservations", "admin-accounting-corrections", "admin-conservation-card"];
   const ticketSections = ["admin-ticket-management"];
 
@@ -635,10 +637,12 @@ function switchAdminMode(mode) {
   if (btnTeam) btnTeam.classList.toggle("active", mode === "team");
   if (btnHistory) btnHistory.classList.toggle("active", mode === "history");
   if (btnTickets) btnTickets.classList.toggle("active", mode === "tickets");
+  if (btnContent) btnContent.classList.toggle("active", mode === "content");
 
   if (zoneDashboard) zoneDashboard.style.display = mode === "dashboard" ? "grid" : "none";
   if (zoneTeam) zoneTeam.style.display = mode === "team" ? "grid" : "none";
   if (zoneGestion) zoneGestion.style.display = ["history", "tickets"].includes(mode) ? "block" : "none";
+  if (zoneContent) zoneContent.style.display = mode === "content" ? "grid" : "none";
   historySections.forEach((id) => { if ($(id)) $(id).style.display = mode === "history" ? "block" : "none"; });
   ticketSections.forEach((id) => { if ($(id)) $(id).style.display = mode === "tickets" ? "block" : "none"; });
 
@@ -1974,6 +1978,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnTeam = $("btnAdminModeTeam");
   const btnHistory = $("btnAdminModeHistory");
   const btnTickets = $("btnAdminModeTickets");
+  const btnContent = $("btnAdminModeContent");
 
   if (btnDashboard) {
     btnDashboard.addEventListener("click", (e) => {
@@ -2000,6 +2005,13 @@ document.addEventListener("DOMContentLoaded", () => {
     btnTickets.addEventListener("click", (e) => {
       e.preventDefault();
       switchAdminMode("tickets");
+    });
+  }
+
+  if (btnContent) {
+    btnContent.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAdminMode("content");
     });
   }
 
