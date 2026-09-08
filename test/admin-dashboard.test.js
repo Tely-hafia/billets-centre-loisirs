@@ -15,6 +15,21 @@ test("le tableau de bord admin est synthétique", () => {
   assert.match(html, /value="week"/);
   assert.match(html, /value="month"/);
   assert.match(html, /value="year"/);
+  assert.match(html, /class="admin-shortcuts"/);
+  assert.match(html, /data-admin-panel="admin-daily-control"/);
+  assert.match(html, /data-admin-panel="admin-ticket-management"/);
+  assert.match(html, /data-admin-panel="admin-agents"/);
+  assert.match(html, /data-admin-panel="admin-etudiants"/);
+  assert.match(source, /function openAdminPanel/);
+});
+
+test("les zones détaillées sont repliées et chargées à la demande", () => {
+  assert.match(html, /<details class="card admin-module" id="admin-daily-control">/);
+  assert.match(html, /<details class="card admin-module" id="admin-reservations">/);
+  assert.match(html, /<details class="card admin-module" id="admin-statistics">/);
+  assert.match(html, /<details class="card team-management-card admin-module" id="admin-agents">/);
+  assert.doesNotMatch(html, /<details[^>]+admin-module[^>]+ open/);
+  assert.match(source, /querySelectorAll\("\.admin-shortcut\[data-admin-mode\]"\)/);
 });
 
 test("le journal affiche une ligne synthétique par agent et par jour", () => {

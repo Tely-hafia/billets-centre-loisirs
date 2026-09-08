@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=17" />
+  <link rel="stylesheet" href="css/app-v2.css?v=18" />
 </head>
 
 <body class="admin-page">
@@ -58,19 +58,19 @@
 
       <nav class="admin-primary-nav" aria-label="Sections de l’administration">
         <button id="btnAdminModeDashboard" type="button" class="mode-btn active">
-          Suivi & statistiques
+          Tableau
         </button>
 
         <button id="btnAdminModeHistory" type="button" class="mode-btn">
-          Historique & comptabilité
+          Comptabilité
         </button>
 
         <button id="btnAdminModeTickets" type="button" class="mode-btn">
-          Gestion des billets
+          Billets
         </button>
 
         <button id="btnAdminModeTeam" type="button" class="mode-btn">
-          Équipe & accès
+          Équipe
         </button>
       </nav>
     </section>
@@ -114,57 +114,34 @@
         </article>
       </section>
 
-      <section class="dashboard-grid dashboard-grid-journal">
-        <article class="card">
-          <div class="agent-workspace-heading">
-            <div>
-              <p class="eyebrow">Équipe</p>
-              <h2>Journal quotidien des agents</h2>
-              <p class="status">Une ligne par agent et par journée.</p>
-            </div>
-          </div>
-
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Ouverture</th>
-                  <th>Fermeture</th>
-                  <th>Agent</th>
-                  <th>Fonds de caisse</th>
-                  <th>Billets vendus</th>
-                  <th>Recette billets</th>
-                  <th>Recette billets internes</th>
-                  <th>Anomalies</th>
-                </tr>
-              </thead>
-              <tbody id="dashboard-agent-body">
-                <tr><td colspan="9">Chargement du journal…</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="agent-workspace-heading">
-            <div>
-              <p class="eyebrow">Contrôle</p>
-              <h2>Alertes à vérifier</h2>
-              <p class="status">Signaux techniques à examiner par un responsable.</p>
-            </div>
-          </div>
-
-          <div id="admin-alert-list" class="admin-alert-list">
-            <div class="empty-state">Analyse en cours…</div>
-          </div>
-        </article>
+      <section class="admin-shortcuts" aria-label="Accès rapides">
+        <button type="button" class="admin-shortcut" data-admin-mode="history" data-admin-panel="admin-daily-control">
+          <span class="admin-shortcut-icon" aria-hidden="true">▦</span>
+          <span><strong>Comptabilité</strong><small>Caisses, recettes et anomalies</small></span>
+          <span class="admin-shortcut-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="admin-shortcut" data-admin-mode="tickets" data-admin-panel="admin-ticket-management">
+          <span class="admin-shortcut-icon" aria-hidden="true">🎟️</span>
+          <span><strong>Gestion des billets</strong><small>Importer, modifier ou supprimer</small></span>
+          <span class="admin-shortcut-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="admin-shortcut" data-admin-mode="team" data-admin-panel="admin-agents">
+          <span class="admin-shortcut-icon" aria-hidden="true">👥</span>
+          <span><strong>Équipe</strong><small>Agents, rôles et accès</small></span>
+          <span class="admin-shortcut-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="admin-shortcut" data-admin-mode="team" data-admin-panel="admin-etudiants">
+          <span class="admin-shortcut-icon" aria-hidden="true">🎓</span>
+          <span><strong>Étudiants</strong><small>Créer ou rechercher une carte</small></span>
+          <span class="admin-shortcut-arrow" aria-hidden="true">›</span>
+        </button>
       </section>
     </div>
 
     <!-- === MODE 1 : Équipe et étudiants === -->
     <div id="admin-zone-team" class="mode-content" style="display:none;">
-      <section class="card team-management-card" id="admin-etudiants">
+      <details class="card team-management-card admin-module" id="admin-etudiants">
+        <summary class="admin-module-summary"><span><strong>Étudiants</strong><small>Créer, rechercher et gérer les cartes étudiantes</small></span></summary>
         <div class="section-heading-row">
           <div>
             <p class="eyebrow">Tarif étudiant</p>
@@ -227,9 +204,10 @@
           </div>
           <div class="actions-row"><button id="btnPrintStudentCard" type="button" class="btn-primary">Imprimer la carte</button><button id="btnCloseStudentCard" type="button" class="btn-secondary">Fermer</button></div>
         </section>
-      </section>
+      </details>
 
-      <section class="card team-management-card" id="admin-agents">
+      <details class="card team-management-card admin-module" id="admin-agents">
+        <summary class="admin-module-summary"><span><strong>Équipe et accès</strong><small>Inviter les agents et modifier leurs rôles</small></span></summary>
         <p class="eyebrow">Équipe</p>
         <h2>Donner l’accès à un agent</h2>
         <p class="status">Préparez le lien de connexion et envoyez-le vous-même sur WhatsApp. Le mot de passe n’apparaît jamais dans le message.</p>
@@ -276,12 +254,37 @@
         <hr class="section-divider" />
         <div class="section-heading-row"><div><h3>Agents autorisés</h3><p class="status">Chargez la liste uniquement lorsque vous devez modifier un rôle ou retirer un accès.</p></div><button id="btnLoadStaff" type="button" class="btn-secondary">Charger l’équipe</button></div>
         <div id="staffManagementList" class="staff-management-list"><p class="empty-state">La liste n’est pas chargée.</p></div>
-      </section>
+      </details>
 
     </div>
 
     <!-- === MODE 2 : Gestion & statistiques === -->
     <div id="admin-zone-gestion" class="mode-content" style="display:none;">
+
+      <details class="card admin-module" id="admin-daily-control">
+        <summary class="admin-module-summary"><span><strong>Journal des caisses</strong><small>Une ligne par agent et par journée, avec les anomalies</small></span></summary>
+        <div class="dashboard-grid dashboard-grid-journal admin-module-content">
+          <article>
+            <div class="agent-workspace-heading">
+              <div>
+                <p class="eyebrow">Équipe</p>
+                <h2>Journal quotidien des agents</h2>
+                <p class="status">Les données suivent la période choisie dans le tableau de bord.</p>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead><tr><th>Date</th><th>Ouverture</th><th>Fermeture</th><th>Agent</th><th>Fonds de caisse</th><th>Billets vendus</th><th>Recette billets</th><th>Recette billets internes</th><th>Anomalies</th></tr></thead>
+                <tbody id="dashboard-agent-body"><tr><td colspan="9">Choisissez une période dans le tableau de bord.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+          <article>
+            <div class="agent-workspace-heading"><div><p class="eyebrow">Contrôle</p><h2>Alertes à vérifier</h2><p class="status">Signaux techniques à examiner par un responsable.</p></div></div>
+            <div id="admin-alert-list" class="admin-alert-list"><div class="empty-state">Choisissez une période pour lancer les contrôles.</div></div>
+          </article>
+        </div>
+      </details>
 
 
       <!-- Gestion des billets CSV -->
@@ -351,7 +354,8 @@
       </section>
 
       <!-- Historique des réservations -->
-      <section class="card" id="admin-reservations">
+      <details class="card admin-module" id="admin-reservations">
+        <summary class="admin-module-summary"><span><strong>Réservations</strong><small>Filtrer l’historique par date et statut</small></span></summary>
         <h2>📅 Historique des réservations</h2>
 
         <p class="status">
@@ -409,9 +413,10 @@
         </div>
 
         <p id="reservations-history-message" class="message" style="display:none;"></p>
-      </section>
+      </details>
 
-      <section class="card" id="admin-accounting-corrections">
+      <details class="card admin-module" id="admin-accounting-corrections">
+        <summary class="admin-module-summary"><span><strong>Corrections comptables</strong><small>Annuler ou rembourser une vente avec un motif</small></span></summary>
         <p class="eyebrow">Comptabilité</p>
         <h2>Corrections comptables</h2>
         <div class="admin-refund-panel">
@@ -432,10 +437,11 @@
           </div>
         </div>
         <p id="admin-cash-message" class="status" aria-live="polite"></p>
-      </section>
+      </details>
 
       <!-- Statistiques Billets / Restauration -->
-      <section class="card" id="admin-statistics">
+      <details class="card admin-module" id="admin-statistics">
+        <summary class="admin-module-summary"><span><strong>Statistiques détaillées</strong><small>Billets et restauration, selon la période</small></span></summary>
         <h2>📊 Statistiques</h2>
 
         <div class="stats-tabs">
@@ -585,10 +591,11 @@
 
           <p id="stats-message-resto" class="message" style="display:none;"></p>
         </div>
-      </section>
+      </details>
 
       <!-- Maintenance -->
-      <section class="card maintenance-card" id="admin-conservation-card">
+      <details class="card maintenance-card admin-module" id="admin-conservation-card">
+        <summary class="admin-module-summary"><span><strong>Conservation des données</strong><small>Règles de traçabilité des ventes validées</small></span></summary>
         <h2>🔒 Conservation des données</h2>
 
         <p class="status">
@@ -596,7 +603,7 @@
           mouvement validé doit rester dans l’historique ; toute correction passera par une
           annulation motivée et traçable.
         </p>
-      </section>
+      </details>
 
     </div>
 
@@ -637,7 +644,7 @@
 <script src="js/vendor/qrcode.js?v=1"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=17"></script>
+<script src="js/admin-appwrite.js?v=18"></script>
 <script src="js/pwa.js?v=1"></script>
 
 <script src="js/whatsapp-access.js?v=1"></script>

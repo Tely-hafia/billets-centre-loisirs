@@ -50,9 +50,9 @@ test("le reçu billets peut être fermé et disparaît après impression", () =>
 
 test("l'administration sépare le jour, l'historique, les billets et l'équipe", () => {
   assert.match(adminHtml, /Aujourd’hui/);
-  assert.match(adminHtml, /Historique & comptabilité/);
+  assert.match(adminHtml, />\s*Comptabilité\s*</);
   assert.match(adminHtml, /Gestion des billets/);
-  assert.match(adminHtml, /Équipe & accès/);
+  assert.match(adminHtml, /Équipe et accès/);
   assert.match(adminHtml, /id="reservationStartDate"/);
   assert.doesNotMatch(adminHtml, /id="admin-history-filter"/);
   assert.match(adminSource, /admin-delete-ticket/);
