@@ -20,7 +20,9 @@
       contenuSite: "contenu_site"
     }),
     buckets: Object.freeze({
-      contenuMedia: "contenu_media"
+      // Le forfait gratuit autorise un seul bucket. On réutilise donc le
+      // bucket historique du logo pour les médias administrables du site.
+      contenuMedia: "69222b6c00245678b63c"
     }),
     staffRoles: Object.freeze({
       admin: "admin",
