@@ -126,12 +126,13 @@ Permissions de la table :
   `Role.team("calypco_staff", "admin")` ;
 - sécurité par ligne désactivée.
 
-Créez ensuite l’unique bucket de fichiers avec l’ID exact `contenu_media` :
+Le forfait gratuit autorisant déjà un seul bucket, réutilisez le bucket existant
+`logo_calypço` (ID `69222b6c00245678b63c`) pour les médias du site :
 
 - lecture pour `Any` ;
 - création, modification et suppression pour l’équipe `calypco_staff`, rôle
   `admin` ;
-- types autorisés : `image/webp`, `image/jpeg`, `image/png` ;
+- extensions autorisées : `webp`, `jpg`, `png` ;
 - taille maximale recommandée : 2 Mo ;
 - sécurité par fichier désactivée.
 
