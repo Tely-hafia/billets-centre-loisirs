@@ -628,7 +628,7 @@ function switchAdminMode(mode) {
   const zoneDashboard = $("admin-zone-dashboard");
   const zoneTeam = $("admin-zone-team");
   const zoneGestion = $("admin-zone-gestion");
-  const historySections = ["admin-statistics", "admin-reservations", "admin-accounting-corrections", "admin-conservation-card"];
+  const historySections = ["admin-daily-control", "admin-statistics", "admin-reservations", "admin-accounting-corrections", "admin-conservation-card"];
   const ticketSections = ["admin-ticket-management"];
 
   if (btnDashboard) btnDashboard.classList.toggle("active", mode === "dashboard");
@@ -637,7 +637,7 @@ function switchAdminMode(mode) {
   if (btnTickets) btnTickets.classList.toggle("active", mode === "tickets");
 
   if (zoneDashboard) zoneDashboard.style.display = mode === "dashboard" ? "grid" : "none";
-  if (zoneTeam) zoneTeam.style.display = mode === "team" ? "block" : "none";
+  if (zoneTeam) zoneTeam.style.display = mode === "team" ? "grid" : "none";
   if (zoneGestion) zoneGestion.style.display = ["history", "tickets"].includes(mode) ? "block" : "none";
   historySections.forEach((id) => { if ($(id)) $(id).style.display = mode === "history" ? "block" : "none"; });
   ticketSections.forEach((id) => { if ($(id)) $(id).style.display = mode === "tickets" ? "block" : "none"; });
@@ -646,6 +646,24 @@ function switchAdminMode(mode) {
     chargerTableauDeBord();
   }
 
+}
+
+function openAdminPanel(mode, panelId) {
+  switchAdminMode(mode);
+  if (!panelId) return;
+
+  const panel = $(panelId);
+  if (!panel) return;
+
+  const zone = panel.closest(".mode-content");
+  zone?.querySelectorAll("details.admin-module").forEach((item) => {
+    item.open = item === panel;
+  });
+  if (panel instanceof HTMLDetailsElement) panel.open = true;
+
+  window.requestAnimationFrame(() => {
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 let ticketManagementPage = 0;
@@ -1987,6 +2005,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const dashboardPeriod = $("dashboardPeriod");
   dashboardPeriod?.addEventListener("change", chargerTableauDeBord);
+
+  document.querySelectorAll(".admin-shortcut[data-admin-mode]").forEach((shortcut) => {
+    shortcut.addEventListener("click", () => {
+      openAdminPanel(shortcut.dataset.adminMode, shortcut.dataset.adminPanel || "");
+    });
+  });
 
   const btnImportCsv = $("btnImportCsv");
   const csvInput = $("csvFile");
