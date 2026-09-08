@@ -44,10 +44,10 @@
   function friendlyError(error) {
     const message = String(error?.message || error || "Erreur inconnue");
     if (/not authorized|unauthorized|permission/i.test(message) || error?.code === 401) {
-      return "Accès refusé par Appwrite. Vérifiez les permissions de la table contenu_site et du bucket contenu_media pour l’équipe d’administration.";
+      return "Accès refusé par Appwrite. Vérifiez les permissions de la table contenu_site et du stockage média pour l’équipe d’administration.";
     }
     if (/collection|table|bucket|not found|could not be found/i.test(message) || error?.code === 404) {
-      return "Configuration Appwrite incomplète : créez la table contenu_site et le bucket contenu_media décrits dans la documentation du dépôt.";
+      return "Configuration Appwrite incomplète : vérifiez la table contenu_site et le stockage média configuré dans l’application.";
     }
     return message;
   }
