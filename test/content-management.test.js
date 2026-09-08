@@ -56,7 +56,8 @@ test("la migration utilise la base existante et un seul bucket", () => {
   const config = read("js/appwrite-config.js");
   const migration = read("docs/APPWRITE_MIGRATION.md");
   assert.match(config, /contenuSite: "contenu_site"/);
-  assert.match(config, /contenuMedia: "contenu_media"/);
+  assert.match(config, /contenuMedia: "69222b6c00245678b63c"/);
   assert.match(migration, /Ne créez pas une deuxième base de données/);
+  assert.match(migration, /réutilisez le bucket existant/);
   assert.match(migration, /une seule lecture/);
 });
