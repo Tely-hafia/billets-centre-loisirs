@@ -991,12 +991,12 @@ body.home-showcase-page .gallery-section {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: 230px;
+  min-height: 320px;
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: clamp(1.25rem, 4vw, 2.25rem);
-  padding: clamp(1.3rem, 4vw, 2.35rem);
+  grid-template-columns: minmax(280px, 38%) minmax(0, 1fr);
+  align-items: start;
+  gap: 0;
+  padding: 0;
   border-radius: 22px;
   color: #fff;
   background:
@@ -1018,19 +1018,51 @@ body.home-showcase-page .gallery-section {
 }
 
 .upcoming-event-visual {
+  position: relative;
+  width: 100%;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   align-content: center;
   gap: 0.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 24px;
+  border: 0;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.09);
   backdrop-filter: blur(8px);
 }
 
+.upcoming-event-visual img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upcoming-event-date-badge {
+  position: absolute;
+  z-index: 2;
+  top: 1rem;
+  left: 1rem;
+  min-width: 64px;
+  padding: 0.55rem 0.7rem;
+  display: grid;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--v2-ink);
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: 0 12px 30px rgba(11, 19, 36, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.upcoming-event-date-badge strong { font-size: 1.55rem; line-height: 1; }
+.upcoming-event-date-badge span { margin-top: 0.15rem; color: var(--v2-brand-strong); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.08em; }
 .upcoming-event-visual > span { font-size: 3rem; }
 .upcoming-event-visual small { color: #c9fbf4; font-weight: 850; }
+.upcoming-event-content { min-height: 100%; padding: clamp(1.5rem, 4vw, 2.6rem); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
 .upcoming-event-label { margin: 0 0 0.45rem; color: #67e8dc; font-size: 0.75rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
 .upcoming-event-content h3 { margin: 0 0 0.65rem; color: #fff; font-size: clamp(1.35rem, 3vw, 2rem); }
 .upcoming-event-content > p:last-of-type { max-width: 620px; margin: 0; color: #ccdae9; line-height: 1.6; }
@@ -1053,6 +1085,7 @@ body.home-showcase-page .gallery-section {
 }
 
 .upcoming-event-action {
+  margin-top: 1.5rem;
   min-height: 52px;
   display: inline-flex;
   align-items: center;
@@ -1069,6 +1102,37 @@ body.home-showcase-page .gallery-section {
 }
 
 .upcoming-event-action:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.18); }
+
+.public-notifications-card {
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid #b8e5df;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #ecf9f7, #fff 58%, #fff7ed);
+  box-shadow: 0 15px 38px rgba(15, 31, 55, 0.08);
+}
+
+.public-notifications-card h2 { margin: 0.3rem 0 0.55rem; color: var(--v2-ink); font-size: clamp(1.4rem, 3vw, 2rem); }
+.public-notifications-card p { margin: 0; color: var(--v2-muted); line-height: 1.55; }
+.public-notifications-card .public-notifications-status { margin-top: 0.65rem; color: var(--v2-brand-strong); font-size: 0.88rem; font-weight: 800; }
+.public-notifications-button { width: auto; white-space: nowrap; }
+
+.public-pwa-install-host {
+  width: min(100%, 720px);
+  margin: 1.25rem auto 0;
+}
+
+.public-pwa-install-host .pwa-install-panel,
+.public-pwa-install-host .pwa-manual-hint,
+.public-pwa-install-host .pwa-ios-hint {
+  margin: 0;
+  background: rgba(255, 255, 255, 0.72);
+}
 
 .home-gallery-heading h1 {
   margin-bottom: 0.55rem;
@@ -1167,8 +1231,12 @@ body.home-showcase-page .gallery-section {
   }
 
   .upcoming-events-heading { align-items: flex-start; flex-direction: column; gap: 0.85rem; }
-  .upcoming-event-card { grid-template-columns: 96px minmax(0, 1fr); }
-  .upcoming-event-action { grid-column: 1 / -1; width: 100%; }
+  .upcoming-event-card { grid-template-columns: minmax(0, 1fr); }
+  .upcoming-event-visual { width: 100%; }
+  .upcoming-event-content { min-height: 0; }
+  .upcoming-event-action { width: 100%; }
+  .public-notifications-card { grid-template-columns: minmax(0, 1fr); }
+  .public-notifications-button { width: 100%; }
 
   .visit-highlights {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1193,10 +1261,11 @@ body.home-showcase-page .gallery-section {
   }
 
   .upcoming-events-section { padding: 1rem; border-radius: 22px; }
-  .upcoming-event-card { grid-template-columns: 1fr; padding: 1.2rem; }
-  .upcoming-event-visual { width: 82px; border-radius: 18px; }
+  .upcoming-event-card { grid-template-columns: 1fr; }
   .upcoming-event-visual > span { font-size: 2rem; }
   .upcoming-event-visual small { font-size: 0.7rem; }
+  .upcoming-event-content { padding: 1.2rem; }
+  .upcoming-event-date-badge { top: 0.75rem; left: 0.75rem; }
 }
 
 /* Page Infos & contact */

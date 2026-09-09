@@ -1,0 +1,37 @@
+{
+  "id": "./index.html",
+  "name": "Calypço – Centre de loisirs",
+  "short_name": "Calypço",
+  "description": "Découvrez les expériences, les événements et les informations pratiques du centre de loisirs Calypço.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1324",
+  "theme_color": "#0b1324",
+  "categories": ["entertainment", "lifestyle"],
+  "icons": [
+    {
+      "src": "assets/icons/calypso-officiel.png",
+      "sizes": "5000x5000",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Événements à venir",
+      "short_name": "Événements",
+      "url": "./index.html#evenements",
+      "icons": [{ "src": "assets/icons/calypso-officiel.png", "sizes": "5000x5000", "type": "image/png" }]
+    },
+    {
+      "name": "Réserver une activité",
+      "short_name": "Réserver",
+      "url": "./index.html#reservation-block",
+      "icons": [{ "src": "assets/icons/calypso-officiel.png", "sizes": "5000x5000", "type": "image/png" }]
+    }
+  ]
+}

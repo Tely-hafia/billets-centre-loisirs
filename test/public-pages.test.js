@@ -16,11 +16,32 @@ test("l'accueil se concentre sur la galerie Calypço", () => {
   assert.match(html, /id="carouselTrack"/);
   assert.match(html, /Événements à venir/);
   assert.match(html, /upcoming-event-card/);
+  assert.doesNotMatch(html, /galleryPause|Mettre en pause/);
   assert.doesNotMatch(html, /Nos Expériences Uniques/);
   assert.doesNotMatch(html, /Informations Pratiques/);
   assert.doesNotMatch(html, /Accès Professionnel/);
   assert.match(html, /class="footer-team-access"[^>]*>Espace équipe<\/a>/);
   assert.doesNotMatch(html.match(/<nav class="public-nav"[\s\S]*?<\/nav>/)?.[0] || "", /connexion\.html|Administration|Espace équipe/);
+});
+
+test("les événements ont une grande image recadrée et un badge de date", () => {
+  const source = read("js/gallery.js");
+  const styles = read("css/app-v2.css");
+
+  assert.match(source, /upcoming-event-date-badge/);
+  assert.match(source, /toLocaleString\("fr-FR", \{ day: "2-digit" \}\)/);
+  assert.match(source, /toLocaleString\("fr-FR", \{ month: "short" \}\)/);
+  assert.match(styles, /\.upcoming-event-visual img\s*\{[\s\S]*?object-fit:\s*cover/);
+  assert.match(styles, /\.upcoming-event-card\s*\{[\s\S]*?grid-template-columns:\s*minmax\(280px, 38%\) minmax\(0, 1fr\)/);
+  assert.match(styles, /@media \(max-width: 768px\)[\s\S]*?\.upcoming-event-card \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+});
+
+test("le carrousel défile toutes les six secondes seulement lorsqu'il est visible", () => {
+  const source = read("js/gallery.js");
+  assert.doesNotMatch(source, /galleryPause|pauseButton|Mettre en pause/);
+  assert.match(source, /IntersectionObserver/);
+  assert.match(source, /!document\.hidden && visible/);
+  assert.match(source, /6000/);
 });
 
 test("les pages publiques proposent les accès importants en haut", () => {

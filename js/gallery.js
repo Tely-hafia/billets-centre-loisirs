@@ -49,6 +49,7 @@
 
     list.replaceChildren();
     upcoming.forEach((event) => {
+      const eventDate = new Date(event.date_evenement);
       const card = document.createElement("article");
       card.className = "upcoming-event-card dynamic-event-card";
 
@@ -57,7 +58,7 @@
       if (event.image_file_id) {
         const image = document.createElement("img");
         image.src = fileUrl(event.image_file_id);
-        image.alt = "";
+        image.alt = `Affiche de l’événement ${event.titre}`;
         image.loading = "lazy";
         image.decoding = "async";
         visual.append(image);
@@ -66,12 +67,21 @@
         icon.textContent = "📅";
         visual.append(icon);
       }
+      const dateBadge = document.createElement("time");
+      dateBadge.className = "upcoming-event-date-badge";
+      dateBadge.dateTime = event.date_evenement;
+      const day = document.createElement("strong");
+      day.textContent = eventDate.toLocaleString("fr-FR", { day: "2-digit" });
+      const month = document.createElement("span");
+      month.textContent = eventDate.toLocaleString("fr-FR", { month: "short" }).replace(".", "");
+      dateBadge.append(day, month);
+      visual.append(dateBadge);
 
       const content = document.createElement("div");
       content.className = "upcoming-event-content";
       const label = document.createElement("p");
       label.className = "upcoming-event-label";
-      label.textContent = new Date(event.date_evenement).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
+      label.textContent = eventDate.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
       const title = document.createElement("h3");
       title.textContent = event.titre;
       const description = document.createElement("p");
@@ -84,7 +94,8 @@
       action.target = "_blank";
       action.rel = "noopener";
       action.textContent = "Demander sur WhatsApp →";
-      card.append(visual, content, action);
+      content.append(action);
+      card.append(visual, content);
       list.append(card);
     });
     if (status) status.innerHTML = `<span aria-hidden="true"></span> ${upcoming.length} événement${upcoming.length > 1 ? "s" : ""} à venir`;
@@ -93,6 +104,7 @@
   async function start() {
     let content = { gallery: [], events: [], mode: "random" };
     try { content = await window.CalypsoPublicContent?.load() || content; } catch (_) { /* contenu intégré */ }
+    window.dispatchEvent(new CustomEvent("calypso:public-content-loaded", { detail: content }));
 
     let images = content.gallery.map((doc) => ({
       src: window.CalypsoPublicContent.fileUrl(doc.image_file_id),
@@ -107,7 +119,6 @@
     if (!slides.length) return;
     let current = 0;
     let visible = true;
-    let paused = window.matchMedia("(prefers-reduced-motion: reduce)").matches || Boolean(navigator.connection?.saveData);
 
     const dots = slides.map((_, index) => {
       const dot = document.createElement("button");
@@ -133,19 +144,11 @@
 
     document.getElementById("galleryNext")?.addEventListener("click", () => show(current + 1));
     document.getElementById("galleryPrev")?.addEventListener("click", () => show(current - 1));
-    const pauseButton = document.getElementById("galleryPause");
-    function updatePause() {
-      if (!pauseButton) return;
-      pauseButton.textContent = paused ? "Démarrer le défilement" : "Mettre en pause";
-      pauseButton.setAttribute("aria-pressed", String(paused));
-    }
-    pauseButton?.addEventListener("click", () => { paused = !paused; updatePause(); });
     if (window.IntersectionObserver) {
       new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; }).observe(track);
     }
-    window.setInterval(() => { if (!paused && !document.hidden && visible) show(current + 1); }, 6000);
+    window.setInterval(() => { if (!document.hidden && visible) show(current + 1); }, 6000);
     show(0);
-    updatePause();
   }
 
   start();

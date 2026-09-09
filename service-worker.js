@@ -1,10 +1,11 @@
 "use strict";
 
-const CACHE_VERSION = "calypso-equipe-v27";
+const CACHE_VERSION = "calypso-equipe-v28";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const APP_SHELL = [
   "./offline.html",
+  "./index.html",
   "./connexion.html",
   "./agent.html",
   "./admin.html",
@@ -27,14 +28,13 @@ const APP_SHELL = [
   "./js/gallery.js",
   "./js/gallery-images.js",
   "./js/public-content.js",
+  "./js/public-notifications.js",
   "./js/agent-appwrite.js",
   "./js/admin-appwrite.js",
   "./js/content-admin.js",
   "./manifest.webmanifest",
-  "./assets/icons/calypso-192.png",
-  "./assets/icons/calypso-512.png",
-  "./assets/icons/calypso-maskable-512.png",
-  "./assets/icons/calypso.svg"
+  "./manifest-public.webmanifest",
+  "./assets/icons/calypso-officiel.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -56,6 +56,22 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "./index.html#evenements", self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windowClients) => {
+      const existingClient = windowClients.find((client) => new URL(client.url).origin === self.location.origin);
+      if (existingClient) {
+        if ("navigate" in existingClient) await existingClient.navigate(targetUrl);
+        return existingClient.focus();
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
 });
 
 self.addEventListener("fetch", (event) => {

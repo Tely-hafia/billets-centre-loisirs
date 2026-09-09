@@ -8,12 +8,12 @@
   <meta name="theme-color" content="#0b1324" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Calypço" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="assets/icons/calypso.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="assets/icons/calypso-192.png" />
+  <link rel="manifest" href="manifest-public.webmanifest" />
+  <link rel="icon" href="assets/icons/calypso-officiel.png" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/icons/calypso-officiel.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=19" />
+  <link rel="stylesheet" href="css/app-v2.css?v=20" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
@@ -116,10 +116,9 @@
       </div>
 
       <div class="carousel-dots" id="carouselDots" aria-label="Choisir une image"></div>
-      <button id="galleryPause" type="button" class="btn-secondary">Mettre en pause</button>
     </section>
 
-    <section class="upcoming-events-section" aria-labelledby="upcomingEventsTitle">
+    <section class="upcoming-events-section" id="evenements" aria-labelledby="upcomingEventsTitle">
       <div class="upcoming-events-heading">
         <div>
           <p class="section-kicker">🎉 Agenda</p>
@@ -144,11 +143,23 @@
             <span>🏊 Piscine</span>
             <span>🎯 Défis</span>
           </div>
+          <a class="upcoming-event-action" href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o%2C%20je%20souhaite%20conna%C3%AEtre%20les%20prochains%20%C3%A9v%C3%A9nements" target="_blank" rel="noopener">Être informé sur WhatsApp <span aria-hidden="true">→</span></a>
         </div>
-        <a class="upcoming-event-action" href="https://wa.me/22400000000?text=Bonjour%20Calyp%C3%A7o%2C%20je%20souhaite%20conna%C3%AEtre%20les%20prochains%20%C3%A9v%C3%A9nements" target="_blank" rel="noopener">Être informé sur WhatsApp <span aria-hidden="true">→</span></a>
       </article>
       </div>
     </section>
+
+    <section class="public-notifications-card" aria-labelledby="publicNotificationsTitle">
+      <div class="public-notifications-copy">
+        <p class="section-kicker">🔔 Agenda</p>
+        <h2 id="publicNotificationsTitle">Ne manquez pas les prochains événements</h2>
+        <p>L’activation est facultative. Calypço vérifie les nouveautés uniquement lorsque vous ouvrez le site ou l’application.</p>
+        <p class="public-notifications-status" id="publicNotificationsStatus" role="status" aria-live="polite">Notifications non activées.</p>
+      </div>
+      <button class="btn-secondary public-notifications-button" id="btnEnablePublicNotifications" type="button">Activer les notifications</button>
+    </section>
+
+    <aside class="pwa-install-host public-pwa-install-host" aria-label="Installer l’application Calypço"></aside>
   </main>
 
   <footer>
@@ -160,11 +171,12 @@
   <script src="js/appwrite-config.js?v=1"></script>
   <script src="js/appwrite-client.js?v=1"></script>
   <script src="js/index.js?v=11"></script>
-  <script src="js/pwa.js?v=2"></script>
+  <script src="js/pwa.js?v=3"></script>
 
   <script src="js/gallery-images.js?v=1"></script>
   <script src="js/public-content.js?v=1"></script>
-  <script src="js/gallery.js?v=2"></script>
+  <script src="js/public-notifications.js?v=1"></script>
+  <script src="js/gallery.js?v=3"></script>
   <script>
     document.getElementById('navReservation')?.addEventListener('click', (event) => {
       event.preventDefault();

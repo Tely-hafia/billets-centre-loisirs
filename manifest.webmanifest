@@ -14,22 +14,10 @@
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "assets/icons/calypso-192.png",
-      "sizes": "192x192",
+      "src": "assets/icons/calypso-officiel.png",
+      "sizes": "5000x5000",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "assets/icons/calypso-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/icons/calypso-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -37,7 +25,7 @@
       "name": "Connexion équipe",
       "short_name": "Connexion",
       "url": "./connexion.html",
-      "icons": [{ "src": "assets/icons/calypso-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "assets/icons/calypso-officiel.png", "sizes": "5000x5000", "type": "image/png" }]
     }
   ]
 }

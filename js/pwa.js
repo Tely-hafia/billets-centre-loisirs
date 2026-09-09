@@ -3,6 +3,9 @@
 
   let installPrompt = null;
   let refreshing = false;
+  const manifestHref = document.querySelector('link[rel="manifest"]')?.getAttribute("href") || "";
+  const isPublicApp = manifestHref.includes("manifest-public.webmanifest");
+  const appName = isPublicApp ? "Calypço" : "Calypço Équipe";
 
   function createStatusBanner() {
     if (document.getElementById("network-status")) return;
@@ -72,13 +75,13 @@
     panel.id = "pwa-install-action";
 
     const text = document.createElement("p");
-    text.textContent = "Installez Calypço Équipe sur ce téléphone pour un accès rapide.";
+    text.textContent = `Installez ${appName} sur cet appareil pour un accès rapide.`;
 
     const button = document.createElement("button");
     button.id = "btn-install-pwa";
     button.type = "button";
     button.className = "btn-secondary";
-    button.textContent = "Installer l’application";
+    button.textContent = `Installer ${appName}`;
     button.addEventListener("click", async () => {
       if (!installPrompt) return;
       await installPrompt.prompt();
@@ -101,21 +104,21 @@
     const hint = document.createElement("p");
     hint.id = "ios-install-hint";
     hint.className = "pwa-ios-hint";
-    hint.textContent = "Sur iPhone : ouvrez Partager puis « Sur l’écran d’accueil » pour installer l’application.";
+    hint.textContent = `Installer ${appName} sur iPhone : ouvrez Partager puis « Sur l’écran d’accueil ».`;
     host.appendChild(hint);
   }
 
   function showManualInstallHint() {
-    const isMobile = /android|mobile/i.test(navigator.userAgent);
+    const isAndroid = /android/i.test(navigator.userAgent);
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const host = getInstallHost();
-    if (!isMobile || isIOS || isStandalone() || installPrompt || !host || document.getElementById("manual-install-hint")) return;
+    if (!isAndroid || isIOS || isStandalone() || installPrompt || !host || document.getElementById("manual-install-hint")) return;
 
     const details = document.createElement("details");
     details.id = "manual-install-hint";
     details.className = "pwa-manual-hint";
     const summary = document.createElement("summary");
-    summary.textContent = "Installer Calypço Équipe";
+    summary.textContent = `Installer ${appName}`;
     const text = document.createElement("p");
     text.textContent = "Ouvrez le menu du navigateur, puis choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».";
     details.append(summary, text);
