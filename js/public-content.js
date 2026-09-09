@@ -1,13 +1,13 @@
 (function initPublicContent() {
   "use strict";
 
-  const CACHE_KEY = "calypso-public-content-v1";
+  const CACHE_KEY = "calypso-public-content-v2";
   const CACHE_TTL = 10 * 60 * 1000;
   const MAX_GALLERY_IMAGES = 24;
   let memoryPromise = null;
 
   function emptyContent() {
-    return { gallery: [], events: [], mode: "random", fetchedAt: 0 };
+    return { gallery: [], events: [], alerts: [], mode: "random", fetchedAt: 0 };
   }
 
   function readCache(allowExpired = false) {
@@ -15,7 +15,7 @@
       const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
       if (!cached || !Array.isArray(cached.gallery) || !Array.isArray(cached.events)) return null;
       if (!allowExpired && Date.now() - Number(cached.fetchedAt || 0) > CACHE_TTL) return null;
-      return cached;
+      return { ...cached, alerts: Array.isArray(cached.alerts) ? cached.alerts : [] };
     } catch (_) {
       return null;
     }
@@ -43,9 +43,13 @@
     const events = active
       .filter((doc) => doc.type_contenu === "event" && doc.titre && doc.date_evenement)
       .sort((a, b) => String(a.date_evenement).localeCompare(String(b.date_evenement)));
+    const alerts = active
+      .filter((doc) => doc.type_contenu === "alert" && doc.titre)
+      .sort((a, b) => String(b.$updatedAt || b.date_evenement || "").localeCompare(String(a.$updatedAt || a.date_evenement || "")));
     return {
       gallery,
       events,
+      alerts,
       mode: setting?.description === "manual" ? "manual" : "random",
       fetchedAt: Date.now()
     };

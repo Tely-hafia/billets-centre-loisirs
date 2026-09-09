@@ -15,9 +15,13 @@ test("l’administration propose le contenu sans le charger automatiquement", ()
   assert.match(html, /id="btnLoadSiteContent"/);
   assert.match(html, /id="eventContentForm"/);
   assert.match(html, /id="galleryContentForm"/);
+  assert.match(html, /id="alertContentForm"/);
+  assert.match(html, /Envoyer l’alerte/);
   assert.match(html, /id="galleryDisplayMode"/);
   assert.match(admin, /switchAdminMode\("content"\)/);
   assert.match(source, /btnLoadSiteContent[^\n]+addEventListener\("click", loadContent\)/);
+  assert.match(source, /type_contenu: "alert"/);
+  assert.match(source, /saveDocument\("alert"/);
   assert.doesNotMatch(source, /DOMContentLoaded[\s\S]{0,300}loadContent\(\)/);
 });
 
@@ -37,7 +41,7 @@ test("le contenu public utilise une lecture commune et un cache de dix minutes",
   assert.match(source, /MAX_GALLERY_IMAGES = 24/);
   assert.equal((source.match(/listDocuments\(/g) || []).length, 1);
   assert.doesNotMatch(source, /setInterval|subscribe|Realtime/);
-  assert.match(html, /js\/public-content\.js\?v=1/);
+  assert.match(html, /js\/public-content\.js\?v=2/);
   assert.match(html, /id="upcomingEventsList"/);
 });
 

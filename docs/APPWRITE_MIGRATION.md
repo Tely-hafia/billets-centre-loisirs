@@ -137,6 +137,9 @@ Le forfait gratuit autorisant déjà un seul bucket, réutilisez le bucket exist
 - sécurité par fichier désactivée.
 
 Les photos sont redimensionnées à 1 600 px maximum et converties en WebP avant
-l’envoi. Le site public effectue une seule lecture pour la galerie, les
-événements et le réglage d’ordre, puis conserve le résultat dix minutes dans le
+l’envoi. Les alertes clients utilisent également cette table avec
+`type_contenu` égal à `alert` : elles apparaissent à la prochaine ouverture du
+site ou de l’application et ne constituent pas un push permanent en arrière-plan.
+Le site public effectue une seule lecture pour la galerie, les événements, les
+alertes et le réglage d’ordre, puis conserve le résultat dix minutes dans le
 cache du téléphone. Il ne fait ni interrogation répétée ni écoute en temps réel.

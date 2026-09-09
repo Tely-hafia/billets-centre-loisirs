@@ -6,27 +6,25 @@ const test = require("node:test");
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-test("l'accueil présente une activation de notifications clairement facultative", () => {
+test("l'accueil ne présente plus de carte permanente d'activation", () => {
   const html = read("index.html");
-  assert.match(html, /Ne manquez pas les prochains événements/);
-  assert.match(html, /id="btnEnablePublicNotifications"/);
-  assert.match(html, /Activer les notifications/);
-  assert.match(html, /activation est facultative/);
-  assert.match(html, /id="publicNotificationsStatus"/);
-  assert.match(html, /js\/public-notifications\.js\?v=1/);
+  assert.doesNotMatch(html, /public-notifications-card|btnEnablePublicNotifications|Ne manquez pas les prochains événements/);
+  assert.match(html, /js\/public-notifications\.js\?v=2/);
 });
 
-test("l'autorisation de notification est demandée uniquement après un clic", () => {
-  const source = read("js/public-notifications.js");
-  const clickHandlerIndex = source.indexOf('button?.addEventListener("click"');
-  const permissionIndex = source.indexOf("Notification.requestPermission()");
+test("l'autorisation est proposée dans le démarrage installé et seulement après un clic", () => {
+  const startup = read("js/startup.js");
+  const clickHandlerIndex = startup.indexOf('enableButton.addEventListener("click"');
+  const permissionIndex = startup.indexOf("Notification.requestPermission()");
 
   assert.ok(clickHandlerIndex >= 0);
   assert.ok(permissionIndex > clickHandlerIndex);
-  assert.equal((source.match(/Notification\.requestPermission\(\)/g) || []).length, 1);
-  assert.match(source, /Notifications activées/);
-  assert.match(source, /Notifications refusées/);
-  assert.match(source, /ne sont pas compatibles/);
+  assert.equal((startup.match(/Notification\.requestPermission\(\)/g) || []).length, 1);
+  assert.match(startup, /isPublicApp/);
+  assert.match(startup, /isStandalone/);
+  assert.match(startup, /Activer les notifications/);
+  assert.match(startup, /Plus tard/);
+  assert.doesNotMatch(read("js/public-notifications.js"), /Notification\.requestPermission/);
 });
 
 test("les notifications réutilisent le contenu commun sans nouvelle requête distante", () => {
@@ -43,4 +41,18 @@ test("les notifications réutilisent le contenu commun sans nouvelle requête di
   assert.match(source, /notifiedEventIds/);
   assert.match(source, /remindedEventIds/);
   assert.match(source, /assets\/icons\/calypso-officiel\.png/);
+});
+
+test("les alertes administrateur apparaissent à l'ouverture sans lecture supplémentaire", () => {
+  const source = read("js/public-notifications.js");
+  const content = read("js/public-content.js");
+
+  assert.match(content, /type_contenu === "alert"/);
+  assert.match(content, /alerts/);
+  assert.match(source, /showOpeningAlert/);
+  assert.match(source, /publicOpeningAlert/);
+  assert.match(source, /seenAlertVersions/);
+  assert.match(source, /notifiedAlertVersions/);
+  assert.equal((content.match(/listDocuments\(/g) || []).length, 1);
+  assert.doesNotMatch(source, /listDocuments|Realtime|subscribe|setInterval/);
 });

@@ -13,13 +13,14 @@
   <link rel="apple-touch-icon" href="assets/icons/calypso-officiel.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=20" />
+  <link rel="stylesheet" href="css/app-v2.css?v=21" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 </head>
 
 <body class="public-page home-showcase-page">
+  <script src="js/startup.js?v=1"></script>
   <header class="site-header">
     <div class="header-inner">
       <a class="public-brand-link" href="index.html" aria-label="Accueil Calypço">
@@ -149,16 +150,6 @@
       </div>
     </section>
 
-    <section class="public-notifications-card" aria-labelledby="publicNotificationsTitle">
-      <div class="public-notifications-copy">
-        <p class="section-kicker">🔔 Agenda</p>
-        <h2 id="publicNotificationsTitle">Ne manquez pas les prochains événements</h2>
-        <p>L’activation est facultative. Calypço vérifie les nouveautés uniquement lorsque vous ouvrez le site ou l’application.</p>
-        <p class="public-notifications-status" id="publicNotificationsStatus" role="status" aria-live="polite">Notifications non activées.</p>
-      </div>
-      <button class="btn-secondary public-notifications-button" id="btnEnablePublicNotifications" type="button">Activer les notifications</button>
-    </section>
-
     <aside class="pwa-install-host public-pwa-install-host" aria-label="Installer l’application Calypço"></aside>
   </main>
 
@@ -174,8 +165,8 @@
   <script src="js/pwa.js?v=3"></script>
 
   <script src="js/gallery-images.js?v=1"></script>
-  <script src="js/public-content.js?v=1"></script>
-  <script src="js/public-notifications.js?v=1"></script>
+  <script src="js/public-content.js?v=2"></script>
+  <script src="js/public-notifications.js?v=2"></script>
   <script src="js/gallery.js?v=3"></script>
   <script>
     document.getElementById('navReservation')?.addEventListener('click', (event) => {

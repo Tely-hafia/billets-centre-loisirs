@@ -64,9 +64,10 @@ test("le service worker exclut les origines distantes du cache", () => {
   assert.match(source, /url\.origin !== self\.location\.origin/);
   assert.match(source, /request\.method !== "GET"/);
   assert.match(source, /offline\.html/);
-  assert.match(source, /calypso-equipe-v28/);
+  assert.match(source, /calypso-equipe-v29/);
   assert.match(source, /manifest-public\.webmanifest/);
   assert.match(source, /js\/public-notifications\.js/);
+  assert.match(source, /js\/startup\.js/);
   assert.match(source, /assets\/icons\/calypso-officiel\.png/);
   assert.match(source, /addEventListener\("notificationclick"/);
   assert.match(source, /index\.html#evenements/);

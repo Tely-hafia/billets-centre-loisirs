@@ -13,10 +13,11 @@
   <link rel="icon" href="assets/icons/calypso-officiel.png" type="image/png" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-officiel.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=19" />
+  <link rel="stylesheet" href="css/app-v2.css?v=21" />
 </head>
 
 <body class="admin-page">
+<script src="js/startup.js?v=1"></script>
 
 <header>
   <div class="header-inner">
@@ -280,6 +281,19 @@
         </div>
         <p id="siteContentMessage" class="status" aria-live="polite">Aucune requête effectuée.</p>
       </section>
+
+      <details class="card admin-module" id="admin-content-alerts">
+        <summary class="admin-module-summary"><span><strong>Alertes clients</strong><small>Afficher un message à la prochaine ouverture du site ou de l’application</small></span></summary>
+        <form id="alertContentForm" class="content-editor-form">
+          <input id="alertContentId" type="hidden" />
+          <div class="form-row"><label for="alertContentTitle">Titre *</label><input id="alertContentTitle" maxlength="160" required placeholder="Ex : Ouverture exceptionnelle" /></div>
+          <div class="form-row"><label for="alertContentDescription">Message *</label><textarea id="alertContentDescription" maxlength="1200" required placeholder="Information destinée aux clients"></textarea></div>
+          <label class="radio-inline content-active-choice"><input id="alertContentActive" type="checkbox" checked /><span>Alerte active</span></label>
+          <p class="content-image-help">L’alerte apparaîtra lors d’une prochaine ouverture, après actualisation du cache public de dix minutes. Aucun push permanent n’est envoyé lorsque l’application est fermée.</p>
+          <div class="actions-row"><button type="submit" class="btn-primary">Envoyer l’alerte</button><button id="btnCancelAlertEdit" type="button" class="btn-secondary" hidden>Annuler la modification</button></div>
+        </form>
+        <div id="alertContentList" class="content-admin-list"><p class="empty-state">Cliquez sur « Charger le contenu ».</p></div>
+      </details>
 
       <details class="card admin-module" id="admin-content-events">
         <summary class="admin-module-summary"><span><strong>Événements</strong><small>Créer, modifier, publier ou masquer un événement</small></span></summary>
@@ -712,7 +726,7 @@
 
 <!-- Script admin -->
 <script src="js/admin-appwrite.js?v=19"></script>
-<script src="js/content-admin.js?v=1"></script>
+<script src="js/content-admin.js?v=2"></script>
 <script src="js/pwa.js?v=3"></script>
 
 <script src="js/whatsapp-access.js?v=1"></script>

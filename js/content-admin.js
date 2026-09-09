@@ -11,7 +11,7 @@
   const db = appwrite.databases;
   const storage = appwrite.storage;
   const state = { loaded: false, documents: [] };
-  const publicCacheKey = "calypso-public-content-v1";
+  const publicCacheKey = "calypso-public-content-v2";
 
   const $ = (id) => document.getElementById(id);
 
@@ -67,19 +67,22 @@
 
   function renderItem(doc, kind) {
     const isEvent = kind === "event";
+    const isAlert = kind === "alert";
     const image = doc.image_file_id
       ? `<img class="content-admin-thumb" src="${fileViewUrl(doc.image_file_id)}" alt="" loading="lazy" decoding="async" />`
-      : `<div class="content-admin-thumb content-admin-thumb-empty" aria-hidden="true">${isEvent ? "📅" : "🖼️"}</div>`;
-    const meta = isEvent
-      ? formatEventDate(doc.date_evenement)
-      : `${escapeHTML(doc.categorie || "Général")} · position ${Number(doc.ordre) || 0}`;
+      : `<div class="content-admin-thumb content-admin-thumb-empty" aria-hidden="true">${isAlert ? "🔔" : isEvent ? "📅" : "🖼️"}</div>`;
+    const meta = isAlert
+      ? `Alerte clients · ${formatEventDate(doc.$updatedAt || doc.date_evenement)}`
+      : isEvent
+        ? formatEventDate(doc.date_evenement)
+        : `${escapeHTML(doc.categorie || "Général")} · position ${Number(doc.ordre) || 0}`;
     return `
       <article class="content-admin-item">
         ${image}
         <div class="content-admin-item-body">
           <div class="content-admin-item-title"><strong>${escapeHTML(doc.titre || "Sans titre")}</strong><span class="${doc.actif ? "badge-success" : "badge-muted"}">${doc.actif ? "Visible" : "Masqué"}</span></div>
           <small>${meta}</small>
-          ${isEvent && doc.description ? `<p>${escapeHTML(doc.description)}</p>` : ""}
+          ${(isEvent || isAlert) && doc.description ? `<p>${escapeHTML(doc.description)}</p>` : ""}
         </div>
         <div class="content-admin-actions">
           <button type="button" class="btn-secondary" data-content-action="edit" data-content-kind="${kind}" data-content-id="${escapeHTML(doc.$id)}">Modifier</button>
@@ -90,6 +93,9 @@
   }
 
   function renderLists() {
+    const alerts = state.documents
+      .filter((doc) => doc.type_contenu === "alert")
+      .sort((a, b) => String(b.$updatedAt || b.date_evenement || "").localeCompare(String(a.$updatedAt || a.date_evenement || "")));
     const events = state.documents
       .filter((doc) => doc.type_contenu === "event")
       .sort((a, b) => String(a.date_evenement || "").localeCompare(String(b.date_evenement || "")));
@@ -98,8 +104,10 @@
       .sort((a, b) => (Number(a.ordre) || 0) - (Number(b.ordre) || 0));
     const setting = state.documents.find((doc) => doc.type_contenu === "setting" && doc.categorie === "gallery_display");
 
+    const alertList = $("alertContentList");
     const eventList = $("eventContentList");
     const galleryList = $("galleryContentList");
+    if (alertList) alertList.innerHTML = alerts.length ? alerts.map((doc) => renderItem(doc, "alert")).join("") : '<p class="empty-state">Aucune alerte enregistrée.</p>';
     if (eventList) eventList.innerHTML = events.length ? events.map((doc) => renderItem(doc, "event")).join("") : '<p class="empty-state">Aucun événement enregistré.</p>';
     if (galleryList) galleryList.innerHTML = gallery.length ? gallery.map((doc) => renderItem(doc, "gallery")).join("") : '<p class="empty-state">Aucune photo enregistrée.</p>';
     if ($("galleryDisplayMode")) $("galleryDisplayMode").value = setting?.description === "manual" ? "manual" : "random";
@@ -192,6 +200,13 @@
     if ($("btnCancelEventEdit")) $("btnCancelEventEdit").hidden = true;
   }
 
+  function resetAlertForm() {
+    $("alertContentForm")?.reset();
+    if ($("alertContentId")) $("alertContentId").value = "";
+    if ($("alertContentActive")) $("alertContentActive").checked = true;
+    if ($("btnCancelAlertEdit")) $("btnCancelAlertEdit").hidden = true;
+  }
+
   function resetGalleryForm() {
     $("galleryContentForm")?.reset();
     if ($("galleryContentId")) $("galleryContentId").value = "";
@@ -202,11 +217,13 @@
 
   async function saveDocument(kind, form) {
     const isEvent = kind === "event";
-    const id = $(isEvent ? "eventContentId" : "galleryContentId")?.value || "";
+    const isAlert = kind === "alert";
+    const idField = isAlert ? "alertContentId" : isEvent ? "eventContentId" : "galleryContentId";
+    const id = $(idField)?.value || "";
     const oldDocument = state.documents.find((doc) => doc.$id === id);
-    const fileInput = $(isEvent ? "eventContentImage" : "galleryContentImage");
+    const fileInput = isAlert ? null : $(isEvent ? "eventContentImage" : "galleryContentImage");
     const file = fileInput?.files?.[0];
-    if (!isEvent && !id && !file) {
+    if (!isEvent && !isAlert && !id && !file) {
       showMessage("Choisissez une photo pour la galerie.", "error");
       return;
     }
@@ -217,7 +234,16 @@
     let newFileId = "";
     try {
       if (file) newFileId = await uploadImage(file);
-      const data = isEvent ? {
+      const data = isAlert ? {
+        type_contenu: "alert",
+        titre: $("alertContentTitle").value.trim(),
+        description: $("alertContentDescription").value.trim(),
+        categorie: "public_alert",
+        date_evenement: new Date().toISOString(),
+        image_file_id: "",
+        actif: $("alertContentActive").checked,
+        ordre: 0
+      } : isEvent ? {
         type_contenu: "event",
         titre: $("eventContentTitle").value.trim(),
         description: $("eventContentDescription").value.trim(),
@@ -243,8 +269,10 @@
         await deleteFileQuietly(oldDocument.image_file_id);
       }
       upsertState(document);
-      isEvent ? resetEventForm() : resetGalleryForm();
-      showMessage(isEvent ? "Événement enregistré." : "Photo enregistrée.", "success");
+      if (isAlert) resetAlertForm();
+      else if (isEvent) resetEventForm();
+      else resetGalleryForm();
+      showMessage(isAlert ? "Alerte envoyée." : isEvent ? "Événement enregistré." : "Photo enregistrée.", "success");
     } catch (error) {
       if (newFileId) await deleteFileQuietly(newFileId);
       console.error("[CONTENU] Enregistrement impossible :", error);
@@ -255,7 +283,15 @@
   }
 
   function editDocument(document, kind) {
-    if (kind === "event") {
+    if (kind === "alert") {
+      $("alertContentId").value = document.$id;
+      $("alertContentTitle").value = document.titre || "";
+      $("alertContentDescription").value = document.description || "";
+      $("alertContentActive").checked = Boolean(document.actif);
+      $("btnCancelAlertEdit").hidden = false;
+      $("admin-content-alerts").open = true;
+      $("alertContentTitle").focus();
+    } else if (kind === "event") {
       $("eventContentId").value = document.$id;
       $("eventContentTitle").value = document.titre || "";
       $("eventContentDate").value = toLocalDateTime(document.date_evenement);
@@ -337,11 +373,17 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     $("btnLoadSiteContent")?.addEventListener("click", loadContent);
+    $("alertContentForm")?.addEventListener("submit", (event) => { event.preventDefault(); saveDocument("alert", event.currentTarget); });
     $("eventContentForm")?.addEventListener("submit", (event) => { event.preventDefault(); saveDocument("event", event.currentTarget); });
     $("galleryContentForm")?.addEventListener("submit", (event) => { event.preventDefault(); saveDocument("gallery", event.currentTarget); });
+    $("btnCancelAlertEdit")?.addEventListener("click", resetAlertForm);
     $("btnCancelEventEdit")?.addEventListener("click", resetEventForm);
     $("btnCancelGalleryEdit")?.addEventListener("click", resetGalleryForm);
     $("btnSaveGalleryMode")?.addEventListener("click", saveGalleryMode);
+    $("alertContentList")?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-content-action]");
+      if (button) handleListAction(button);
+    });
     $("eventContentList")?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-content-action]");
       if (button) handleListAction(button);

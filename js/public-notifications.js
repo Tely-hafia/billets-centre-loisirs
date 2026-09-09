@@ -5,7 +5,7 @@
   const NEAR_EVENT_WINDOW = 36 * 60 * 60 * 1000;
   const CONTENT_EVENT = "calypso:public-content-loaded";
   let loadedEvents = [];
-  let hasLoadedContent = false;
+  let loadedAlerts = [];
 
   function defaultState() {
     return {
@@ -13,13 +13,19 @@
       initialized: false,
       knownEventIds: [],
       notifiedEventIds: [],
-      remindedEventIds: []
+      remindedEventIds: [],
+      seenAlertVersions: [],
+      notifiedAlertVersions: []
     };
   }
 
   function readState() {
     try {
-      return { ...defaultState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+      const state = { ...defaultState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+      for (const key of ["knownEventIds", "notifiedEventIds", "remindedEventIds", "seenAlertVersions", "notifiedAlertVersions"]) {
+        if (!Array.isArray(state[key])) state[key] = [];
+      }
+      return state;
     } catch (_) {
       return defaultState();
     }
@@ -31,6 +37,10 @@
 
   function eventId(event) {
     return String(event.$id || `${event.date_evenement || "date-inconnue"}:${event.titre || "evenement"}`);
+  }
+
+  function alertVersion(alert) {
+    return `${alert.$id || alert.titre}:${alert.$updatedAt || alert.date_evenement || "version-inconnue"}`;
   }
 
   function upcomingEvents(events) {
@@ -50,46 +60,21 @@
     });
   }
 
-  function isSupported() {
-    return "Notification" in window && "serviceWorker" in navigator;
+  function notificationsEnabled() {
+    return "Notification" in window
+      && "serviceWorker" in navigator
+      && Notification.permission === "granted"
+      && readState().enabled;
   }
 
-  function updateStatus() {
-    const status = document.getElementById("publicNotificationsStatus");
-    const button = document.getElementById("btnEnablePublicNotifications");
-    if (!status || !button) return;
-
-    if (!isSupported()) {
-      status.textContent = "Les notifications ne sont pas compatibles avec ce navigateur.";
-      button.hidden = true;
-      return;
-    }
-
-    if (Notification.permission === "denied") {
-      status.textContent = "Notifications refusées. Vous pouvez modifier ce choix dans les réglages du navigateur.";
-      button.hidden = true;
-      return;
-    }
-
-    if (Notification.permission === "granted" && readState().enabled) {
-      status.textContent = "Notifications activées sur cet appareil.";
-      button.hidden = true;
-      return;
-    }
-
-    status.textContent = "Notifications non activées — vous gardez le contrôle.";
-    button.hidden = false;
-  }
-
-  async function showEventNotification(event, kind) {
+  async function showLocalNotification(title, body, tag) {
     try {
       const registration = await navigator.serviceWorker.ready;
-      const title = kind === "new" ? "Nouvel événement au Calypço" : "Un événement approche au Calypço";
       await registration.showNotification(title, {
-        body: `${event.titre} · ${formatEventDate(event)}`,
+        body,
         icon: "./assets/icons/calypso-officiel.png",
         badge: "./assets/icons/calypso-officiel.png",
-        tag: `calypso-event-${eventId(event)}`,
+        tag,
         data: { url: new URL("./index.html#evenements", window.location.href).href }
       });
       return true;
@@ -99,12 +84,68 @@
     }
   }
 
+  function showOpeningAlert(alert, version) {
+    if (document.getElementById("publicOpeningAlert")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "publicOpeningAlert";
+    overlay.className = "public-opening-alert";
+    overlay.setAttribute("role", "alertdialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "publicOpeningAlertTitle");
+
+    const card = document.createElement("section");
+    card.className = "public-opening-alert-card";
+    const label = document.createElement("p");
+    label.className = "section-kicker";
+    label.textContent = "🔔 Message du Calypço";
+    const title = document.createElement("h2");
+    title.id = "publicOpeningAlertTitle";
+    title.textContent = alert.titre;
+    const body = document.createElement("p");
+    body.textContent = alert.description || "Une nouvelle information est disponible au Calypço.";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "btn-primary";
+    close.textContent = "J’ai compris";
+    close.addEventListener("click", () => {
+      const state = readState();
+      state.seenAlertVersions = [...new Set([...state.seenAlertVersions, version])].slice(-100);
+      saveState(state);
+      overlay.remove();
+    });
+    card.append(label, title, body, close);
+    overlay.append(card);
+    document.body.append(overlay);
+    close.focus();
+  }
+
+  async function checkAdminAlerts(alerts) {
+    const state = readState();
+    const alert = alerts.find((item) => !state.seenAlertVersions.includes(alertVersion(item)));
+    if (!alert) return;
+
+    const version = alertVersion(alert);
+    showOpeningAlert(alert, version);
+
+    if (notificationsEnabled() && !state.notifiedAlertVersions.includes(version)) {
+      const shown = await showLocalNotification(
+        alert.titre,
+        alert.description || "Nouveau message du Calypço.",
+        `calypso-alert-${encodeURIComponent(version)}`
+      );
+      if (shown) {
+        const current = readState();
+        current.notifiedAlertVersions = [...new Set([...current.notifiedAlertVersions, version])].slice(-100);
+        saveState(current);
+      }
+    }
+  }
+
   async function checkEvents(events) {
-    if (!isSupported() || Notification.permission !== "granted") return;
+    if (!notificationsEnabled()) return;
 
     const state = readState();
-    if (!state.enabled) return;
-
     const upcoming = upcomingEvents(events);
     const ids = upcoming.map(eventId);
     if (!state.initialized) {
@@ -128,43 +169,32 @@
     const kind = newEvent ? "new" : "near";
 
     state.knownEventIds = Array.from(new Set([...state.knownEventIds, ...ids])).slice(-200);
-    if (selected && await showEventNotification(selected, kind)) {
-      const id = eventId(selected);
-      if (kind === "new") state.notifiedEventIds = [...state.notifiedEventIds, id].slice(-200);
-      else state.remindedEventIds = [...state.remindedEventIds, id].slice(-200);
+    if (selected) {
+      const title = kind === "new" ? "Nouvel événement au Calypço" : "Un événement approche au Calypço";
+      const shown = await showLocalNotification(
+        title,
+        `${selected.titre} · ${formatEventDate(selected)}`,
+        `calypso-event-${encodeURIComponent(eventId(selected))}`
+      );
+      if (shown) {
+        const id = eventId(selected);
+        if (kind === "new") state.notifiedEventIds = [...state.notifiedEventIds, id].slice(-200);
+        else state.remindedEventIds = [...state.remindedEventIds, id].slice(-200);
+      }
     }
     saveState(state);
   }
 
-  function enableOnClick() {
-    const button = document.getElementById("btnEnablePublicNotifications");
-    button?.addEventListener("click", async () => {
-      if (!isSupported()) {
-        updateStatus();
-        return;
-      }
-
-      const permission = await Notification.requestPermission();
-      const state = readState();
-      state.enabled = permission === "granted";
-      if (state.enabled && !state.initialized && hasLoadedContent) {
-        state.initialized = true;
-        state.knownEventIds = upcomingEvents(loadedEvents).map(eventId).slice(-200);
-      }
-      saveState(state);
-      updateStatus();
-      if (state.enabled && hasLoadedContent) checkEvents(loadedEvents);
-    });
+  function checkLoadedContent() {
+    checkAdminAlerts(loadedAlerts);
+    checkEvents(loadedEvents);
   }
 
   window.addEventListener(CONTENT_EVENT, (event) => {
-    hasLoadedContent = true;
     loadedEvents = Array.isArray(event.detail?.events) ? event.detail.events : [];
-    checkEvents(loadedEvents);
+    loadedAlerts = Array.isArray(event.detail?.alerts) ? event.detail.alerts : [];
+    checkLoadedContent();
   });
 
-  document.addEventListener("DOMContentLoaded", () => {
-    updateStatus();
-    enableOnClick();
-  });
+  window.addEventListener("calypso:notification-preference-changed", checkLoadedContent);
 })();

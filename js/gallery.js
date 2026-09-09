@@ -102,7 +102,7 @@
   }
 
   async function start() {
-    let content = { gallery: [], events: [], mode: "random" };
+    let content = { gallery: [], events: [], alerts: [], mode: "random" };
     try { content = await window.CalypsoPublicContent?.load() || content; } catch (_) { /* contenu intégré */ }
     window.dispatchEvent(new CustomEvent("calypso:public-content-loaded", { detail: content }));
 
