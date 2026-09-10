@@ -98,7 +98,13 @@
     toggle.dataset.restoAction = "toggle";
     toggle.dataset.restoId = product.$id;
     toggle.textContent = product.actif ? "Masquer" : "Réactiver";
-    actions.append(edit, toggle);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn-danger";
+    remove.dataset.restoAction = "delete";
+    remove.dataset.restoId = product.$id;
+    remove.textContent = "Supprimer";
+    actions.append(edit, toggle, remove);
     item.append(body, actions);
     return item;
   }
@@ -295,6 +301,30 @@
     }
   }
 
+  async function deleteProduct(product, button) {
+    const confirmed = window.confirm(
+      `Supprimer définitivement « ${product.libelle || "ce produit"} » ?\n\nLes anciennes ventes resteront conservées.`
+    );
+    if (!confirmed) return;
+
+    button.disabled = true;
+    showStatus("Suppression du produit…");
+    try {
+      await db.deleteDocument(databaseId, tableId, product.$id);
+      await deleteFileQuietly(product.image_file_id);
+      state.products = state.products.filter((item) => item.$id !== product.$id);
+      if ($("restoMenuDocumentId")?.value === product.$id) resetForm();
+      renderProducts();
+      window.dispatchEvent(new CustomEvent("calypso:resto-menu-changed"));
+      showStatus("Produit supprimé. Les anciennes ventes restent conservées.", "success");
+    } catch (error) {
+      console.error("[MENU RESTO] Suppression impossible :", error);
+      showStatus(friendlyError(error), "error");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     $("btnLoadRestoMenu")?.addEventListener("click", loadMenu);
     $("restoMenuForm")?.addEventListener("submit", (event) => {
@@ -318,7 +348,8 @@
       const product = state.products.find((item) => item.$id === button.dataset.restoId);
       if (!product) return;
       if (button.dataset.restoAction === "edit") editProduct(product);
-      if (button.dataset.restoAction === "toggle") toggleProduct(product, button);
+      else if (button.dataset.restoAction === "toggle") toggleProduct(product, button);
+      else if (button.dataset.restoAction === "delete") deleteProduct(product, button);
     });
   });
 })();

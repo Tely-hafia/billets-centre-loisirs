@@ -157,9 +157,11 @@ seulement les colonnes facultatives suivantes :
 
 `numero_table` contient une valeur de 1 à 12 pour une commande sur place et
 reste absent pour une commande à emporter. Les quatre chaises de chaque table
-ne sont pas suivies individuellement. Les produits ne sont pas supprimés depuis
-l’application : ils sont masqués avec la colonne `actif` afin de préserver
-l’historique des ventes.
+ne sont pas suivies individuellement. L’administrateur peut modifier, masquer ou
+supprimer un produit. Une confirmation est demandée avant toute suppression
+définitive. Cette suppression retire le produit du menu et sa photo, mais ne
+supprime pas les anciennes lignes de `ventes_resto`. Pour une indisponibilité
+temporaire, préférez le bouton **Masquer**.
 
 Les photos du menu sont converties en WebP avant l’envoi dans le bucket
 `69222b6c00245678b63c`. Les permissions existantes restent inchangées :

@@ -18,7 +18,7 @@ test("l'administration permet de gérer le menu sans chargement automatique", ()
   assert.match(html, /id="restoMenuCategory"/);
   assert.match(html, /id="restoMenuPrice"/);
   assert.match(html, /id="restoMenuImage"/);
-  assert.match(html, /js\/resto-admin\.js\?v=1/);
+  assert.match(html, /js\/resto-admin\.js\?v=2/);
   assert.match(source, /btnLoadRestoMenu[^\n]+addEventListener\("click", loadMenu\)/);
   assert.doesNotMatch(source, /DOMContentLoaded[\s\S]{0,250}loadMenu\(\)/);
 });
@@ -31,7 +31,10 @@ test("les produits utilisent la table et le bucket existants", () => {
   assert.match(source, /config\.buckets\?\.contenuMedia/);
   assert.match(source, /db\.createDocument/);
   assert.match(source, /db\.updateDocument/);
-  assert.doesNotMatch(source, /db\.deleteDocument/);
+  assert.match(source, /db\.deleteDocument\(databaseId, tableId, product\.\$id\)/);
+  assert.match(source, /window\.confirm/);
+  assert.match(source, /restoAction = "delete"/);
+  assert.match(source, /Les anciennes ventes resteront conservées/);
   assert.match(source, /storage\.createFile/);
   assert.match(source, /storage\.deleteFile/);
   assert.match(source, /"image\/webp"/);
