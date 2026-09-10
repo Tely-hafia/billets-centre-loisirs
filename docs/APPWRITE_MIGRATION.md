@@ -148,11 +148,10 @@ cache du téléphone. Il ne fait ni interrogation répétée ni écoute en temps
 
 Conservez les tables `menu_resto` et `ventes_resto` ainsi que le bucket média
 existant. Aucune nouvelle base, table ou bucket n’est nécessaire. Ajoutez
-seulement les colonnes facultatives suivantes :
+seulement la colonne facultative suivante :
 
 | Table | Colonne | Type Appwrite | Taille | Valeur par défaut |
 |---|---|---|---:|---|
-| `menu_resto` | `image_file_id` | String | 64 | chaîne vide |
 | `ventes_resto` | `numero_table` | Integer | non applicable | null |
 
 `numero_table` contient une valeur de 1 à 12 pour une commande sur place et
@@ -164,6 +163,9 @@ supprime pas les anciennes lignes de `ventes_resto`. Pour une indisponibilité
 temporaire, préférez le bouton **Masquer**.
 
 Les photos du menu sont converties en WebP avant l’envoi dans le bucket
-`69222b6c00245678b63c`. Les permissions existantes restent inchangées :
+`69222b6c00245678b63c`. Leur identifiant stable est calculé à partir de
+l’identifiant du produit : aucune colonne photo supplémentaire n’est nécessaire
+dans `menu_resto`. Les anciennes données possédant encore `image_file_id`
+restent compatibles. Les permissions existantes restent inchangées :
 l’administrateur gère le menu et le poste restauration lit uniquement les
 produits actifs.

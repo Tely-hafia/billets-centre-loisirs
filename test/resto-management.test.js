@@ -18,7 +18,7 @@ test("l'administration permet de gérer le menu sans chargement automatique", ()
   assert.match(html, /id="restoMenuCategory"/);
   assert.match(html, /id="restoMenuPrice"/);
   assert.match(html, /id="restoMenuImage"/);
-  assert.match(html, /js\/resto-admin\.js\?v=2/);
+  assert.match(html, /js\/resto-admin\.js\?v=3/);
   assert.match(source, /btnLoadRestoMenu[^\n]+addEventListener\("click", loadMenu\)/);
   assert.doesNotMatch(source, /DOMContentLoaded[\s\S]{0,250}loadMenu\(\)/);
 });
@@ -38,7 +38,8 @@ test("les produits utilisent la table et le bucket existants", () => {
   assert.match(source, /storage\.createFile/);
   assert.match(source, /storage\.deleteFile/);
   assert.match(source, /"image\/webp"/);
-  assert.match(source, /image_file_id/);
+  assert.match(source, /function productImageFileId/);
+  assert.doesNotMatch(source, /data\.image_file_id/);
   assert.match(config, /menuResto: "menu_resto"/);
   assert.match(config, /contenuMedia: "69222b6c00245678b63c"/);
 });
@@ -46,8 +47,9 @@ test("les produits utilisent la table et le bucket existants", () => {
 test("le poste restauration affiche les images et conserve une seule lecture du menu", () => {
   const source = read("js/agent-appwrite.js");
 
-  assert.match(source, /produit\.image_file_id/);
+  assert.match(source, /product\?\.image_file_id/);
   assert.match(source, /restoProductImageUrl/);
+  assert.match(source, /restoProductImageFileIds/);
   assert.match(source, /resto-product-quantity/);
   assert.match(source, /Appwrite\.Query\.equal\("actif", true\)/);
   const loader = source.match(/async function chargerProduitsResto\(\)[\s\S]*?\n}\n\nasync function initialiserDernierNumeroVente/)?.[0] || "";
@@ -79,9 +81,11 @@ test("le panier mobile reste dans l'en-tête et non dans une barre basse fixe", 
   assert.match(styles, /#mode-resto \.resto-categories-tabs[\s\S]*?overflow-x: auto/);
 });
 
-test("la migration documente uniquement les deux colonnes nécessaires", () => {
+test("la migration ne demande aucune colonne photo pour le menu", () => {
   const migration = read("docs/APPWRITE_MIGRATION.md");
-  assert.match(migration, /`menu_resto` \| `image_file_id`/);
+  const menuSection = migration.split("## 9. Menu restauration administrable")[1] || "";
+  assert.doesNotMatch(menuSection, /`menu_resto` \| `image_file_id`/);
   assert.match(migration, /`ventes_resto` \| `numero_table`/);
+  assert.match(menuSection, /aucune colonne photo supplémentaire/i);
   assert.match(migration, /Aucune nouvelle base/i);
 });

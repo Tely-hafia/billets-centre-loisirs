@@ -25,6 +25,18 @@
     return `${endpoint}/storage/buckets/${encodeURIComponent(bucketId)}/files/${encodeURIComponent(fileId)}/view?project=${encodeURIComponent(config.projectId)}`;
   }
 
+  function productImageFileId(product) {
+    const productId = String(product?.$id || "")
+      .replace(/[^a-z0-9._-]/gi, "-")
+      .slice(0, 30);
+    return productId ? `resto-${productId}` : "";
+  }
+
+  function productImageFileIds(product) {
+    return [productImageFileId(product), product?.image_file_id]
+      .filter((fileId, index, fileIds) => fileId && fileIds.indexOf(fileId) === index);
+  }
+
   function showStatus(text, type = "info") {
     const node = $("restoMenuAdminStatus");
     if (!node) return;
@@ -34,9 +46,6 @@
 
   function friendlyError(error) {
     const message = String(error?.message || error || "Erreur inconnue");
-    if (/image_file_id|unknown attribute[^\n]*image/i.test(message)) {
-      return "Ajoutez d’abord la colonne facultative image_file_id (String, 64) à la table menu_resto dans Appwrite.";
-    }
     if (/permission|unauthorized|not authorized/i.test(message) || error?.code === 401) {
       return "Accès refusé. Vérifiez que le compte possède le rôle administrateur Appwrite.";
     }
@@ -54,13 +63,27 @@
     const item = document.createElement("article");
     item.className = "content-admin-item resto-menu-admin-item";
 
-    if (product.image_file_id) {
+    const imageFileIds = productImageFileIds(product);
+    if (imageFileIds.length) {
       const image = document.createElement("img");
       image.className = "content-admin-thumb";
-      image.src = fileViewUrl(product.image_file_id);
       image.alt = "";
       image.loading = "lazy";
       image.decoding = "async";
+      let imageIndex = 0;
+      image.addEventListener("error", () => {
+        imageIndex += 1;
+        if (imageIndex < imageFileIds.length) {
+          image.src = fileViewUrl(imageFileIds[imageIndex]);
+          return;
+        }
+        const placeholder = document.createElement("div");
+        placeholder.className = "content-admin-thumb content-admin-thumb-empty";
+        placeholder.setAttribute("aria-hidden", "true");
+        placeholder.textContent = "🍽️";
+        image.replaceWith(placeholder);
+      });
+      image.src = fileViewUrl(imageFileIds[0]);
       item.append(image);
     } else {
       const placeholder = document.createElement("div");
@@ -153,11 +176,31 @@
     previewObjectUrl = "";
   }
 
-  function setPreview(src) {
+  function setPreview(src, fallbackSrc = "") {
     const preview = $("restoMenuImagePreview");
     if (!preview) return;
-    preview.src = src || "";
-    preview.hidden = !src;
+    preview.onerror = null;
+    if (!src) {
+      preview.hidden = true;
+      preview.removeAttribute("src");
+      return;
+    }
+    let fallbackUsed = false;
+    preview.onerror = () => {
+      if (fallbackSrc && !fallbackUsed) {
+        fallbackUsed = true;
+        preview.src = fallbackSrc;
+      } else {
+        preview.hidden = true;
+      }
+    };
+    preview.hidden = false;
+    preview.src = src;
+  }
+
+  function setProductPreview(product) {
+    const urls = productImageFileIds(product).map(fileViewUrl);
+    setPreview(urls[0] || "", urls[1] || "");
   }
 
   function resetForm() {
@@ -207,7 +250,11 @@
 
   async function deleteFileQuietly(fileId) {
     if (!fileId) return;
-    try { await storage.deleteFile(bucketId, fileId); } catch (error) { console.warn("[MENU RESTO] Ancienne image non supprimée :", error); }
+    try {
+      await storage.deleteFile(bucketId, fileId);
+    } catch (error) {
+      if (error?.code !== 404) console.warn("[MENU RESTO] Ancienne image non supprimée :", error);
+    }
   }
 
   function upsertProduct(product) {
@@ -241,10 +288,13 @@
     showStatus("Enregistrement du produit…");
     let uploadedFileId = "";
     try {
+      const documentId = id || Appwrite.ID.unique();
       const image = $("restoMenuImage")?.files?.[0];
       if (image) {
         const compressed = await compressImage(image);
-        const uploaded = await storage.createFile(bucketId, Appwrite.ID.unique(), compressed);
+        uploadedFileId = productImageFileId({ $id: documentId });
+        await deleteFileQuietly(uploadedFileId);
+        const uploaded = await storage.createFile(bucketId, uploadedFileId, compressed);
         uploadedFileId = uploaded.$id;
       }
       const data = {
@@ -254,11 +304,10 @@
         prix_unitaire: Number($("restoMenuPrice")?.value || 0),
         actif: Boolean($("restoMenuActive")?.checked)
       };
-      if (uploadedFileId) data.image_file_id = uploadedFileId;
 
       const product = id
         ? await db.updateDocument(databaseId, tableId, id, data)
-        : await db.createDocument(databaseId, tableId, Appwrite.ID.unique(), data);
+        : await db.createDocument(databaseId, tableId, documentId, data);
       if (uploadedFileId && current?.image_file_id && current.image_file_id !== uploadedFileId) {
         await deleteFileQuietly(current.image_file_id);
       }
@@ -266,7 +315,7 @@
       resetForm();
       showStatus("Produit enregistré.", "success");
     } catch (error) {
-      if (uploadedFileId) await deleteFileQuietly(uploadedFileId);
+      if (uploadedFileId && !id) await deleteFileQuietly(uploadedFileId);
       console.error("[MENU RESTO] Enregistrement impossible :", error);
       showStatus(friendlyError(error), "error");
     } finally {
@@ -283,7 +332,7 @@
     $("restoMenuPrice").value = String(Number(product.prix_unitaire) || 0);
     $("restoMenuActive").checked = Boolean(product.actif);
     $("btnCancelRestoMenuEdit").hidden = false;
-    setPreview(fileViewUrl(product.image_file_id));
+    setProductPreview(product);
     $("restoMenuLabel").focus();
   }
 
@@ -311,7 +360,7 @@
     showStatus("Suppression du produit…");
     try {
       await db.deleteDocument(databaseId, tableId, product.$id);
-      await deleteFileQuietly(product.image_file_id);
+      for (const fileId of productImageFileIds(product)) await deleteFileQuietly(fileId);
       state.products = state.products.filter((item) => item.$id !== product.$id);
       if ($("restoMenuDocumentId")?.value === product.$id) resetForm();
       renderProducts();

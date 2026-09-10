@@ -36,6 +36,15 @@ function restoProductImageUrl(fileId) {
   return `${endpoint}/storage/buckets/${encodeURIComponent(bucketId)}/files/${encodeURIComponent(fileId)}/view?project=${encodeURIComponent(CalypsoConfig.projectId)}`;
 }
 
+function restoProductImageFileIds(product) {
+  const productId = String(product?.$id || "")
+    .replace(/[^a-z0-9._-]/gi, "-")
+    .slice(0, 30);
+  const stableFileId = productId ? `resto-${productId}` : "";
+  return [stableFileId, product?.image_file_id]
+    .filter((fileId, index, fileIds) => fileId && fileIds.indexOf(fileId) === index);
+}
+
 function escapeRestoHTML(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -1761,12 +1770,24 @@ function afficherProduits(produits) {
 
     const visual = document.createElement("span");
     visual.className = "resto-product-visual";
-    if (produit.image_file_id) {
+    const imageFileIds = restoProductImageFileIds(produit);
+    if (imageFileIds.length) {
       const image = document.createElement("img");
-      image.src = restoProductImageUrl(produit.image_file_id);
       image.alt = "";
       image.loading = "lazy";
       image.decoding = "async";
+      let imageIndex = 0;
+      image.addEventListener("error", () => {
+        imageIndex += 1;
+        if (imageIndex < imageFileIds.length) {
+          image.src = restoProductImageUrl(imageFileIds[imageIndex]);
+          return;
+        }
+        image.remove();
+        visual.classList.add("is-placeholder");
+        visual.textContent = /boisson|jus|eau/i.test(produit.categorie || "") ? "🥤" : /chicha/i.test(produit.categorie || "") ? "♨️" : "🍽️";
+      });
+      image.src = restoProductImageUrl(imageFileIds[0]);
       visual.append(image);
     } else {
       visual.classList.add("is-placeholder");
