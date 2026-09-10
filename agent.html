@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/icons/calypso-officiel.png" type="image/png" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-officiel.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=21" />
+  <link rel="stylesheet" href="css/app-v2.css?v=22" />
 </head>
 
 <body class="staff-page">
@@ -363,6 +363,10 @@
           <h2>Restauration / Chicha</h2>
           <p class="status">Sélectionnez les produits, vérifiez le panier puis validez la commande.</p>
         </div>
+        <button id="btnRestoCartSummary" type="button" class="btn-secondary resto-cart-summary" aria-controls="restoCartPanel" disabled>
+          <span aria-hidden="true">🛒</span>
+          <span id="restoCartSummaryText">Panier vide</span>
+        </button>
       </div>
 
       <div class="resto-container">
@@ -379,7 +383,7 @@
         </div>
 
         <!-- Panier -->
-        <div class="resto-cart-side">
+        <div class="resto-cart-side" id="restoCartPanel">
           <div class="resto-cart-header">
             <h3>🛒 Panier en cours</h3>
 
@@ -409,6 +413,25 @@
                 </label>
               </div>
             </div>
+
+            <fieldset id="restoTableFieldset" class="resto-table-picker">
+              <legend>Numéro de table *</legend>
+              <div class="resto-table-grid" aria-label="Choisir une table parmi les 12 tables">
+                <label><input type="radio" name="restoTable" value="1" /><span>1</span></label>
+                <label><input type="radio" name="restoTable" value="2" /><span>2</span></label>
+                <label><input type="radio" name="restoTable" value="3" /><span>3</span></label>
+                <label><input type="radio" name="restoTable" value="4" /><span>4</span></label>
+                <label><input type="radio" name="restoTable" value="5" /><span>5</span></label>
+                <label><input type="radio" name="restoTable" value="6" /><span>6</span></label>
+                <label><input type="radio" name="restoTable" value="7" /><span>7</span></label>
+                <label><input type="radio" name="restoTable" value="8" /><span>8</span></label>
+                <label><input type="radio" name="restoTable" value="9" /><span>9</span></label>
+                <label><input type="radio" name="restoTable" value="10" /><span>10</span></label>
+                <label><input type="radio" name="restoTable" value="11" /><span>11</span></label>
+                <label><input type="radio" name="restoTable" value="12" /><span>12</span></label>
+              </div>
+              <small>12 tables · 4 chaises par table</small>
+            </fieldset>
 
             <div class="form-row">
               <label for="restoOrderNotes">Notes spéciales :</label>
@@ -494,7 +517,7 @@
 <!-- Script agent -->
 <script src="js/receipts.js?v=1"></script>
 <script src="js/access-control.js?v=1"></script>
-  <script src="js/agent-appwrite.js?v=21"></script>
+  <script src="js/agent-appwrite.js?v=22"></script>
 <script src="js/pwa.js?v=3"></script>
 
 </body>

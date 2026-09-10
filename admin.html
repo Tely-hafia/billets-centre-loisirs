@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/icons/calypso-officiel.png" type="image/png" />
   <link rel="apple-touch-icon" href="assets/icons/calypso-officiel.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/app-v2.css?v=21" />
+  <link rel="stylesheet" href="css/app-v2.css?v=22" />
 </head>
 
 <body class="admin-page">
@@ -281,6 +281,36 @@
         </div>
         <p id="siteContentMessage" class="status" aria-live="polite">Aucune requête effectuée.</p>
       </section>
+
+      <details class="card admin-module" id="admin-resto-menu">
+        <summary class="admin-module-summary"><span><strong>Menu restauration</strong><small>Plats, boissons, chichas, prix et photos</small></span></summary>
+        <div class="admin-module-content">
+          <div class="section-heading-row">
+            <p id="restoMenuAdminStatus" class="status" role="status" aria-live="polite">Le menu n’est pas chargé.</p>
+            <button id="btnLoadRestoMenu" type="button" class="btn-secondary">Charger le menu</button>
+          </div>
+          <form id="restoMenuForm" class="content-editor-form">
+            <input id="restoMenuDocumentId" type="hidden" />
+            <fieldset id="restoMenuEditorFields" class="resto-menu-editor-fields" disabled>
+              <div class="resto-menu-form-grid">
+                <div class="form-row"><label for="restoMenuCode">Code produit *</label><input id="restoMenuCode" maxlength="40" pattern="[A-Za-z0-9_-]+" required placeholder="EX : JUS_BISSAP" autocapitalize="characters" /></div>
+                <div class="form-row"><label for="restoMenuLabel">Nom *</label><input id="restoMenuLabel" maxlength="160" required placeholder="Jus de bissap" /></div>
+                <div class="form-row"><label for="restoMenuCategory">Catégorie *</label><input id="restoMenuCategory" list="restoMenuCategories" maxlength="60" required placeholder="Boissons" /></div>
+                <div class="form-row"><label for="restoMenuPrice">Prix (GNF) *</label><input id="restoMenuPrice" type="number" min="0" step="500" inputmode="numeric" required /></div>
+              </div>
+              <datalist id="restoMenuCategories"><option value="Plats"></option><option value="Boissons"></option><option value="Chicha"></option><option value="Snacks"></option><option value="Desserts"></option></datalist>
+              <div class="resto-menu-image-row">
+                <div class="form-row"><label for="restoMenuImage">Photo</label><input id="restoMenuImage" type="file" accept="image/*" /></div>
+                <img id="restoMenuImagePreview" class="resto-menu-image-preview" alt="Aperçu du produit" hidden />
+              </div>
+              <p class="content-image-help">La photo est réduite et convertie en WebP avant l’envoi. Laissez ce champ vide pour conserver la photo actuelle.</p>
+              <label class="radio-inline content-active-choice"><input id="restoMenuActive" type="checkbox" checked /><span>Produit disponible à la vente</span></label>
+              <div class="actions-row"><button type="submit" class="btn-primary">Enregistrer le produit</button><button id="btnCancelRestoMenuEdit" type="button" class="btn-secondary" hidden>Annuler la modification</button></div>
+            </fieldset>
+          </form>
+          <div id="restoMenuAdminList" class="content-admin-list"><p class="empty-state">Chargez le menu pour gérer les produits.</p></div>
+        </div>
+      </details>
 
       <details class="card admin-module" id="admin-content-alerts">
         <summary class="admin-module-summary"><span><strong>Alertes clients</strong><small>Afficher un message à la prochaine ouverture du site ou de l’application</small></span></summary>
@@ -725,8 +755,9 @@
 <script src="js/vendor/qrcode.js?v=1"></script>
 
 <!-- Script admin -->
-<script src="js/admin-appwrite.js?v=19"></script>
+<script src="js/admin-appwrite.js?v=20"></script>
 <script src="js/content-admin.js?v=2"></script>
+<script src="js/resto-admin.js?v=1"></script>
 <script src="js/pwa.js?v=3"></script>
 
 <script src="js/whatsapp-access.js?v=1"></script>

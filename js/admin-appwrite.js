@@ -1391,6 +1391,7 @@ async function chargerStatsBillets() {
 // =====================================
 
 let restoMenuCache = null;
+window.addEventListener("calypso:resto-menu-changed", () => { restoMenuCache = null; });
 
 async function chargerMenuRestoPourStats() {
   if (restoMenuCache) return restoMenuCache;

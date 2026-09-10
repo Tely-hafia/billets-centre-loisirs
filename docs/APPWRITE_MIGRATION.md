@@ -143,3 +143,25 @@ site ou de l’application et ne constituent pas un push permanent en arrière-p
 Le site public effectue une seule lecture pour la galerie, les événements, les
 alertes et le réglage d’ordre, puis conserve le résultat dix minutes dans le
 cache du téléphone. Il ne fait ni interrogation répétée ni écoute en temps réel.
+
+## 9. Menu restauration administrable
+
+Conservez les tables `menu_resto` et `ventes_resto` ainsi que le bucket média
+existant. Aucune nouvelle base, table ou bucket n’est nécessaire. Ajoutez
+seulement les colonnes facultatives suivantes :
+
+| Table | Colonne | Type Appwrite | Taille | Valeur par défaut |
+|---|---|---|---:|---|
+| `menu_resto` | `image_file_id` | String | 64 | chaîne vide |
+| `ventes_resto` | `numero_table` | Integer | non applicable | null |
+
+`numero_table` contient une valeur de 1 à 12 pour une commande sur place et
+reste absent pour une commande à emporter. Les quatre chaises de chaque table
+ne sont pas suivies individuellement. Les produits ne sont pas supprimés depuis
+l’application : ils sont masqués avec la colonne `actif` afin de préserver
+l’historique des ventes.
+
+Les photos du menu sont converties en WebP avant l’envoi dans le bucket
+`69222b6c00245678b63c`. Les permissions existantes restent inchangées :
+l’administrateur gère le menu et le poste restauration lit uniquement les
+produits actifs.

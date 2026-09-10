@@ -29,6 +29,22 @@ function formatMontantGNF(n) {
   return v.toLocaleString("fr-FR") + " GNF";
 }
 
+function restoProductImageUrl(fileId) {
+  if (!fileId) return "";
+  const endpoint = String(CalypsoConfig.endpoint || "").replace(/\/$/, "");
+  const bucketId = CalypsoConfig.buckets?.contenuMedia;
+  return `${endpoint}/storage/buckets/${encodeURIComponent(bucketId)}/files/${encodeURIComponent(fileId)}/view?project=${encodeURIComponent(CalypsoConfig.projectId)}`;
+}
+
+function escapeRestoHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function showResult(text, type) {
   const zone = $("result-message");
   if (!zone) return;
@@ -1677,7 +1693,7 @@ function creerOngletsCategories() {
   const allButton = document.createElement("button");
   allButton.type = "button";
   allButton.className = "resto-category-tab active";
-  allButton.textContent = "Tous les plats";
+  allButton.textContent = "Tous";
 
   allButton.onclick = () => {
     document.querySelectorAll(".resto-category-tab").forEach((tab) => {
@@ -1735,21 +1751,46 @@ function afficherProduits(produits) {
     return;
   }
 
-  productsGrid.innerHTML = produits
-    .map(
-      (produit) => `
-        <div class="resto-product-card" onclick="ajouterProduitAuPanier('${produit.code_produit}')">
-          <div class="resto-product-name">${produit.libelle}</div>
-          <div class="resto-product-price">${formatMontantGNF(produit.prix_unitaire)}</div>
-          <div style="margin-top:0.5rem;">
-            <button type="button" class="btn-primary" style="padding:0.5rem 1rem; font-size:0.9rem;">
-              + Ajouter
-            </button>
-          </div>
-        </div>
-      `
-    )
-    .join("");
+  productsGrid.replaceChildren();
+  produits.forEach((produit) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "resto-product-card";
+    card.dataset.productCode = produit.code_produit;
+    card.setAttribute("aria-label", `Ajouter ${produit.libelle}, ${formatMontantGNF(produit.prix_unitaire)}`);
+
+    const visual = document.createElement("span");
+    visual.className = "resto-product-visual";
+    if (produit.image_file_id) {
+      const image = document.createElement("img");
+      image.src = restoProductImageUrl(produit.image_file_id);
+      image.alt = "";
+      image.loading = "lazy";
+      image.decoding = "async";
+      visual.append(image);
+    } else {
+      visual.classList.add("is-placeholder");
+      visual.textContent = /boisson|jus|eau/i.test(produit.categorie || "") ? "🥤" : /chicha/i.test(produit.categorie || "") ? "♨️" : "🍽️";
+    }
+
+    const details = document.createElement("span");
+    details.className = "resto-product-details";
+    const name = document.createElement("span");
+    name.className = "resto-product-name";
+    name.textContent = produit.libelle;
+    const price = document.createElement("span");
+    price.className = "resto-product-price";
+    price.textContent = formatMontantGNF(produit.prix_unitaire);
+    const quantity = document.createElement("span");
+    quantity.className = "resto-product-quantity";
+    quantity.hidden = true;
+    quantity.setAttribute("aria-label", "Quantité dans le panier");
+    details.append(name, price);
+    card.append(visual, details, quantity);
+    card.addEventListener("click", () => ajouterProduitAuPanier(produit.code_produit));
+    productsGrid.append(card);
+  });
+  actualiserBadgesProduits();
 }
 
 async function chargerProduitsResto() {
@@ -1870,6 +1911,8 @@ function actualiserPanier() {
   const cartCount = $("restoCartCount");
   const cartTotal = $("restoCartTotal");
   const validerBtn = $("btnRestoValider");
+  const summaryButton = $("btnRestoCartSummary");
+  const summaryText = $("restoCartSummaryText");
 
   if (!cartItems) return;
 
@@ -1886,6 +1929,11 @@ function actualiserPanier() {
   if (cartCount) cartCount.textContent = `${totalArticles} article(s)`;
   if (cartTotal) cartTotal.textContent = formatMontantGNF(totalMontant);
   if (validerBtn) validerBtn.disabled = totalArticles === 0;
+  if (summaryButton) summaryButton.disabled = totalArticles === 0;
+  if (summaryText) summaryText.textContent = totalArticles
+    ? `${totalArticles} article${totalArticles > 1 ? "s" : ""} · ${formatMontantGNF(totalMontant)}`
+    : "Panier vide";
+  actualiserBadgesProduits();
   updateRestoChange();
 
   if (restoPanier.length === 0) {
@@ -1898,7 +1946,7 @@ function actualiserPanier() {
       (item, index) => `
         <div class="resto-cart-item">
           <div class="resto-cart-item-info">
-            <div class="resto-cart-item-name">${item.libelle}</div>
+            <div class="resto-cart-item-name">${escapeRestoHTML(item.libelle)}</div>
             <div class="resto-cart-item-price">${formatMontantGNF(item.prix_unitaire)}/unité</div>
           </div>
 
@@ -1912,6 +1960,27 @@ function actualiserPanier() {
       `
     )
     .join("");
+}
+
+function actualiserBadgesProduits() {
+  document.querySelectorAll(".resto-product-card[data-product-code]").forEach((card) => {
+    const item = restoPanier.find((entry) => entry.code_produit === card.dataset.productCode);
+    const badge = card.querySelector(".resto-product-quantity");
+    if (!badge) return;
+    badge.hidden = !item;
+    badge.textContent = item ? String(item.quantite) : "";
+  });
+}
+
+function updateRestoOrderType() {
+  const orderType = document.querySelector('input[name="orderType"]:checked')?.value || "sur_place";
+  const tableFieldset = $("restoTableFieldset");
+  if (!tableFieldset) return;
+  tableFieldset.hidden = orderType !== "sur_place";
+  tableFieldset.disabled = orderType !== "sur_place";
+  if (orderType !== "sur_place") {
+    document.querySelectorAll('input[name="restoTable"]').forEach((input) => { input.checked = false; });
+  }
 }
 
 function updateRestoChange() {
@@ -1998,6 +2067,15 @@ async function enregistrerVenteResto() {
     document.querySelector('input[name="orderType"]:checked')?.value ||
     "sur_place";
 
+  const numeroTable = orderType === "sur_place"
+    ? Number(document.querySelector('input[name="restoTable"]:checked')?.value || 0)
+    : null;
+  if (orderType === "sur_place" && (numeroTable < 1 || numeroTable > 12)) {
+    showTempMessage("Choisissez le numéro de table avant d’encaisser.", "warn");
+    $("restoTableFieldset")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
   const notes = $("restoOrderNotes")?.value.trim() || "";
 
   const totalCommande = restoPanier.reduce(
@@ -2022,30 +2100,33 @@ async function enregistrerVenteResto() {
     for (const [index, item] of restoPanier.entries()) {
       const montant = item.prix_unitaire * item.quantite;
 
+      const saleData = {
+        numero_vente: numeroVente,
+        date_vente: nowIso,
+        code_produit: item.code_produit,
+        quantite: item.quantite,
+        montant_total: montant,
+        agent_id: currentAgent.$id,
+        poste_id: "RESTO",
+        moyen_paiement: paiement.moyenPaiement,
+        montant_recu: index === 0 ? paiement.montantRecu : 0,
+        monnaie_rendue: index === 0 ? paiement.monnaieRendue : 0,
+        session_caisse_id: currentCashSession.$id
+      };
+      if (numeroTable) saleData.numero_table = numeroTable;
+
       await db.createDocument(
         APPWRITE_DATABASE_ID,
         APPWRITE_VENTES_RESTO_COLLECTION_ID,
         Appwrite.ID.unique(),
-        {
-          numero_vente: numeroVente,
-          date_vente: nowIso,
-          code_produit: item.code_produit,
-          quantite: item.quantite,
-          montant_total: montant,
-          agent_id: currentAgent.$id,
-          poste_id: "RESTO",
-          moyen_paiement: paiement.moyenPaiement,
-          montant_recu: index === 0 ? paiement.montantRecu : 0,
-          monnaie_rendue: index === 0 ? paiement.monnaieRendue : 0,
-          session_caisse_id: currentCashSession.$id
-        }
+        saleData
       );
       totalGlobal += montant;
       completedLines += 1;
       ajouterRecetteCaisse(montant, completedLines === 1 ? 1 : 0);
     }
 
-    afficherReçu(numeroVente, totalGlobal, orderType, notes);
+    afficherReçu(numeroVente, totalGlobal, orderType, numeroTable, notes, paiement, [...restoPanier]);
 
     if ($("restoCashReceived")) $("restoCashReceived").value = "";
     if ($("restoChange")) {
@@ -2059,14 +2140,17 @@ async function enregistrerVenteResto() {
     console.error("[RESTO] Erreur enregistrement vente :", err);
     restoPanier = restoPanier.slice(completedLines);
     actualiserPanier();
-    showTempMessage(completedLines + " ligne(s) enregistrée(s). " + CalypsoData.errorMessage(err, "Vente restauration"), "error");
+    const schemaMessage = /numero_table|unknown attribute[^\n]*table/i.test(String(err?.message || ""))
+      ? "Ajoutez la colonne facultative numero_table (Integer) à ventes_resto dans Appwrite."
+      : CalypsoData.errorMessage(err, "Vente restauration");
+    showTempMessage(completedLines + " ligne(s) enregistrée(s). " + schemaMessage, "error");
   } finally {
     restoSaleBusy = false;
     resetButtonLoading(saleButton);
   }
 }
 
-function afficherReçu(numeroVente, total, orderType, notes) {
+function afficherReçu(numeroVente, total, orderType, numeroTable, notes, paiement, items) {
   const receipt = $("restoReceipt");
   const receiptNumber = $("receiptNumber");
   const receiptContent = $("receiptContent");
@@ -2080,9 +2164,10 @@ function afficherReçu(numeroVente, total, orderType, notes) {
     <div style="margin-bottom:1rem;">
       <div><strong>Date :</strong> ${new Date().toLocaleString("fr-FR")}</div>
       <div><strong>Type :</strong> ${orderType === "sur_place" ? "Sur place" : "À emporter"}</div>
+      ${numeroTable ? `<div class="resto-receipt-table"><strong>Table :</strong> ${numeroTable}</div>` : ""}
       ${
         notes
-          ? `<div><strong>Notes :</strong> ${notes.replace(/</g, "&lt;")}</div>`
+          ? `<div><strong>Notes :</strong> ${escapeRestoHTML(notes)}</div>`
           : ""
       }
     </div>
@@ -2090,12 +2175,12 @@ function afficherReçu(numeroVente, total, orderType, notes) {
     <div style="border-bottom:1px dashed #ccc; margin-bottom:0.5rem;"></div>
   `;
 
-  restoPanier.forEach((item) => {
+  items.forEach((item) => {
     const sousTotal = item.prix_unitaire * item.quantite;
 
     html += `
       <div class="receipt-item">
-        <div>${item.quantite}x ${item.libelle}</div>
+        <div>${item.quantite}x ${escapeRestoHTML(item.libelle)}</div>
         <div>${sousTotal.toLocaleString("fr-FR")} GNF</div>
       </div>
     `;
@@ -2107,6 +2192,15 @@ function afficherReçu(numeroVente, total, orderType, notes) {
     <div class="receipt-item receipt-total">
       <div>TOTAL</div>
       <div>${total.toLocaleString("fr-FR")} GNF</div>
+    </div>
+
+    <div class="receipt-item">
+      <div>Reçu</div>
+      <div>${paiement.montantRecu.toLocaleString("fr-FR")} GNF</div>
+    </div>
+    <div class="receipt-item">
+      <div>Monnaie</div>
+      <div>${paiement.monnaieRendue.toLocaleString("fr-FR")} GNF</div>
     </div>
 
     <div style="text-align:center; margin-top:1rem; font-style:italic;">
@@ -2132,6 +2226,12 @@ function nouvelleCommandeResto() {
   if (productsSide) productsSide.style.display = "block";
   if (receipt) receipt.style.display = "none";
   if (notes) notes.value = "";
+  if ($("restoCashReceived")) $("restoCashReceived").value = "";
+  document.querySelectorAll('input[name="restoTable"]').forEach((input) => { input.checked = false; });
+  const surPlace = document.querySelector('input[name="orderType"][value="sur_place"]');
+  if (surPlace) surPlace.checked = true;
+  updateRestoOrderType();
+  actualiserPanier();
 
   showTempMessage("🆕 Nouvelle commande prête", "success");
 }
@@ -2364,6 +2464,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnRestoNouvelleCommande = $("btnRestoNouvelleCommande");
   const btnRestoImprimer = $("btnRestoImprimer");
   const restoCashReceived = $("restoCashReceived");
+
+  $("btnRestoCartSummary")?.addEventListener("click", () => {
+    $("restoCartPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.querySelectorAll('input[name="orderType"]').forEach((input) => {
+    input.addEventListener("change", updateRestoOrderType);
+  });
+  updateRestoOrderType();
 
   if (restoCashReceived) restoCashReceived.addEventListener("input", updateRestoChange);
 
